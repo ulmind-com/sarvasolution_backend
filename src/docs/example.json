@@ -1,0 +1,15 @@
+{
+    "paths": {
+        "/": {
+            "get": {
+                "summary": "Root endpoint",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "Welcome message"
+                    }
+                }
+            }
+        }
+    }
+}
