@@ -99,8 +99,6 @@ export const register = async (req, res) => {
             address
         } = req.body;
 
-        console.log(bankDetails);
-
         // Validation
         if (!username || !email || !password || !fullName || !phone || !sponsorId || !joiningPackage) {
             if (Configs.NODE_ENV == 'development') {
