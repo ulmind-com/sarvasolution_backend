@@ -8,7 +8,7 @@
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -32,13 +32,16 @@
  *                 type: string
  *               sponsorId:
  *                 type: string
- *                 description: Member ID of the sponsor
  *               joiningPackage:
  *                 type: number
  *                 enum: [500, 1000, 2000, 5000, 10000]
  *               preferredPosition:
  *                 type: string
  *                 enum: [left, right]
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file
  *               bankDetails:
  *                 type: object
  *                 properties:
@@ -139,4 +142,49 @@
  *         description: Missing credentials
  *       401:
  *         description: Invalid credentials
+ * 
+ * /api/v1/profile:
+ *   get:
+ *     summary: Get logged in user profile
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       type: object
+ *                     bankAccount:
+ *                       type: object
+ *                       properties:
+ *                         accountName:
+ *                           type: string
+ *                         accountNumber:
+ *                           type: string
+ *                         bankName:
+ *                           type: string
+ *                         ifscCode:
+ *                           type: string
+ *                         branch:
+ *                           type: string
+ *       401:
+ *         description: Unauthorized
+ * 
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */

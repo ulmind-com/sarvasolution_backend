@@ -3,6 +3,7 @@ import BankAccount from '../../models/BankAccount.model.js';
 import jwt from 'jsonwebtoken';
 import Configs from '../../config/config.js';
 import chalk from 'chalk';
+import { uploadToCloudinary } from '../../services/cloudinary.service.js';
 
 // Helper function to find available position in binary tree
 async function findAvailablePosition(sponsorId, preferredPosition = null) {
@@ -25,7 +26,6 @@ async function findAvailablePosition(sponsorId, preferredPosition = null) {
     }
 
     // If no preference or position taken, use spillover logic
-    // Extreme left spillover (default)
     return await findExtremeLeftPosition(sponsor);
 }
 
@@ -34,30 +34,20 @@ async function findExtremeLeftPosition(parentUser) {
     let current = parentUser;
 
     while (true) {
-        // Check left child first
         if (!current.leftChild) {
             return { parentId: current.memberId, position: 'left' };
         }
-
-        // Check right child if strictly balanced or some other rule, but usually "extreme left" implies going left down the left most leg. 
-        // However, the prompt's spillover logic example suggests a simple traversal.
-        // Let's follow the prompt's logic: if prefered failed, go deep left? 
-        // Prompt says: "If no preference or position taken, use spillover logic... Extreme left spillover (default)"
-        // The prompt's implementation of findExtremeLeftPosition checks left then right of the *current* node?
-        // Wait, the prompt code:
-        // if (!current.leftChild) return ... left
-        // if (!current.rightChild) return ... right
-        // current = await User.findById(current.leftChild)
-        // This logic fills the parent's immediate left, then immediate right, THEN moves to the LEFT child to repeat.
-        // This creates a "Power Leg" on the left side where everyone gets filled 2 wide but only down the left axis.
 
         if (!current.rightChild) {
             return { parentId: current.memberId, position: 'right' };
         }
 
         // Move to left child and continue
-        current = await User.findById(current.leftChild);
+        const nextNodeId = current.leftChild;
+        current = await User.findById(nextNodeId);
+        if (!current) break;
     }
+    throw new Error('Could not find available position in the tree');
 }
 
 // Update PV up the genealogy tree
@@ -65,7 +55,6 @@ async function updateUplinePV(parentMemberId, position, pv) {
     let current = await User.findOne({ memberId: parentMemberId });
 
     while (current) {
-        // Update left or right leg PV
         if (position === 'left') {
             current.leftLegPV += pv;
         } else {
@@ -75,18 +64,21 @@ async function updateUplinePV(parentMemberId, position, pv) {
         current.totalPV = current.leftLegPV + current.rightLegPV + current.personalPV;
         await current.save();
 
-        // Move to parent and continue
         if (!current.parentId) break;
 
         const parent = await User.findOne({ memberId: current.parentId });
-        position = current.position; // Update position for next iteration (this node is LEFT or RIGHT of the parent)
+        if (!parent) break;
+        position = current.position;
         current = parent;
     }
 }
 
 export const register = async (req, res) => {
     try {
-        const {
+        // More resilient body handling
+        const body = req.body || {};
+
+        let {
             username,
             email,
             password,
@@ -94,19 +86,29 @@ export const register = async (req, res) => {
             phone,
             sponsorId,
             joiningPackage,
-            preferredPosition, // 'left' or 'right' (optional)
+            preferredPosition,
             bankDetails,
             address
-        } = req.body;
+        } = body;
+
+        // Handle nested objects if sent as strings via FormData
+        try {
+            if (typeof bankDetails === 'string' && bankDetails.trim().startsWith('{')) {
+                bankDetails = JSON.parse(bankDetails);
+            }
+            if (typeof address === 'string' && address.trim().startsWith('{')) {
+                address = JSON.parse(address);
+            }
+        } catch (e) {
+            console.error('Error parsing JSON fields in body:', e);
+        }
 
         // Validation
         if (!username || !email || !password || !fullName || !phone || !sponsorId || !joiningPackage) {
-            if (Configs.NODE_ENV == 'development') {
-                console.log(chalk.bgRed('All fields are required!'));
-            }
             return res.status(400).json({
                 success: false,
-                message: 'All fields are required'
+                message: 'All fields (username, email, password, fullName, phone, sponsorId, joiningPackage) are required. Please check if your request method is multipart/form-data and includes these fields.',
+                debug: { bodyReceivedKeys: Object.keys(body) }
             });
         }
 
@@ -124,8 +126,23 @@ export const register = async (req, res) => {
         if (!sponsor) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid sponsor ID'
+                message: 'Invalid sponsor ID. Sponsor does not exist.'
             });
+        }
+
+        // Handle Profile Picture Upload
+        let profilePicture = {
+            url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s',
+            publicId: null
+        };
+
+        if (req.file) {
+            try {
+                const uploadResult = await uploadToCloudinary(req.file.buffer);
+                profilePicture = uploadResult;
+            } catch (uploadError) {
+                console.error('Cloudinary upload error:', uploadError);
+            }
         }
 
         // Find available position in binary tree
@@ -135,7 +152,7 @@ export const register = async (req, res) => {
         const memberId = await User.generateMemberId();
 
         // Set PV based on joining package (10% of package amount)
-        const personalPV = joiningPackage * 0.1;
+        const personalPV = Number(joiningPackage) * 0.1;
 
         // Create new user
         const newUser = new User({
@@ -148,58 +165,62 @@ export const register = async (req, res) => {
             sponsorId,
             parentId: placement.parentId,
             position: placement.position,
-            joiningPackage,
+            joiningPackage: Number(joiningPackage),
             personalPV,
             totalPV: personalPV,
-            address,
-            dailyCap: joiningPackage * 5, // Example: 5x joining package
-            weeklyCap: joiningPackage * 30,
-            monthlyCap: joiningPackage * 100
+            address: address || {},
+            profilePicture,
+            dailyCap: Number(joiningPackage) * 5,
+            weeklyCap: Number(joiningPackage) * 30,
+            monthlyCap: Number(joiningPackage) * 100
         });
 
         await newUser.save();
 
-        const newBankAccount = new BankAccount({ ...bankDetails, userId: newUser._id });
+        const bankAccountData = bankDetails || {};
+        const newBankAccount = new BankAccount({ ...bankAccountData, userId: newUser._id });
         await newBankAccount.save();
 
         // Update parent's child reference
-        const parent = await User.findOne({ memberId: placement.parentId });
-        if (placement.position === 'left') {
-            parent.leftChild = newUser._id;
-        } else {
-            parent.rightChild = newUser._id;
+        const parentNode = await User.findOne({ memberId: placement.parentId });
+        if (parentNode) {
+            if (placement.position === 'left') {
+                parentNode.leftChild = newUser._id;
+            } else {
+                parentNode.rightChild = newUser._id;
+            }
+            await parentNode.save();
         }
-        await parent.save();
 
         // Update upline PVs (propagate up the tree)
         await updateUplinePV(placement.parentId, placement.position, personalPV);
 
         // Generate JWT token
         const token = jwt.sign(
-            { userId: newUser._id, memberId: newUser.memberId },
-            process.env.JWT_SECRET || 'secret', // Fallback for dev
+            { userId: newUser._id, memberId: newUser.memberId, role: newUser.role },
+            process.env.JWT_SECRET || 'secret',
             { expiresIn: '7d' }
         );
 
         res.status(201).json({
             success: true,
-            message: 'Registration successful',
+            message: req.file && profilePicture.url.includes('encrypted-tbn0')
+                ? 'Registration successful but profile picture upload failed'
+                : 'Registration successful',
             data: {
                 memberId: newUser.memberId,
                 username: newUser.username,
                 email: newUser.email,
-                sponsorId: newUser.sponsorId,
-                parentId: newUser.parentId,
-                position: newUser.position,
-                token
+                token,
+                warning: req.file && profilePicture.url.includes('encrypted-tbn0') ? 'Image upload timed out' : null
             }
         });
 
     } catch (error) {
-        console.error('Registration error:', error);
+        console.error('Registration error details:', error);
         res.status(500).json({
             success: false,
-            message: 'Registration failed',
+            message: 'Registration failed due to a server error',
             error: error.message
         });
     }

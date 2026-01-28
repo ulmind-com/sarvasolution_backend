@@ -164,6 +164,18 @@ const userSchema = new mongoose.Schema({
         zipCode: String
     },
 
+    // Profile Picture
+    profilePicture: {
+        url: {
+            type: String,
+            default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s'
+        },
+        publicId: {
+            type: String,
+            default: null
+        }
+    },
+
     // Metadata
     isEmailVerified: {
         type: Boolean,
