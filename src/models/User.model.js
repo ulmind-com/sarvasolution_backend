@@ -145,6 +145,11 @@ const userSchema = new mongoose.Schema({
         default: 'Member',
         enum: ['Member', 'Silver', 'Gold', 'Platinum', 'Diamond']
     },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
 
     // Banking Details
     // bankDetails: {
