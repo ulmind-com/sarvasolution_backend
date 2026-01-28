@@ -18,3 +18,5 @@ const upload = multer({
 });
 
 export const uploadSingle = upload.single('profilePicture');
+export const uploadProductImage = upload.single('productImage');
+export { upload }; // Export the existing multer instance

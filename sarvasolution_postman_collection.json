@@ -1,0 +1,276 @@
+{
+    "info": {
+        "_postman_id": "sarvasolution-api-collection-v2",
+        "name": "SarvaSolution API",
+        "description": "Postman collection for SarvaSolution MLM Backend API (Including Products)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "username",
+                                    "value": "john_doe_2",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "email",
+                                    "value": "john2@example.com",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "password",
+                                    "value": "securepassword123",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "fullName",
+                                    "value": "John Doe",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "phone",
+                                    "value": "9876543210",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "sponsorId",
+                                    "value": "SVS000001",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "joiningPackage",
+                                    "value": "1000",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "preferredPosition",
+                                    "value": "left",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "bankDetails",
+                                    "value": "{\"accountName\":\"John Doe\",\"accountNumber\":\"1234567890\",\"bankName\":\"HDFC\",\"ifscCode\":\"HDFC0001234\"}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "address",
+                                    "value": "{\"street\":\"Main St\",\"city\":\"New York\",\"state\":\"NY\",\"country\":\"USA\",\"zipCode\":\"10001\"}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "profilePicture",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/register/user",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "register",
+                                "user"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Login User",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"identifier\": \"rootadmin\",\n    \"password\": \"adminpassword123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/login/user",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "login",
+                                "user"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Products",
+            "item": [
+                {
+                    "name": "Get Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/products",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "products"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Product (Admin)",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "name",
+                                    "value": "Test Product",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "bv",
+                                    "value": "100",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "price",
+                                    "value": "500",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "description",
+                                    "value": "Example description",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "segment",
+                                    "value": "health care",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "productImage",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/products",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "products"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User",
+            "item": [
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/profile",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "profile"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "if (pm.response.code === 200 || pm.response.code === 201) {",
+                    "    var jsonData = pm.response.json();",
+                    "    if (jsonData.data && jsonData.data.token) {",
+                    "        pm.environment.set(\"token\", jsonData.data.token);",
+                    "    } else if (jsonData.token) {",
+                    "        pm.environment.set(\"token\", jsonData.token);",
+                    "    }",
+                    "}"
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8000",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        }
+    ]
+}

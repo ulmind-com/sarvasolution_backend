@@ -180,11 +180,4 @@
  *                           type: string
  *       401:
  *         description: Unauthorized
- * 
- * components:
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
  */

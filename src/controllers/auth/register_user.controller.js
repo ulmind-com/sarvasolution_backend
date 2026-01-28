@@ -138,7 +138,7 @@ export const register = async (req, res) => {
 
         if (req.file) {
             try {
-                const uploadResult = await uploadToCloudinary(req.file.buffer);
+                const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
                 profilePicture = uploadResult;
             } catch (uploadError) {
                 console.error('Cloudinary upload error:', uploadError);

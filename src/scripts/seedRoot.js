@@ -37,7 +37,8 @@ const seedRootUser = async () => {
                 state: 'Admin State',
                 country: 'Admin Country',
                 zipCode: '000000'
-            }
+            },
+            role: 'admin'
         });
 
         await rootUser.save();
