@@ -11,6 +11,11 @@ const options = {
         servers: [
             {
                 url: `http://localhost:${process.env.PORT || 8000}`,
+                description: 'Local development server',
+            },
+            {
+                url: 'https://sarvasolution-backend.onrender.com',
+                description: 'Production server',
             },
         ],
     },
