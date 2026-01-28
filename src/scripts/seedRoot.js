@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import User from '../models/User.js';
+import User from '../models/User.model.js';
+import BankAccount from '../models/BankAccount.model.js';
 import connectDB from '../config/db.js';
 
 dotenv.config();
@@ -21,7 +22,7 @@ const seedRootUser = async () => {
             password: 'adminpassword123', // Will be hashed by pre-save hook
             fullName: 'Super Admin',
             phone: '0000000000',
-            memberId: 'MLM000001',
+            memberId: 'SVS000001',
             sponsorId: null, // No sponsor for root
             parentId: null, // No parent for root
             position: 'root',
@@ -30,13 +31,6 @@ const seedRootUser = async () => {
             rank: 'Diamond',
             personalPV: 1000,
             totalPV: 1000,
-            bankDetails: {
-                accountName: 'Admin',
-                accountNumber: '0000000000',
-                bankName: 'Admin Bank',
-                ifscCode: 'ADMIN0000',
-                branch: 'Headquarters'
-            },
             address: {
                 street: 'Admin St',
                 city: 'Admin City',
@@ -48,9 +42,20 @@ const seedRootUser = async () => {
 
         await rootUser.save();
 
+        const rootUserBankAccount = new BankAccount({
+            userId: rootUser._id,
+            accountName: 'Admin',
+            accountNumber: '0000000000',
+            bankName: 'Admin Bank',
+            ifscCode: 'ADMIN0000',
+            branch: 'Headquarters'
+        });
+
+        await rootUserBankAccount.save();
+
         console.log('Root user created successfully!');
-        console.log('Member ID: MLM000001');
-        console.log('Username: rootadmin');
+        console.log(`Member ID: ${rootUser.memberId}`);
+        console.log(`Username: ${rootUser.username}`);
         console.log('Password: adminpassword123');
 
         process.exit(0);
