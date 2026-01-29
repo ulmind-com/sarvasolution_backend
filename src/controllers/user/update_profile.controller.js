@@ -1,6 +1,7 @@
 import User from '../../models/User.model.js';
 import BankAccount from '../../models/BankAccount.model.js';
 import { uploadToCloudinary } from '../../services/cloudinary.service.js';
+import { mailer } from '../../services/mail.service.js';
 
 export const updateProfile = async (req, res) => {
     try {
@@ -34,6 +35,8 @@ export const updateProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
+        const updatedFields = [];
+
         // Phone uniqueness check if changing
         if (phone && phone !== user.phone) {
             const phoneExists = await User.findOne({ phone });
@@ -41,6 +44,7 @@ export const updateProfile = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Phone number already in use' });
             }
             user.phone = phone;
+            updatedFields.push('Phone Number');
         }
 
         // PAN limit check if changing
@@ -50,19 +54,33 @@ export const updateProfile = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Maximum 3 accounts allowed per PAN card' });
             }
             user.panCardNumber = panCardNumber.toUpperCase();
+            updatedFields.push('PAN Card Number');
         }
 
         // Update other user fields
-        if (fullName) user.fullName = fullName;
-        if (email) user.email = email;
-        if (username) user.username = username;
-        if (address) user.address = { ...user.address, ...address };
+        if (fullName && fullName !== user.fullName) {
+            user.fullName = fullName;
+            updatedFields.push('Full Name');
+        }
+        if (email && email !== user.email) {
+            user.email = email;
+            updatedFields.push('Email Address');
+        }
+        if (username && username !== user.username) {
+            user.username = username;
+            updatedFields.push('Username');
+        }
+        if (address) {
+            user.address = { ...user.address, ...address };
+            updatedFields.push('Address');
+        }
 
         // Handle Profile Picture if provided
         if (req.file) {
             try {
                 const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
                 user.profilePicture = uploadResult;
+                updatedFields.push('Profile Picture');
             } catch (uploadError) {
                 console.error('Profile picture update error:', uploadError);
             }
@@ -74,12 +92,22 @@ export const updateProfile = async (req, res) => {
         if (bankDetails) {
             let bankAccount = await BankAccount.findOne({ userId });
             if (bankAccount) {
-                Object.assign(bankAccount, bankDetails);
-                await bankAccount.save();
+                const hasBankDetailsChanged = Object.keys(bankDetails).some(key => bankDetails[key] !== bankAccount[key]);
+                if (hasBankDetailsChanged) {
+                    Object.assign(bankAccount, bankDetails);
+                    await bankAccount.save();
+                    updatedFields.push('Bank Details');
+                }
             } else {
                 bankAccount = new BankAccount({ ...bankDetails, userId });
                 await bankAccount.save();
+                updatedFields.push('Bank Details');
             }
+        }
+
+        // Send update notification if any fields were updated
+        if (updatedFields.length > 0) {
+            mailer.sendUpdateNotification(user, updatedFields).catch(err => console.error('Profile update mail error:', err));
         }
 
         const updatedUser = await User.findById(userId).select('-password');

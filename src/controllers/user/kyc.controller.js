@@ -1,6 +1,7 @@
 import User from '../../models/User.model.js';
 import BankAccount from '../../models/BankAccount.model.js';
 import { uploadToCloudinary } from '../../services/cloudinary.service.js';
+import { mailer } from '../../services/mail.service.js';
 
 /**
  * Handle KYC submission (One-time)
@@ -82,6 +83,9 @@ export const submitKYC = async (req, res) => {
         if (panCardNumber) user.panCardNumber = panCardNumber.toUpperCase();
 
         await user.save();
+
+        // Send KYC Submission Email (Non-blocking)
+        mailer.sendKYCSubmission(user).catch(err => console.error('KYC submission mail error:', err));
 
         // Update or Create Bank Account
         if (bankDetails && bankDetails.accountNumber) {
