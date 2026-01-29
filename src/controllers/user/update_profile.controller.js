@@ -2,132 +2,122 @@ import User from '../../models/User.model.js';
 import BankAccount from '../../models/BankAccount.model.js';
 import { uploadToCloudinary } from '../../services/cloudinary.service.js';
 import { mailer } from '../../services/mail.service.js';
+import { asyncHandler } from '../../utils/asyncHandler.js';
+import { ApiError } from '../../utils/ApiError.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
 
-export const updateProfile = async (req, res) => {
+/**
+ * Update user profile
+ */
+export const updateProfile = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+    const body = req.body || {};
+
+    let {
+        fullName,
+        email,
+        phone,
+        panCardNumber,
+        address,
+        bankDetails,
+        username
+    } = body;
+
+    // Handle nested objects if sent as strings via FormData
     try {
-        const userId = req.user._id;
-        const body = req.body || {};
-
-        let {
-            fullName,
-            email,
-            phone,
-            panCardNumber,
-            address,
-            bankDetails,
-            username
-        } = body;
-
-        // Handle nested objects if sent as strings via FormData
-        try {
-            if (typeof bankDetails === 'string' && bankDetails.trim().startsWith('{')) {
-                bankDetails = JSON.parse(bankDetails);
-            }
-            if (typeof address === 'string' && address.trim().startsWith('{')) {
-                address = JSON.parse(address);
-            }
-        } catch (e) {
-            console.error('Error parsing JSON fields in profile update:', e);
+        if (typeof bankDetails === 'string' && bankDetails.trim().startsWith('{')) {
+            bankDetails = JSON.parse(bankDetails);
         }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+        if (typeof address === 'string' && address.trim().startsWith('{')) {
+            address = JSON.parse(address);
         }
+    } catch (e) {
+        console.error('Error parsing JSON fields in profile update:', e);
+    }
 
-        const updatedFields = [];
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
 
-        // Phone uniqueness check if changing
-        if (phone && phone !== user.phone) {
-            const phoneExists = await User.findOne({ phone });
-            if (phoneExists) {
-                return res.status(400).json({ success: false, message: 'Phone number already in use' });
-            }
-            user.phone = phone;
-            updatedFields.push('Phone Number');
-        }
+    const updatedFields = [];
 
-        // PAN limit check if changing
-        if (panCardNumber && panCardNumber.toUpperCase() !== user.panCardNumber) {
-            const panCount = await User.countDocuments({ panCardNumber: panCardNumber.toUpperCase() });
-            if (panCount >= 3) {
-                return res.status(400).json({ success: false, message: 'Maximum 3 accounts allowed per PAN card' });
-            }
-            user.panCardNumber = panCardNumber.toUpperCase();
-            updatedFields.push('PAN Card Number');
+    // Phone uniqueness check
+    if (phone && phone !== user.phone) {
+        const phoneExists = await User.findOne({ phone });
+        if (phoneExists) {
+            throw new ApiError(400, 'Phone number already in use');
         }
+        user.phone = phone;
+        updatedFields.push('Phone Number');
+    }
 
-        // Update other user fields
-        if (fullName && fullName !== user.fullName) {
-            user.fullName = fullName;
-            updatedFields.push('Full Name');
+    // PAN limit check
+    if (panCardNumber && panCardNumber.toUpperCase() !== user.panCardNumber) {
+        const panCount = await User.countDocuments({ panCardNumber: panCardNumber.toUpperCase() });
+        if (panCount >= 3) {
+            throw new ApiError(400, 'Maximum 3 accounts allowed per PAN card');
         }
-        if (email && email !== user.email) {
-            user.email = email;
-            updatedFields.push('Email Address');
-        }
-        if (username && username !== user.username) {
-            user.username = username;
-            updatedFields.push('Username');
-        }
-        if (address) {
-            user.address = { ...user.address, ...address };
-            updatedFields.push('Address');
-        }
+        user.panCardNumber = panCardNumber.toUpperCase();
+        updatedFields.push('PAN Card Number');
+    }
 
-        // Handle Profile Picture if provided
-        if (req.file) {
-            try {
-                const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
-                user.profilePicture = uploadResult;
-                updatedFields.push('Profile Picture');
-            } catch (uploadError) {
-                console.error('Profile picture update error:', uploadError);
-            }
-        }
+    // Update basic fields
+    if (fullName && fullName !== user.fullName) {
+        user.fullName = fullName;
+        updatedFields.push('Full Name');
+    }
+    if (email && email !== user.email) {
+        user.email = email;
+        updatedFields.push('Email Address');
+    }
+    if (username && username !== user.username) {
+        user.username = username;
+        updatedFields.push('Username');
+    }
+    if (address) {
+        user.address = { ...user.address, ...address };
+        updatedFields.push('Address');
+    }
 
-        await user.save();
+    // Profile Picture
+    if (req.file) {
+        const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
+        user.profilePicture = uploadResult;
+        updatedFields.push('Profile Picture');
+    }
 
-        // Update Bank Account if provided
-        if (bankDetails) {
-            let bankAccount = await BankAccount.findOne({ userId });
-            if (bankAccount) {
-                const hasBankDetailsChanged = Object.keys(bankDetails).some(key => bankDetails[key] !== bankAccount[key]);
-                if (hasBankDetailsChanged) {
-                    Object.assign(bankAccount, bankDetails);
-                    await bankAccount.save();
-                    updatedFields.push('Bank Details');
-                }
-            } else {
-                bankAccount = new BankAccount({ ...bankDetails, userId });
+    await user.save();
+
+    // Bank Account logic
+    if (bankDetails) {
+        let bankAccount = await BankAccount.findOne({ userId });
+        if (bankAccount) {
+            const hasBankDetailsChanged = Object.keys(bankDetails).some(key => bankDetails[key] !== bankAccount[key]);
+            if (hasBankDetailsChanged) {
+                Object.assign(bankAccount, bankDetails);
                 await bankAccount.save();
                 updatedFields.push('Bank Details');
             }
+        } else {
+            bankAccount = new BankAccount({ ...bankDetails, userId });
+            await bankAccount.save();
+            updatedFields.push('Bank Details');
         }
-
-        // Send update notification if any fields were updated
-        if (updatedFields.length > 0) {
-            mailer.sendUpdateNotification(user, updatedFields).catch(err => console.error('Profile update mail error:', err));
-        }
-
-        const updatedUser = await User.findById(userId).select('-password');
-        const updatedBank = await BankAccount.findOne({ userId });
-
-        res.status(200).json({
-            success: true,
-            message: 'Profile updated successfully',
-            data: {
-                user: updatedUser,
-                bankAccount: updatedBank || null
-            }
-        });
-
-    } catch (error) {
-        console.error('Update profile error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating profile',
-            error: error.message
-        });
     }
-};
+
+    // Notifications
+    if (updatedFields.length > 0) {
+        mailer.sendUpdateNotification(user, updatedFields).catch(err => console.error('Profile update mail error:', err));
+    }
+
+    const updatedUser = await User.findById(userId).select('-password');
+    const updatedBank = await BankAccount.findOne({ userId });
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            user: updatedUser,
+            bankAccount: updatedBank || null
+        }, 'Profile updated successfully')
+    );
+});

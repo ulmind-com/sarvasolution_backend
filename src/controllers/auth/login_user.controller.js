@@ -1,64 +1,43 @@
 import User from '../../models/User.model.js';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import Configs from '../../config/config.js';
-import chalk from 'chalk';
+import { asyncHandler } from '../../utils/asyncHandler.js';
+import { ApiError } from '../../utils/ApiError.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
 
-export const login = async (req, res) => {
-    try {
-        const { memberId, password } = req.body;
+/**
+ * Handle user login
+ */
+export const login = asyncHandler(async (req, res) => {
+    const { memberId, password } = req.body;
 
-        if (!memberId || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide memberId and password'
-            });
-        }
-
-        // Find user by memberId strictly
-        const user = await User.findOne({ memberId });
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
-        }
-
-        // Check password
-        const isMatch = await bcrypt.compare(password, user.password);
-
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials'
-            });
-        }
-
-        // Generate Token
-        const token = jwt.sign(
-            { userId: user._id, memberId: user.memberId, role: user.role },
-            process.env.JWT_SECRET || 'secret',
-            { expiresIn: '7d' }
-        );
-
-        // Convert user to object and remove password
-        const userObj = user.toObject();
-        delete userObj.password;
-
-        res.status(200).json({
-            success: true,
-            message: 'Login successful',
-            token,
-            user: userObj
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error during login',
-            error: error.message
-        });
+    if (!memberId || !password) {
+        throw new ApiError(400, 'Member ID and password are required');
     }
-};
+
+    const user = await User.findOne({ memberId });
+    if (!user) {
+        throw new ApiError(401, 'Invalid credentials');
+    }
+
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+        throw new ApiError(401, 'Invalid credentials');
+    }
+
+    const token = jwt.sign(
+        { userId: user._id, memberId: user.memberId, role: user.role },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '7d' }
+    );
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            token,
+            user: {
+                memberId: user.memberId,
+                fullName: user.fullName,
+                role: user.role
+            }
+        }, "Login successful")
+    );
+});

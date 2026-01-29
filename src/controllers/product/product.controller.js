@@ -1,78 +1,49 @@
 import Product from '../../models/Product.model.js';
 import { uploadToCloudinary } from '../../services/cloudinary.service.js';
+import { asyncHandler } from '../../utils/asyncHandler.js';
+import { ApiError } from '../../utils/ApiError.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
 
-export const createProduct = async (req, res) => {
-    try {
-        const { name, bv, description, price, segment } = req.body;
+/**
+ * Create a new product (Admin only)
+ */
+export const createProduct = asyncHandler(async (req, res) => {
+    const { name, bv, description, price, segment } = req.body;
 
-        // Validation
-        if (!name || !bv || !price || !segment) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name, BV, Price, and Segment are required'
-            });
-        }
-
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'Product image is required'
-            });
-        }
-
-        // Upload to Cloudinary
-        let image = { url: '', publicId: '' };
-        try {
-            const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/products');
-            image = uploadResult;
-        } catch (uploadError) {
-            console.error('Product image upload error:', uploadError);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to upload product image',
-                error: uploadError.message
-            });
-        }
-
-        const newProduct = new Product({
-            name,
-            bv: Number(bv),
-            description,
-            price: Number(price),
-            segment,
-            image
-        });
-
-        await newProduct.save();
-
-        res.status(201).json({
-            success: true,
-            message: 'Product created successfully',
-            data: newProduct
-        });
-
-    } catch (error) {
-        console.error('Create product error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error creating product',
-            error: error.message
-        });
+    // Validation
+    if (!name || !bv || !price || !segment) {
+        throw new ApiError(400, 'Name, BV, Price, and Segment are required');
     }
-};
 
-export const getProducts = async (req, res) => {
-    try {
-        const products = await Product.find({ isActive: true });
-        res.status(200).json({
-            success: true,
-            data: products
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Server error fetching products',
-            error: error.message
-        });
+    if (!req.file) {
+        throw new ApiError(400, 'Product image is required');
     }
-};
+
+    // Upload to Cloudinary
+    const image = await uploadToCloudinary(req.file.buffer, 'sarvasolution/products');
+
+    const newProduct = new Product({
+        name,
+        bv: Number(bv),
+        description,
+        price: Number(price),
+        segment,
+        image
+    });
+
+    await newProduct.save();
+
+    return res.status(201).json(
+        new ApiResponse(201, newProduct, 'Product created successfully')
+    );
+});
+
+/**
+ * Get all active products
+ */
+export const getProducts = asyncHandler(async (req, res) => {
+    const products = await Product.find({ isActive: true });
+    return res.status(200).json(
+        new ApiResponse(200, products, 'Products fetched successfully')
+    );
+});
