@@ -8,6 +8,7 @@ import errorHandler from './middlewares/errorHandler.js';
 import routes from './routes/index.js';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', routes);
 app.use('/api/v1', authRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 app.get('/', (req, res) => {
     res.send('API is running...');

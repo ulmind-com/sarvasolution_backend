@@ -79,45 +79,37 @@ export const register = async (req, res) => {
         const body = req.body || {};
 
         let {
-            username,
             email,
             password,
             fullName,
             phone,
             sponsorId,
-            joiningPackage,
-            preferredPosition,
-            bankDetails,
-            address
+            panCardNumber
         } = body;
 
-        // Handle nested objects if sent as strings via FormData
-        try {
-            if (typeof bankDetails === 'string' && bankDetails.trim().startsWith('{')) {
-                bankDetails = JSON.parse(bankDetails);
-            }
-            if (typeof address === 'string' && address.trim().startsWith('{')) {
-                address = JSON.parse(address);
-            }
-        } catch (e) {
-            console.error('Error parsing JSON fields in body:', e);
-        }
-
         // Validation
-        if (!username || !email || !password || !fullName || !phone || !sponsorId || !joiningPackage) {
+        if (!email || !password || !fullName || !phone || !sponsorId || !panCardNumber) {
             return res.status(400).json({
                 success: false,
-                message: 'All fields (username, email, password, fullName, phone, sponsorId, joiningPackage) are required. Please check if your request method is multipart/form-data and includes these fields.',
-                debug: { bodyReceivedKeys: Object.keys(body) }
+                message: 'Points required: sponsorId, email, phone, fullName, panCardNumber, password.'
             });
         }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+        // Check if phone or username (though we generate it) already exists
+        const existingUser = await User.findOne({ phone });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'User already exists with this email or username'
+                message: 'Phone number already registered'
+            });
+        }
+
+        // Check PAN card usage limit (Max 3)
+        const panCount = await User.countDocuments({ panCardNumber: panCardNumber.toUpperCase() });
+        if (panCount >= 3) {
+            return res.status(400).json({
+                success: false,
+                message: 'Maximum 3 accounts allowed per PAN card'
             });
         }
 
@@ -130,56 +122,37 @@ export const register = async (req, res) => {
             });
         }
 
-        // Handle Profile Picture Upload
-        let profilePicture = {
-            url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s',
-            publicId: null
-        };
-
-        if (req.file) {
-            try {
-                const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
-                profilePicture = uploadResult;
-            } catch (uploadError) {
-                console.error('Cloudinary upload error:', uploadError);
-            }
-        }
-
-        // Find available position in binary tree
-        const placement = await findAvailablePosition(sponsorId, preferredPosition);
+        // Find available position in binary tree (default to spillover/extreme left)
+        const placement = await findAvailablePosition(sponsorId);
 
         // Generate unique member ID
         const memberId = await User.generateMemberId();
 
-        // Set PV based on joining package (10% of package amount)
-        const personalPV = Number(joiningPackage) * 0.1;
+        // Default Package Settings (Minimal entry)
+        const joiningPackage = 500;
+        const personalPV = joiningPackage * 0.1;
 
         // Create new user
         const newUser = new User({
-            username,
+            username: memberId, // Use memberId as default username
             email,
             password,
             fullName,
             phone,
             memberId,
             sponsorId,
+            panCardNumber,
             parentId: placement.parentId,
             position: placement.position,
-            joiningPackage: Number(joiningPackage),
+            joiningPackage,
             personalPV,
             totalPV: personalPV,
-            address: address || {},
-            profilePicture,
-            dailyCap: Number(joiningPackage) * 5,
-            weeklyCap: Number(joiningPackage) * 30,
-            monthlyCap: Number(joiningPackage) * 100
+            dailyCap: joiningPackage * 5,
+            weeklyCap: joiningPackage * 30,
+            monthlyCap: joiningPackage * 100
         });
 
         await newUser.save();
-
-        const bankAccountData = bankDetails || {};
-        const newBankAccount = new BankAccount({ ...bankAccountData, userId: newUser._id });
-        await newBankAccount.save();
 
         // Update parent's child reference
         const parentNode = await User.findOne({ memberId: placement.parentId });
@@ -204,15 +177,12 @@ export const register = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: req.file && profilePicture.url.includes('encrypted-tbn0')
-                ? 'Registration successful but profile picture upload failed'
-                : 'Registration successful',
+            message: 'Registration successful',
             data: {
                 memberId: newUser.memberId,
-                username: newUser.username,
+                fullName: newUser.fullName,
                 email: newUser.email,
-                token,
-                warning: req.file && profilePicture.url.includes('encrypted-tbn0') ? 'Image upload timed out' : null
+                token
             }
         });
 
