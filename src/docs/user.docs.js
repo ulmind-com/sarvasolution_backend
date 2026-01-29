@@ -1,0 +1,85 @@
+/**
+ * @swagger
+ * tags:
+ *   name: User Financials
+ *   description: BV summaries, fund tracking, and payout management
+ */
+
+/**
+ * @swagger
+ * /user/bv-summary:
+ *   get:
+ *     summary: Get BV balance and transaction history
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: BV Summary fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     summary: { $ref: '#/components/schemas/User' }
+ *                     recentTransactions: { type: array, items: { $ref: '#/components/schemas/BVTransaction' } }
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+
+/**
+ * @swagger
+ * /user/funds-status:
+ *   get:
+ *     summary: Get status of all 4 Funds (Bike, House, Royalty, Super)
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Funds status fetched
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+
+/**
+ * @swagger
+ * /user/wallet:
+ *   get:
+ *     summary: Get wallet balance and payout history
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Wallet info fetched
+ */
+
+/**
+ * @swagger
+ * /user/request-payout:
+ *   post:
+ *     summary: Request a withdrawal (Payout)
+ *     description: Minimum withdrawal is ₹450. Processing occurs every Friday at 11 AM IST.
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [amount]
+ *             properties:
+ *               amount: { type: number, example: 500 }
+ *     responses:
+ *       201:
+ *         description: Payout request submitted
+ *       400:
+ *         description: Insufficient balance or below minimum
+ */

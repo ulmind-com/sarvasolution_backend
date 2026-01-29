@@ -137,6 +137,53 @@
  *     responses:
  *       200:
  *         description: KYC status updated
- *       400:
- *         $ref: '#/components/responses/BadRequest'
+ * 
+ * /api/v1/admin/dashboard-metrics:
+ *   get:
+ *     summary: Get global system metrics (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Analytics summary fetched
+ * 
+ * /api/v1/admin/payouts/process-bulk:
+ *   post:
+ *     summary: Bulk process pending payouts (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               payoutIds: { type: array, items: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Payouts processed
+ * 
+ * /api/v1/admin/bv/allocate-manual:
+ *   post:
+ *     summary: Manually adjust/allocate BV to a user (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [memberId, bvAmount, leg]
+ *             properties:
+ *               memberId: { type: string }
+ *               bvAmount: { type: number }
+ *               leg: { type: string, enum: [left, right, personal] }
+ *     responses:
+ *       200:
+ *         description: BV allocated
  */

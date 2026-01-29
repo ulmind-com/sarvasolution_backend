@@ -7,54 +7,39 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
 import jwt from 'jsonwebtoken';
 
 /**
- * Handle new user registration
+ * Handle new user registration in SSVPL System
  */
 export const register = asyncHandler(async (req, res) => {
-    const body = req.body || {};
-
-    let {
+    const {
         email,
         password,
         fullName,
         phone,
         sponsorId,
-        panCardNumber
-    } = body;
+        panCardNumber,
+        preferredPosition
+    } = req.body;
 
-    // Validation
+    // 1. Validation
     if (!email || !password || !fullName || !phone || !sponsorId || !panCardNumber) {
-        throw new ApiError(400, 'All fields are required: sponsorId, email, phone, fullName, panCardNumber, password.');
+        throw new ApiError(400, 'Required: sponsorId, email, phone, fullName, panCardNumber, password.');
     }
 
-    // Check if phone already exists
     const existingUser = await User.findOne({ phone });
-    if (existingUser) {
-        throw new ApiError(400, 'Phone number already registered');
-    }
+    if (existingUser) throw new ApiError(400, 'Phone number already registered');
 
-    // Check PAN card usage limit (Max 3)
     const panCount = await User.countDocuments({ panCardNumber: panCardNumber.toUpperCase() });
-    if (panCount >= 3) {
-        throw new ApiError(400, 'Maximum 3 accounts allowed per PAN card');
-    }
+    if (panCount >= 3) throw new ApiError(400, 'Maximum 3 accounts allowed per PAN card');
 
-    // Verify sponsor exists
     const sponsor = await User.findOne({ memberId: sponsorId });
-    if (!sponsor) {
-        throw new ApiError(400, 'Invalid sponsor ID. Sponsor does not exist.');
-    }
+    if (!sponsor) throw new ApiError(400, 'Invalid sponsor ID.');
 
-    // Find available position in binary tree (Genealogy Logic moved to Service)
-    const placement = await mlmService.findAvailablePosition(sponsorId);
-
-    // Generate unique member ID
+    // 2. Genealogy Placement
+    const placement = await mlmService.findAvailablePosition(sponsorId, preferredPosition);
     const memberId = await User.generateMemberId();
 
-    // Default Package Settings
-    const joiningPackage = 500;
-    const personalPV = joiningPackage * 0.1;
-
-    // Create new user
+    // 3. User Creation (SSVPL default: 500 BV Package)
+    const joiningPackageBV = 500;
     const newUser = new User({
         username: memberId,
         email,
@@ -66,20 +51,25 @@ export const register = asyncHandler(async (req, res) => {
         panCardNumber: panCardNumber.toUpperCase(),
         parentId: placement.parentId,
         position: placement.position,
-        joiningPackage,
-        personalPV,
-        totalPV: personalPV,
-        dailyCap: joiningPackage * 5,
-        weeklyCap: joiningPackage * 30,
-        monthlyCap: joiningPackage * 100
+        personalBV: joiningPackageBV,
+        totalBV: joiningPackageBV,
+        thisMonthBV: joiningPackageBV,
+        thisYearBV: joiningPackageBV
     });
 
     await newUser.save();
 
-    // Send Welcome Email with PDF (Non-blocking)
-    mailer.sendWelcome(newUser).catch(err => console.error('Failed to send welcome email:', err));
+    // 4. Update Sponsor's Direct Sponsors count
+    if (sponsor) {
+        sponsor.directSponsors.count += 1;
+        sponsor.directSponsors.members.push(newUser.memberId);
+        if (sponsor.directSponsors.count >= 2) {
+            sponsor.directSponsors.eligibleForBonuses = true;
+        }
+        await sponsor.save();
+    }
 
-    // Update parent's child reference
+    // 5. Update parent's child reference
     const parentNode = await User.findOne({ memberId: placement.parentId });
     if (parentNode) {
         if (placement.position === 'left') {
@@ -90,10 +80,18 @@ export const register = asyncHandler(async (req, res) => {
         await parentNode.save();
     }
 
-    // Update upline PVs (Logic moved to Service)
-    await mlmService.updateUplinePV(placement.parentId, placement.position, personalPV);
+    // 5. BV Propagation & Tracking
+    await mlmService.propagateBVUpTree(
+        newUser._id,
+        placement.position,
+        joiningPackageBV,
+        'joining',
+        `REG-${newUser.memberId}`
+    );
 
-    // Generate JWT token
+    // 6. Notifications & JWT
+    mailer.sendWelcome(newUser).catch(e => console.error('Welcome Email Error:', e));
+
     const token = jwt.sign(
         { userId: newUser._id, memberId: newUser.memberId, role: newUser.role },
         process.env.JWT_SECRET || 'secret',
@@ -104,8 +102,7 @@ export const register = asyncHandler(async (req, res) => {
         new ApiResponse(201, {
             memberId: newUser.memberId,
             fullName: newUser.fullName,
-            email: newUser.email,
             token
-        }, 'Registration successful')
+        }, 'Registration successful in SSVPL System')
     );
 });
