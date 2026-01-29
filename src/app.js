@@ -6,36 +6,38 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
 import errorHandler from './middlewares/errorHandler.js';
 import routes from './routes/index.js';
-import authRoutes from './routes/authRoutes.js';
-import productRoutes from './routes/productRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 
-// Middleware
+/**
+ * Standard Middlewares
+ */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet({
-    contentSecurityPolicy: false, // Disable CSP to allow Swagger UI inline scripts and styles
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(morgan('dev'));
 
-// Swagger Docs
+/**
+ * documentation
+ */
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Routes
-app.use('/api', routes);
-app.use('/api/v1', authRoutes);
-app.use('/api/v1/products', productRoutes);
-app.use('/api/v1/admin', adminRoutes);
+/**
+ * Centralized v1 Routes
+ */
+app.use('/api/v1', routes);
 
 app.get('/', (req, res) => {
-    res.send('API is running...');
+    res.json({ message: 'SarvaSolution Backend API is active' });
 });
 
-// Error Handler
+/**
+ * Global Error Handling Middleware
+ */
 app.use(errorHandler);
 
 export default app;
