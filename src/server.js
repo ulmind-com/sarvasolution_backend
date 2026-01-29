@@ -5,8 +5,11 @@ import app from './app.js';
 import connectDB from './config/db.js';
 import Configs from './config/config.js';
 import chalk from 'chalk';
+import { initCrons } from './services/cron.service.js';
 
-connectDB();
+connectDB().then(() => {
+    initCrons();
+});
 
 const PORT = Configs.PORT || 8000;
 

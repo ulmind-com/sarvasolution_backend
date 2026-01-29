@@ -24,6 +24,8 @@
  *       properties:
  *         _id:
  *           type: string
+ *         memberId:
+ *           type: string
  *         username:
  *           type: string
  *         email:
@@ -34,27 +36,72 @@
  *           type: string
  *         panCardNumber:
  *           type: string
- *         memberId:
- *           type: string
  *         sponsorId:
  *           type: string
  *         parentId:
  *           type: string
  *         position:
  *           type: string
- *         joiningPackage:
+ *           enum: [left, right, root]
+ *         currentRank:
+ *           type: string
+ *         starMatching:
  *           type: number
- *         role:
- *           type: string
- *         rank:
- *           type: string
- *         profilePicture:
+ *         personalBV:
+ *           type: number
+ *         leftLegBV:
+ *           type: number
+ *         rightLegBV:
+ *           type: number
+ *         totalBV:
+ *           type: number
+ *         wallet:
  *           type: object
  *           properties:
- *             url:
- *               type: string
- *             publicId:
- *               type: string
+ *             totalEarnings:
+ *               type: number
+ *             availableBalance:
+ *               type: number
+ *         status:
+ *           type: string
+ *           enum: [active, inactive, suspended]
+ * 
+ *     Payout:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         memberId:
+ *           type: string
+ *         payoutType:
+ *           type: string
+ *         grossAmount:
+ *           type: number
+ *         adminCharge:
+ *           type: number
+ *         netAmount:
+ *           type: number
+ *         status:
+ *           type: string
+ *           enum: [pending, processing, completed, failed]
+ *         scheduledFor:
+ *           type: string
+ *           format: date-time
+ * 
+ *     BVTransaction:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         transactionType:
+ *           type: string
+ *         bvAmount:
+ *           type: number
+ *         legAffected:
+ *           type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
  * 
  *     Product:
  *       type: object

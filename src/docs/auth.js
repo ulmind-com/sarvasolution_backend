@@ -2,7 +2,10 @@
  * @swagger
  * /api/v1/register/user:
  *   post:
- *     summary: Register a new user (Simplified - 6 fields)
+ *     summary: Register a new user in the SSVPL System (6 fields)
+ *     description: |
+ *       **Mandatory Step**: All users must register through this endpoint before they can access the system.
+ *       Upon registration, the user is placed in the binary tree (Genealogy) and assigned an initial 500 BV package.
  *     tags:
  *       - Auth
  *     requestBody:
@@ -55,7 +58,8 @@
  * 
  * /api/v1/login/user:
  *   post:
- *     summary: Login user (Using memberId)
+ *     summary: User Login (Mandatory Registration Required)
+ *     description: Authenticate using the Member ID (SVSxxxxxx) generated during registration and the chosen password.
  *     tags:
  *       - Auth
  *     requestBody:

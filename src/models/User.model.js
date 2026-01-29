@@ -3,251 +3,197 @@ import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema({
     // Basic Information
-    username: {
-        type: String,
-        trim: true,
-        lowercase: true
-    },
-    email: {
-        type: String,
-        required: true,
-        trim: true,
-        lowercase: true
-    },
-    password: {
-        type: String,
-        required: true,
-        minlength: 6
-    },
-    fullName: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    phone: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true
-    },
-    panCardNumber: {
-        type: String,
-        trim: true,
-        uppercase: true
-    },
+    username: { type: String, trim: true, lowercase: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    password: { type: String, required: true, minlength: 6 },
+    fullName: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, unique: true, trim: true },
+    panCardNumber: { type: String, trim: true, uppercase: true },
 
     // MLM Structure
-    memberId: {
+    memberId: { type: String, unique: true, required: true },
+    sponsorId: { type: String, default: null },
+    parentId: { type: String, default: null },
+    position: { type: String, enum: ['left', 'right', 'root'], default: null },
+    leftChild: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    rightChild: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+
+    // BV Tracking System (SSVPL Standard)
+    personalBV: { type: Number, default: 0 },
+    leftLegBV: { type: Number, default: 0 },
+    rightLegBV: { type: Number, default: 0 },
+    totalBV: { type: Number, default: 0 },
+    thisMonthBV: { type: Number, default: 0 },
+    thisYearBV: { type: Number, default: 0 },
+    carryForwardLeft: { type: Number, default: 0 },
+    carryForwardRight: { type: Number, default: 0 },
+    lastBVUpdate: { type: Date, default: Date.now },
+
+    // 4 Fund Systems (Image 1)
+    bikeCarFund: {
+        units: { type: Number, default: 0 },
+        totalBVContributed: { type: Number, default: 0 },
+        lastAchieved: Date,
+        nextTargetBV: { type: Number, default: 100000 }
+    },
+    houseFund: {
+        units: { type: Number, default: 0 },
+        totalBVContributed: { type: Number, default: 0 },
+        lastAchieved: Date,
+        nextTargetBV: { type: Number, default: 250000 },
+        paymentSchedule: { type: String, default: 'half-yearly' }
+    },
+    royaltyFund: {
+        units: { type: Number, default: 0 },
+        totalBVContributed: { type: Number, default: 0 },
+        lastAchieved: Date,
+        nextTargetBV: { type: Number, default: 750000 },
+        paymentSchedule: { type: String, default: 'annual' }
+    },
+    ssvplSuperBonus: {
+        units: { type: Number, default: 0 },
+        totalBVContributed: { type: Number, default: 0 },
+        lastAchieved: Date,
+        nextTargetBV: { type: Number, default: 2500000 }
+    },
+
+    // 13 Rank System (Image 8)
+    currentRank: {
         type: String,
-        unique: true,
-        required: true
+        default: 'Associate',
+        enum: [
+            'Associate', 'Bronze', 'Silver', 'Gold', 'Platinum',
+            'Diamond', 'Blue Diamond', 'Black Diamond', 'Royal Diamond',
+            'Crown Diamond', 'Ambassador', 'Crown Ambassador', 'SSVPL Legend'
+        ]
     },
-    sponsorId: {
-        type: String,
-        ref: 'User',
-        default: null
+    rankNumber: { type: Number, default: 14 }, // 13 is lowest (Bronze), 1 is highest (Legend)
+    starMatching: { type: Number, default: 0 },
+    rankBonus: { type: Number, default: 0 },
+    achievedDate: Date,
+    nextRankRequirement: { type: String },
+    rankHistory: [{
+        rank: String,
+        date: { type: Date, default: Date.now }
+    }],
+
+    // Repurchase Bonus Tracking (Image 7)
+    selfPurchase: {
+        totalPurchases: { type: Number, default: 0 },
+        lastPurchaseDate: Date,
+        thisMonthBV: { type: Number, default: 0 },
+        bonusEarned: { type: Number, default: 0 },
+        eligibleForPrize: { type: Boolean, default: false }
     },
-    parentId: {
-        type: String,
-        ref: 'User',
-        default: null
+    beginnerBonus: {
+        units: { type: Number, default: 0 },
+        cappingReached: { type: Number, default: 0 },
+        cappingLimit: { type: Number, default: 10 },
+        totalBV: { type: Number, default: 0 }
     },
-    position: {
-        type: String,
-        enum: ['left', 'right', 'root'],
-        default: null
+    startUpBonus: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
+    leadershipBonus: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
+    tourFund: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
+    healthEducation: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
+
+    // Bonus Income Tracking (Fast Track & Matching)
+    fastTrack: {
+        dailyEarnings: { type: Number, default: 0 },
+        weeklyEarnings: { type: Number, default: 0 },
+        monthlyEarnings: { type: Number, default: 0 },
+        totalEarned: { type: Number, default: 0 },
+        dailyClosings: { type: Number, default: 0 }
+    },
+    starMatchingBonus: { // Refined field name
+        dailyEarnings: { type: Number, default: 0 },
+        weeklyEarnings: { type: Number, default: 0 },
+        monthlyEarnings: { type: Number, default: 0 },
+        totalEarned: { type: Number, default: 0 },
+        dailyClosings: { type: Number, default: 0 }
     },
 
-    // Genealogy Tree References
-    leftChild: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null
+    // Stock Points (Image 1)
+    lsp: {
+        achieved: { type: Boolean, default: false },
+        achievedDate: Date,
+        currentBV: { type: Number, default: 0 },
+        targetBV: { type: Number, default: 100000 }
     },
-    rightChild: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: null
-    },
-
-    // Package & Financial
-    joiningPackage: {
-        type: Number,
-        enum: [500, 1000, 2000, 5000, 10000], // Define your packages
-        default: 500
-    },
-    joiningDate: {
-        type: Date,
-        default: Date.now
+    msp: {
+        achieved: { type: Boolean, default: false },
+        achievedDate: Date,
+        currentBV: { type: Number, default: 0 },
+        targetBV: { type: Number, default: 500000 }
     },
 
-    // Point Values (PV)
-    personalPV: {
-        type: Number,
-        default: 0
+    // Compliance & Wallet
+    directSponsors: {
+        count: { type: Number, default: 0 },
+        members: [{ type: String }], // Array of memberIds
+        eligibleForBonuses: { type: Boolean, default: false }
     },
-    leftLegPV: {
-        type: Number,
-        default: 0
+    compliance: {
+        minimumWithdrawal: { type: Number, default: 450 },
+        adminChargePercent: { type: Number, default: 5 },
+        tdsPercent: { type: Number, default: 0 }, // Set per region/rule
+        autoRankUpgrade: { type: Boolean, default: true }
     },
-    rightLegPV: {
-        type: Number,
-        default: 0
-    },
-    totalPV: {
-        type: Number,
-        default: 0
-    },
-
-    // Commission Tracking
-    totalCommission: {
-        type: Number,
-        default: 0
-    },
-    withdrawnCommission: {
-        type: Number,
-        default: 0
-    },
-    pendingCommission: {
-        type: Number,
-        default: 0
+    wallet: {
+        totalEarnings: { type: Number, default: 0 },
+        availableBalance: { type: Number, default: 0 },
+        withdrawnAmount: { type: Number, default: 0 },
+        pendingWithdrawal: { type: Number, default: 0 }
     },
 
-    // Carry Forward (for unmatched PV)
-    carryForwardLeft: {
-        type: Number,
-        default: 0
-    },
-    carryForwardRight: {
-        type: Number,
-        default: 0
-    },
-
-    // Binary Capping
-    dailyCap: {
-        type: Number,
-        default: 5000 // Set based on joining package
-    },
-    weeklyCap: {
-        type: Number,
-        default: 30000
-    },
-    monthlyCap: {
-        type: Number,
-        default: 100000
-    },
-
-    // Status & Rank
-    status: {
-        type: String,
-        enum: ['active', 'inactive', 'suspended'],
-        default: 'active'
-    },
-    rank: {
-        type: String,
-        default: 'Member',
-        enum: ['Member', 'Silver', 'Gold', 'Platinum', 'Diamond']
-    },
-    role: {
-        type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
-    },
-
-    // Banking Details
-    // bankDetails: {
-    //     accountName: String,
-    //     accountNumber: String,
-    //     bankName: String,
-    //     ifscCode: String,
-    //     branch: String
-    // },
-
-    // Address
+    // Profile & KYC (Preserved)
     address: {
-        street: String,
-        city: String,
-        state: String,
-        country: String,
-        zipCode: String
+        street: String, city: String, state: String, country: String, zipCode: String
     },
-
-    // KYC Information
     kyc: {
-        status: {
-            type: String,
-            enum: ['none', 'pending', 'verified', 'rejected'],
-            default: 'none'
-        },
-        aadhaarNumber: {
-            type: String,
-            trim: true
-        },
-        aadhaarFront: {
-            url: String,
-            publicId: String
-        },
-        aadhaarBack: {
-            url: String,
-            publicId: String
-        },
-        panImage: {
-            url: String,
-            publicId: String
-        },
+        status: { type: String, enum: ['none', 'pending', 'verified', 'rejected'], default: 'none' },
+        aadhaarNumber: { type: String, trim: true },
+        aadhaarFront: { url: String, publicId: String },
+        aadhaarBack: { url: String, publicId: String },
+        panImage: { url: String, publicId: String },
         submittedAt: Date,
         verifiedAt: Date,
         rejectionReason: String
     },
-
-    // Profile Picture
     profilePicture: {
-        url: {
-            type: String,
-            default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s'
-        },
-        publicId: {
-            type: String,
-            default: null
-        }
+        url: { type: String, default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s' },
+        publicId: { type: String, default: null }
     },
-
-    // Metadata
-    isEmailVerified: {
-        type: Boolean,
-        default: false
-    },
-    emailVerificationToken: String,
-    passwordResetToken: String,
-    passwordResetExpires: Date
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'active' }
 
 }, {
-    timestamps: true // Automatically adds createdAt and updatedAt
+    timestamps: true
 });
 
-// Hash password before saving
+// Password Hashing
 userSchema.pre('save', async function () {
     if (!this.isModified('password')) return;
     this.password = await bcrypt.hash(this.password, 12);
 });
 
-// Compare password method
+// Compare Password
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Generate unique member ID
 userSchema.statics.generateMemberId = async function () {
-    // Use try-catch or ensure we can access model within static context
-    // 'this' refers to the model
     const count = await this.countDocuments();
-    return `SVS${String(count + 1).padStart(6, '0')}`; // SVS000001, SVS000002...
+    return `SVS${String(count + 1).padStart(6, '0')}`;
 };
 
-// Add indexes
+// Indexes
 userSchema.index({ sponsorId: 1 });
 userSchema.index({ parentId: 1 });
 userSchema.index({ panCardNumber: 1 });
+userSchema.index({ phone: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ memberId: 1 }, { unique: true });
 
 const User = mongoose.model('User', userSchema);
 export default User;

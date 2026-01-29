@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './authRoutes.js';
 import productRoutes from './productRoutes.js';
 import adminRoutes from './adminRoutes.js';
+import userRoutes from './userRoutes.js';
 
 const router = express.Router();
 
@@ -13,8 +14,9 @@ router.get('/health', (req, res) => {
 });
 
 // Mounted at /api/v1
-router.use('/', authRoutes); // Handles /register/user, /login/user, /profile, /kyc/submit
+router.use('/', authRoutes);
 router.use('/products', productRoutes);
 router.use('/admin', adminRoutes);
+router.use('/user', userRoutes);
 
 export default router;
