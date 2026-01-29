@@ -13,7 +13,10 @@ const getTransporter = () => {
             auth: {
                 user: process.env.MAIL_ADDRESS,
                 pass: process.env.MAIL_PASSWORD
-            }
+            },
+            connectionTimeout: 15000, // 15 seconds
+            greetingTimeout: 10000,   // 10 seconds
+            socketTimeout: 30000      // 30 seconds
         });
     }
     return transporter;
