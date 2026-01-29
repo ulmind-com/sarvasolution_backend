@@ -1,4 +1,5 @@
 import User from '../../models/User.model.js';
+import { mailer } from '../../services/mail.service.js';
 import BankAccount from '../../models/BankAccount.model.js';
 import jwt from 'jsonwebtoken';
 import Configs from '../../config/config.js';
@@ -141,7 +142,7 @@ export const register = async (req, res) => {
             phone,
             memberId,
             sponsorId,
-            panCardNumber,
+            panCardNumber: panCardNumber.toUpperCase(),
             parentId: placement.parentId,
             position: placement.position,
             joiningPackage,
@@ -153,6 +154,9 @@ export const register = async (req, res) => {
         });
 
         await newUser.save();
+
+        // Send Welcome Email with PDF (Non-blocking)
+        mailer.sendWelcome(newUser).catch(err => console.error('Failed to send welcome email:', err));
 
         // Update parent's child reference
         const parentNode = await User.findOne({ memberId: placement.parentId });

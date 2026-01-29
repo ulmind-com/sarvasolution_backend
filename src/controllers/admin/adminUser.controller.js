@@ -1,5 +1,6 @@
 import User from '../../models/User.model.js';
 import BankAccount from '../../models/BankAccount.model.js';
+import { mailer } from '../../services/mail.service.js';
 
 /**
  * Get all users with basic details
@@ -89,11 +90,21 @@ export const updateUserByAdmin = async (req, res) => {
             updates.panCardNumber = updates.panCardNumber.toUpperCase();
         }
 
+        // Track updates for notification
+        const updatedFields = [];
+        Object.keys(updates).forEach(key => {
+            if (updates[key] !== user[key]) {
+                updatedFields.push(key.charAt(0).toUpperCase() + key.slice(1));
+            }
+        });
+
         // Apply updates
-        // Note: In a real system, you'd want to be more selective about what fields admin can update directly here
-        // or handle nested objects (address, bankDetails) properly.
         Object.assign(user, updates);
         await user.save();
+
+        if (updatedFields.length > 0) {
+            mailer.sendUpdateNotification(user, updatedFields).catch(err => console.error('Admin update mail error:', err));
+        }
 
         const updatedUser = await User.findOne({ memberId }).select('-password');
 
@@ -143,6 +154,9 @@ export const verifyKYC = async (req, res) => {
         user.kyc.rejectionReason = status === 'rejected' ? rejectionReason : null;
 
         await user.save();
+
+        // Send Status Update Email (Non-blocking)
+        mailer.sendKYCStatusUpdate(user, status, rejectionReason).catch(err => console.error('KYC verify mail error:', err));
 
         res.status(200).json({
             success: true,
