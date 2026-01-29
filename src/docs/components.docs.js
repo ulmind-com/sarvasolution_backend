@@ -32,6 +32,8 @@
  *           type: string
  *         phone:
  *           type: string
+ *         panCardNumber:
+ *           type: string
  *         memberId:
  *           type: string
  *         sponsorId:

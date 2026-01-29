@@ -6,23 +6,17 @@ import chalk from 'chalk';
 
 export const login = async (req, res) => {
     try {
-        const { identifier, password } = req.body;
+        const { memberId, password } = req.body;
 
-        if (!identifier || !password) {
+        if (!memberId || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Please provide email/memberId and password'
+                message: 'Please provide memberId and password'
             });
         }
 
-        // Find user by email or memberId
-        // Using $or operator to check both fields
-        const user = await User.findOne({
-            $or: [
-                { email: identifier },
-                { memberId: identifier }
-            ]
-        });
+        // Find user by memberId strictly
+        const user = await User.findOne({ memberId });
 
         if (!user) {
             return res.status(401).json({

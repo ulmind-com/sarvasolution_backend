@@ -5,15 +5,12 @@ const userSchema = new mongoose.Schema({
     // Basic Information
     username: {
         type: String,
-        required: true,
-        unique: true,
         trim: true,
         lowercase: true
     },
     email: {
         type: String,
         required: true,
-        unique: true,
         trim: true,
         lowercase: true
     },
@@ -30,7 +27,14 @@ const userSchema = new mongoose.Schema({
     phone: {
         type: String,
         required: true,
+        unique: true,
         trim: true
+    },
+    panCardNumber: {
+        type: String,
+        required: true,
+        trim: true,
+        uppercase: true
     },
 
     // MLM Structure
@@ -70,8 +74,8 @@ const userSchema = new mongoose.Schema({
     // Package & Financial
     joiningPackage: {
         type: Number,
-        required: true,
-        enum: [500, 1000, 2000, 5000, 10000] // Define your packages
+        enum: [500, 1000, 2000, 5000, 10000], // Define your packages
+        default: 500
     },
     joiningDate: {
         type: Date,
@@ -169,6 +173,34 @@ const userSchema = new mongoose.Schema({
         zipCode: String
     },
 
+    // KYC Information
+    kyc: {
+        status: {
+            type: String,
+            enum: ['none', 'pending', 'verified', 'rejected'],
+            default: 'none'
+        },
+        aadhaarNumber: {
+            type: String,
+            trim: true
+        },
+        aadhaarFront: {
+            url: String,
+            publicId: String
+        },
+        aadhaarBack: {
+            url: String,
+            publicId: String
+        },
+        panImage: {
+            url: String,
+            publicId: String
+        },
+        submittedAt: Date,
+        verifiedAt: Date,
+        rejectionReason: String
+    },
+
     // Profile Picture
     profilePicture: {
         url: {
@@ -216,6 +248,9 @@ userSchema.statics.generateMemberId = async function () {
 // Add indexes
 userSchema.index({ sponsorId: 1 });
 userSchema.index({ parentId: 1 });
+userSchema.index({ panCardNumber: 1 });
+userSchema.index({ phone: 1 });
+userSchema.index({ email: 1 }); // Optional but good for searching
 
 const User = mongoose.model('User', userSchema);
 export default User;

@@ -19,4 +19,11 @@ const upload = multer({
 
 export const uploadSingle = upload.single('profilePicture');
 export const uploadProductImage = upload.single('productImage');
+
+export const uploadKYC = upload.fields([
+    { name: 'aadhaarFront', maxCount: 1 },
+    { name: 'aadhaarBack', maxCount: 1 },
+    { name: 'panImage', maxCount: 1 }
+]);
+
 export { upload }; // Export the existing multer instance

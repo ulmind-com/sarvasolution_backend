@@ -2,26 +2,23 @@
  * @swagger
  * /api/v1/register/user:
  *   post:
- *     summary: Register a new user in the Binary MLM system
+ *     summary: Register a new user (Simplified - 6 fields)
  *     tags:
  *       - Auth
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
  *             required:
- *               - username
  *               - email
  *               - password
  *               - fullName
  *               - phone
  *               - sponsorId
- *               - joiningPackage
+ *               - panCardNumber
  *             properties:
- *               username:
- *                 type: string
  *               email:
  *                 type: string
  *               password:
@@ -32,40 +29,8 @@
  *                 type: string
  *               sponsorId:
  *                 type: string
- *               joiningPackage:
- *                 type: number
- *                 enum: [500, 1000, 2000, 5000, 10000]
- *               preferredPosition:
+ *               panCardNumber:
  *                 type: string
- *                 enum: [left, right]
- *               profilePicture:
- *                 type: string
- *                 format: binary
- *                 description: Profile image file
- *               bankDetails:
- *                 type: object
- *                 properties:
- *                   accountName:
- *                     type: string
- *                   accountNumber:
- *                     type: string
- *                   bankName:
- *                     type: string
- *                   ifscCode:
- *                     type: string
- *               address:
- *                 type: object
- *                 properties:
- *                   street:
- *                     type: string
- *                   city:
- *                     type: string
- *                   state:
- *                     type: string
- *                   country:
- *                     type: string
- *                   zipCode:
- *                     type: string
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -86,13 +51,11 @@
  *                     token:
  *                       type: string
  *       400:
- *         description: Bad request (validation error, user exists)
- *       500:
- *         description: Server error
+ *         $ref: '#/components/responses/BadRequest'
  * 
  * /api/v1/login/user:
  *   post:
- *     summary: Login user
+ *     summary: Login user (Using memberId)
  *     tags:
  *       - Auth
  *     requestBody:
@@ -102,16 +65,14 @@
  *           schema:
  *             type: object
  *             required:
- *               - identifier
+ *               - memberId
  *               - password
  *             properties:
- *               identifier:
+ *               memberId:
  *                 type: string
- *                 description: Email or Member ID
- *                 example: rootadmin
+ *                 example: SVS000001
  *               password:
  *                 type: string
- *                 description: User password
  *                 example: adminpassword123
  *     responses:
  *       200:
@@ -128,20 +89,9 @@
  *                 token:
  *                   type: string
  *                 user:
- *                   type: object
- *                   properties:
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
- *                     role:
- *                       type: string
- *                     memberId:
- *                       type: string
- *       400:
- *         description: Missing credentials
+ *                   $ref: '#/components/schemas/User'
  *       401:
- *         description: Invalid credentials
+ *         $ref: '#/components/responses/Unauthorized'
  * 
  * /api/v1/profile:
  *   get:
@@ -164,20 +114,91 @@
  *                   type: object
  *                   properties:
  *                     user:
- *                       type: object
+ *                       $ref: '#/components/schemas/User'
  *                     bankAccount:
  *                       type: object
- *                       properties:
- *                         accountName:
- *                           type: string
- *                         accountNumber:
- *                           type: string
- *                         bankName:
- *                           type: string
- *                         ifscCode:
- *                           type: string
- *                         branch:
- *                           type: string
  *       401:
- *         description: Unauthorized
+ *         $ref: '#/components/responses/Unauthorized'
+ * 
+ *   patch:
+ *     summary: Update profile details
+ *     tags:
+ *       - Profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               panCardNumber:
+ *                 type: string
+ *               username:
+ *                 type: string
+ *               profilePicture:
+ *                 type: string
+ *                 format: binary
+ *               address:
+ *                 type: object
+ *                 description: JSON string if using multipart/form-data
+ *               bankDetails:
+ *                 type: object
+ *                 description: JSON string if using multipart/form-data
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ * /api/v1/kyc/submit:
+ *   post:
+ *     summary: Submit KYC documents (One-time)
+ *     tags:
+ *       - KYC
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - aadhaarNumber
+ *               - panCardNumber
+ *               - aadhaarFront
+ *               - aadhaarBack
+ *               - panImage
+ *             properties:
+ *               aadhaarNumber:
+ *                 type: string
+ *               panCardNumber:
+ *                 type: string
+ *               aadhaarFront:
+ *                 type: string
+ *                 format: binary
+ *               aadhaarBack:
+ *                 type: string
+ *                 format: binary
+ *               panImage:
+ *                 type: string
+ *                 format: binary
+ *               bankDetails:
+ *                 type: object
+ *                 description: JSON string if using multipart/form-data
+ *     responses:
+ *       200:
+ *         description: KYC submitted successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
