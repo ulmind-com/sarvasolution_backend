@@ -230,5 +230,28 @@ export const mlmService = {
             }
             await user.save();
         }
+    },
+
+    /**
+     * Fetch Genealogy Tree recursively
+     * Limit depth to prevent performance issues
+     */
+    getGenealogyTree: async (userId, depth = 3) => {
+        if (depth < 0) return null;
+
+        const user = await User.findById(userId).select('fullName memberId currentRank position leftChild rightChild');
+        if (!user) return null;
+
+        const tree = {
+            id: user._id,
+            memberId: user.memberId,
+            fullName: user.fullName,
+            rank: user.currentRank,
+            position: user.position,
+            left: user.leftChild ? await mlmService.getGenealogyTree(user.leftChild, depth - 1) : null,
+            right: user.rightChild ? await mlmService.getGenealogyTree(user.rightChild, depth - 1) : null
+        };
+
+        return tree;
     }
 };

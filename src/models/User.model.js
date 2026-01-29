@@ -191,9 +191,7 @@ userSchema.statics.generateMemberId = async function () {
 userSchema.index({ sponsorId: 1 });
 userSchema.index({ parentId: 1 });
 userSchema.index({ panCardNumber: 1 });
-userSchema.index({ phone: 1 });
 userSchema.index({ email: 1 });
-userSchema.index({ memberId: 1 }, { unique: true });
 
 const User = mongoose.model('User', userSchema);
 export default User;
