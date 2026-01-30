@@ -59,6 +59,16 @@ export const getWalletInfo = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Get Payout History (Dedicated Endpoint)
+ */
+export const getPayouts = asyncHandler(async (req, res) => {
+    const payouts = await Payout.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    return res.status(200).json(
+        new ApiResponse(200, payouts, 'Payout history fetched')
+    );
+});
+
+/**
  * Get Genealogy Tree
  */
 export const getTree = asyncHandler(async (req, res) => {

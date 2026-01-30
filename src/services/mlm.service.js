@@ -18,9 +18,39 @@ export const mlmService = {
                 return { parentId: current.memberId, position: 'left' };
             }
             if (!current.rightChild) {
+                // IMPORTANT: SSVPL Rule - If left is taken, spillover naturally fills right only if specifically balanced that way
+                // But for "Extreme Left" logic, we just keep going Left.
+                // However, "Extreme Left" usually means "Bottom-most Node on the Left Leg".
+                // If a node has a Left Child, we go there.
+                // If it ONLY has a Right Child (rare in strict binary fill), we might technically need to go there to continue left, 
+                // but usually "Extreme Left" means following leftChild references.
+            }
+
+            // Traverse Left
+            if (current.leftChild) {
+                const nextNodeId = current.leftChild;
+                current = await User.findById(nextNodeId);
+                if (!current) break; // Should not happen if DB integrity holds
+            } else {
+                // If no left child, this IS the spot
+                return { parentId: current.memberId, position: 'left' };
+            }
+        }
+        throw new Error('Could not find available position in the tree');
+    },
+
+    /**
+     * Find extreme right available position (spillover for right leg)
+     */
+    findExtremeRightPosition: async (parentUser) => {
+        let current = parentUser;
+        while (true) {
+            if (!current.rightChild) {
                 return { parentId: current.memberId, position: 'right' };
             }
-            const nextNodeId = current.leftChild;
+
+            // Traverse Right
+            const nextNodeId = current.rightChild;
             current = await User.findById(nextNodeId);
             if (!current) break;
         }
@@ -29,17 +59,33 @@ export const mlmService = {
 
     /**
      * Find available position in binary tree
+     * Supports Manual Placement Preference
      */
     findAvailablePosition: async (sponsorId, preferredPosition = null) => {
         const sponsor = await User.findOne({ memberId: sponsorId });
         if (!sponsor) throw new Error('Sponsor not found');
 
-        if (preferredPosition === 'left' && !sponsor.leftChild) {
-            return { parentId: sponsor.memberId, position: 'left' };
+        // 1. Manual Left Preference
+        if (preferredPosition === 'left') {
+            if (!sponsor.leftChild) {
+                return { parentId: sponsor.memberId, position: 'left' };
+            } else {
+                const leftChild = await User.findById(sponsor.leftChild);
+                return await mlmService.findExtremeLeftPosition(leftChild);
+            }
         }
-        if (preferredPosition === 'right' && !sponsor.rightChild) {
-            return { parentId: sponsor.memberId, position: 'right' };
+
+        // 2. Manual Right Preference
+        if (preferredPosition === 'right') {
+            if (!sponsor.rightChild) {
+                return { parentId: sponsor.memberId, position: 'right' };
+            } else {
+                const rightChild = await User.findById(sponsor.rightChild);
+                return await mlmService.findExtremeRightPosition(rightChild);
+            }
         }
+
+        // 3. Auto-Balancing (Legacy/Extreme Left Spillover Default)
         return await mlmService.findExtremeLeftPosition(sponsor);
     },
 

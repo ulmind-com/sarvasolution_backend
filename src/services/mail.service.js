@@ -9,14 +9,18 @@ let transporter;
 const getTransporter = () => {
     if (!transporter) {
         transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true, // Use SSL
             auth: {
                 user: process.env.MAIL_ADDRESS,
                 pass: process.env.MAIL_PASSWORD
             },
-            connectionTimeout: 15000, // 15 seconds
-            greetingTimeout: 10000,   // 10 seconds
-            socketTimeout: 30000      // 30 seconds
+            connectionTimeout: 20000,
+            greetingTimeout: 20000,
+            socketTimeout: 30000,
+            logger: true, // Log to console for debugging
+            debug: true   // Include SMTP traffic in logs
         });
     }
     return transporter;
