@@ -10,6 +10,7 @@ router.get('/bv-summary', getBVSummary);
 router.get('/funds-status', getFundsStatus);
 router.get('/wallet', getWalletInfo);
 router.get('/tree', getTree);
+router.get('/tree_view', getTree); // Alias for easy tree implementation
 router.get('/tree/:memberId', getTree);
 router.get('/payouts', getPayouts); // New Route
 router.post('/request-payout', requestPayout);
