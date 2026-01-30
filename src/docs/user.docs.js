@@ -117,3 +117,39 @@
  *                     left: { type: object }
  *                     right: { type: object }
  */
+
+/**
+ * @swagger
+ * /user/tree_view:
+ *   get:
+ *     summary: Fetch Genealogy Tree (Simplified)
+ *     description: Alias for fetching the tree structure. Supports optional depth parameter.
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: depth
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           default: 3
+ *           maximum: 10
+ *         description: Depth of the tree to retrieve (Max 10)
+ *     responses:
+ *       200:
+ *         description: Tree structure retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     memberId: { type: string }
+ *                     fullName: { type: string }
+ *                     left: { type: object }
+ *                     right: { type: object }
+ */
