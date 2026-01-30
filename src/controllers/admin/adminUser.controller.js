@@ -60,15 +60,29 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
         updates.panCardNumber = updates.panCardNumber.toUpperCase();
     }
 
+    // Allowed fields for Admin Update (Exclude structural/financial fields to prevent tree corruption)
+    const allowedUpdates = [
+        'fullName', 'email', 'phone', 'panCardNumber', 'username',
+        'role', 'status', 'address', 'kyc', 'profilePicture'
+    ];
+
+    // Filter updates
+    const safeUpdates = {};
+    Object.keys(updates).forEach(key => {
+        if (allowedUpdates.includes(key)) {
+            safeUpdates[key] = updates[key];
+        }
+    });
+
     // Track updates for notification
     const updatedFields = [];
-    Object.keys(updates).forEach(key => {
-        if (updates[key] !== user[key]) {
+    Object.keys(safeUpdates).forEach(key => {
+        if (JSON.stringify(safeUpdates[key]) !== JSON.stringify(user[key])) {
             updatedFields.push(key.charAt(0).toUpperCase() + key.slice(1));
         }
     });
 
-    Object.assign(user, updates);
+    Object.assign(user, safeUpdates);
     await user.save();
 
     if (updatedFields.length > 0) {

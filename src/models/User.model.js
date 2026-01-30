@@ -183,8 +183,14 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 // Generate unique member ID
 userSchema.statics.generateMemberId = async function () {
-    const count = await this.countDocuments();
-    return `SVS${String(count + 1).padStart(6, '0')}`;
+    const lastUser = await this.findOne().sort({ memberId: -1 });
+    if (!lastUser) {
+        return 'SVS000001';
+    }
+
+    const lastIdNum = parseInt(lastUser.memberId.replace('SVS', ''), 10);
+    const newId = lastIdNum + 1;
+    return `SVS${String(newId).padStart(6, '0')}`;
 };
 
 // Indexes
