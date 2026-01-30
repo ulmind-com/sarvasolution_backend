@@ -5,11 +5,24 @@ import chalk from 'chalk';
 
 // Transport configuration
 const transporter = nodemailer.createTransport({
-    service: 'Gmail',
+    pool: true, // Use pooled connections
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // use TLS
     auth: {
         user: process.env.MAIL_ADDRESS,
         pass: process.env.MAIL_PASSWORD
-    }
+    },
+    // Reliability settings
+    tls: {
+        // do not fail on invalid certs
+        rejectUnauthorized: false
+    },
+    // Force IPv4 to avoid IPv6 issues on some cloud providers
+    family: 4,
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000
 });
 
 /**
