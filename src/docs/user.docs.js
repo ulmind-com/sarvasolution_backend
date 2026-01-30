@@ -7,7 +7,7 @@
 
 /**
  * @swagger
- * /user/bv-summary:
+ * /api/v1/user/bv-summary:
  *   get:
  *     summary: Get BV balance and transaction history
  *     tags: [User Financials]
@@ -33,7 +33,7 @@
 
 /**
  * @swagger
- * /user/funds-status:
+ * /api/v1/user/funds-status:
  *   get:
  *     summary: Get status of all 4 Funds (Bike, House, Royalty, Super)
  *     tags: [User Financials]
@@ -48,7 +48,7 @@
 
 /**
  * @swagger
- * /user/wallet:
+ * /api/v1/user/wallet:
  *   get:
  *     summary: Get wallet balance and payout history
  *     tags: [User Financials]
@@ -61,7 +61,7 @@
 
 /**
  * @swagger
- * /user/request-payout:
+ * /api/v1/user/request-payout:
  *   post:
  *     summary: Request a withdrawal (Payout)
  *     description: Minimum withdrawal is ₹450. Processing occurs every Friday at 11 AM IST.
@@ -86,7 +86,7 @@
 
 /**
  * @swagger
- * /user/tree/{memberId}:
+ * /api/v1/user/tree/{memberId}:
  *   get:
  *     summary: Fetch Genealogy Tree Structure
  *     description: Returns a recursive tree structure (Left/Right) for the specified member. If no memberId is provided, returns starting from the logged-in user.
@@ -120,7 +120,7 @@
 
 /**
  * @swagger
- * /user/tree_view:
+ * /api/v1/user/tree_view:
  *   get:
  *     summary: Fetch Genealogy Tree (Simplified)
  *     description: Alias for fetching the tree structure. Supports optional depth parameter.
