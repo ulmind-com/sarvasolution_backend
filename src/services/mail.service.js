@@ -1,10 +1,16 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import PDFDocument from 'pdfkit';
 import { templates } from './emailTemplates.js';
 import chalk from 'chalk';
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY || 're_cfPgNNhA_7LvcpjJGroaTn7NE2YKvarNX');
+// Transport configuration
+const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: process.env.MAIL_ADDRESS,
+        pass: process.env.MAIL_PASSWORD
+    }
+});
 
 /**
  * Generate a Welcome PDF as a Buffer
@@ -55,37 +61,31 @@ export const generateWelcomePDF = async (user) => {
 };
 
 /**
- * Core Send Email Function (Callback Wrapped in Promise)
- */
-/**
- * Core Send Email Function (Using Resend)
+ * Core Send Email Function
  */
 export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
-    try {
-        const { data, error } = await resend.emails.send({
-            from: 'SarvaSolution <onboarding@resend.dev>', // Use verified domain or default test domain
-            to: [to],
-            subject: subject,
-            html: html,
-            attachments: attachments.map(att => ({
-                filename: att.filename,
-                content: att.content // Resend accepts Buffer
-            }))
+    return new Promise((resolve, reject) => {
+        const mailOptions = {
+            from: process.env.MAIL_ADDRESS,
+            to,
+            subject,
+            html,
+            attachments
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(chalk.red('Error sending email:'), error);
+                // Don't reject to prevent crashing main flows, but log error
+                resolve(null);
+            } else {
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(chalk.green(`Email sent: ${subject} to ${to}`));
+                }
+                resolve(info.response);
+            }
         });
-
-        if (error) {
-            console.error(chalk.red('Resend Error:'), error);
-            return null;
-        }
-
-        if (process.env.NODE_ENV === 'development') {
-            console.log(chalk.green(`Email sent via Resend: ${subject} to ${to}`));
-        }
-        return data;
-    } catch (err) {
-        console.error(chalk.red('Unexpected Mail Error:'), err);
-        return null;
-    }
+    });
 };
 
 /**
