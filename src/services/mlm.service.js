@@ -14,27 +14,23 @@ export const mlmService = {
     findExtremeLeftPosition: async (parentUser) => {
         let current = parentUser;
         while (true) {
+            // Check if current is valid
+            if (!current) throw new Error('Invalid node iteration');
+
             if (!current.leftChild) {
                 return { parentId: current.memberId, position: 'left' };
             }
-            if (!current.rightChild) {
-                // IMPORTANT: SSVPL Rule - If left is taken, spillover naturally fills right only if specifically balanced that way
-                // But for "Extreme Left" logic, we just keep going Left.
-                // However, "Extreme Left" usually means "Bottom-most Node on the Left Leg".
-                // If a node has a Left Child, we go there.
-                // If it ONLY has a Right Child (rare in strict binary fill), we might technically need to go there to continue left, 
-                // but usually "Extreme Left" means following leftChild references.
-            }
 
             // Traverse Left
-            if (current.leftChild) {
-                const nextNodeId = current.leftChild;
-                current = await User.findById(nextNodeId);
-                if (!current) break; // Should not happen if DB integrity holds
-            } else {
-                // If no left child, this IS the spot
+            const nextNodeId = current.leftChild;
+            const nextNode = await User.findById(nextNodeId);
+
+            // Ghost Node Handling: If logic says child exists but DB says null
+            if (!nextNode) {
                 return { parentId: current.memberId, position: 'left' };
             }
+
+            current = nextNode;
         }
         throw new Error('Could not find available position in the tree');
     },
@@ -45,14 +41,23 @@ export const mlmService = {
     findExtremeRightPosition: async (parentUser) => {
         let current = parentUser;
         while (true) {
+            // Check if current is valid
+            if (!current) throw new Error('Invalid node iteration');
+
             if (!current.rightChild) {
                 return { parentId: current.memberId, position: 'right' };
             }
 
             // Traverse Right
             const nextNodeId = current.rightChild;
-            current = await User.findById(nextNodeId);
-            if (!current) break;
+            const nextNode = await User.findById(nextNodeId);
+
+            // Ghost Node Handling: If logic says child exists but DB says null
+            if (!nextNode) {
+                return { parentId: current.memberId, position: 'right' };
+            }
+
+            current = nextNode;
         }
         throw new Error('Could not find available position in the tree');
     },
@@ -71,6 +76,10 @@ export const mlmService = {
                 return { parentId: sponsor.memberId, position: 'left' };
             } else {
                 const leftChild = await User.findById(sponsor.leftChild);
+                if (!leftChild) {
+                    // Dangling reference - take the spot
+                    return { parentId: sponsor.memberId, position: 'left' };
+                }
                 return await mlmService.findExtremeLeftPosition(leftChild);
             }
         }
@@ -81,6 +90,10 @@ export const mlmService = {
                 return { parentId: sponsor.memberId, position: 'right' };
             } else {
                 const rightChild = await User.findById(sponsor.rightChild);
+                if (!rightChild) {
+                    // Dangling reference - take the spot
+                    return { parentId: sponsor.memberId, position: 'right' };
+                }
                 return await mlmService.findExtremeRightPosition(rightChild);
             }
         }
