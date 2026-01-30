@@ -34,6 +34,10 @@
  *                 type: string
  *               panCardNumber:
  *                 type: string
+ *               preferredPosition:
+ *                 type: string
+ *                 enum: [left, right]
+ *                 description: "Optional. 'left' places user at extreme left of sponsor's left leg. 'right' places at extreme right of sponsor's right leg. Defaults to auto-balance (extreme left spillover)."
  *     responses:
  *       201:
  *         description: User registered successfully

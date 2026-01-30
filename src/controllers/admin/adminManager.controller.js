@@ -46,6 +46,21 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Get All Payouts (Admin)
+ */
+export const getPayouts = asyncHandler(async (req, res) => {
+    const { status } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+
+    const payouts = await Payout.find(filter).sort({ createdAt: -1 });
+
+    return res.status(200).json(
+        new ApiResponse(200, payouts, 'Payouts fetched successfully')
+    );
+});
+
+/**
  * Bulk Process Payouts (e.g., Friday Batch)
  */
 export const bulkProcessPayouts = asyncHandler(async (req, res) => {

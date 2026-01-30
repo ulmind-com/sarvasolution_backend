@@ -62,13 +62,20 @@ export const submitKYC = asyncHandler(async (req, res) => {
     if (bankDetailsStr) {
         try {
             const bankDetails = JSON.parse(bankDetailsStr);
-            let bankAccount = await BankAccount.findOne({ userId });
-            if (bankAccount) {
-                Object.assign(bankAccount, bankDetails);
-                await bankAccount.save();
+            const { accountName, accountNumber, bankName, ifscCode } = bankDetails;
+
+            // Explicit validation for required fields to avoid ValidatorError
+            if (!accountName || !accountNumber || !bankName || !ifscCode) {
+                console.warn('Bank detail sync skipped: Missing required fields', { accountName, accountNumber, bankName, ifscCode });
             } else {
-                bankAccount = new BankAccount({ ...bankDetails, userId });
-                await bankAccount.save();
+                let bankAccount = await BankAccount.findOne({ userId });
+                if (bankAccount) {
+                    Object.assign(bankAccount, bankDetails);
+                    await bankAccount.save();
+                } else {
+                    bankAccount = new BankAccount({ ...bankDetails, userId });
+                    await bankAccount.save();
+                }
             }
         } catch (e) {
             console.error('Bank details sync error:', e);

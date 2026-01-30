@@ -57,3 +57,35 @@ export const getWalletInfo = asyncHandler(async (req, res) => {
         new ApiResponse(200, { wallet: user.wallet, history }, 'Wallet info fetched')
     );
 });
+
+/**
+ * Get Payout History (Dedicated Endpoint)
+ */
+export const getPayouts = asyncHandler(async (req, res) => {
+    const payouts = await Payout.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    return res.status(200).json(
+        new ApiResponse(200, payouts, 'Payout history fetched')
+    );
+});
+
+/**
+ * Get Genealogy Tree
+ */
+export const getTree = asyncHandler(async (req, res) => {
+    const { memberId } = req.params;
+    let targetUser;
+
+    if (memberId) {
+        targetUser = await User.findOne({ memberId });
+    } else {
+        targetUser = await User.findById(req.user._id);
+    }
+
+    if (!targetUser) throw new ApiError(404, 'User not found');
+
+    const tree = await mlmService.getGenealogyTree(targetUser._id, 3); // Default depth 3
+
+    return res.status(200).json(
+        new ApiResponse(200, tree, 'Genealogy tree fetched successfully')
+    );
+});

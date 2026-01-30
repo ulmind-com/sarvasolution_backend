@@ -83,3 +83,37 @@
  *       400:
  *         description: Insufficient balance or below minimum
  */
+
+/**
+ * @swagger
+ * /user/tree/{memberId}:
+ *   get:
+ *     summary: Fetch Genealogy Tree Structure
+ *     description: Returns a recursive tree structure (Left/Right) for the specified member. If no memberId is provided, returns starting from the logged-in user.
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: memberId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         example: SVS000001
+ *     responses:
+ *       200:
+ *         description: Tree structure retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     memberId: { type: string }
+ *                     fullName: { type: string }
+ *                     left: { type: object }
+ *                     right: { type: object }
+ */
