@@ -153,3 +153,26 @@
  *                     left: { type: object }
  *                     right: { type: object }
  */
+
+/**
+ * @swagger
+ * /api/v1/user/payouts:
+ *   get:
+ *     summary: Get Payout History
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payout history fetched
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Payout'
+ */

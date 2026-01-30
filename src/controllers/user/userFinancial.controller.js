@@ -2,6 +2,7 @@ import User from '../../models/User.model.js';
 import Payout from '../../models/Payout.model.js';
 import BVTransaction from '../../models/BVTransaction.model.js';
 import { payoutService } from '../../services/payout.service.js';
+import { mlmService } from '../../services/mlm.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
