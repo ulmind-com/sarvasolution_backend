@@ -4,29 +4,13 @@ import { templates } from './emailTemplates.js';
 import chalk from 'chalk';
 
 // Transport configuration
-let transporter;
-
-const getTransporter = () => {
-    if (!transporter) {
-        transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false, // Use STARTTLS
-            requireTLS: true,
-            auth: {
-                user: process.env.MAIL_ADDRESS,
-                pass: process.env.MAIL_PASSWORD
-            },
-            connectionTimeout: 60000, // 60 seconds
-            greetingTimeout: 60000,   // 60 seconds
-            socketTimeout: 60000,     // 60 seconds
-            dnsTimeout: 60000,        // 60 seconds
-            logger: true, // Log to console for debugging
-            debug: true   // Include SMTP traffic in logs
-        });
+const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: process.env.MAIL_ADDRESS,
+        pass: process.env.MAIL_PASSWORD
     }
-    return transporter;
-};
+});
 
 /**
  * Generate a Welcome PDF as a Buffer
@@ -77,27 +61,30 @@ export const generateWelcomePDF = async (user) => {
 };
 
 /**
- * Core Send Email Function
+ * Core Send Email Function (Callback Wrapped in Promise)
  */
 export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
-    try {
+    return new Promise((resolve, reject) => {
         const mailOptions = {
-            from: `"SarvaSolution Admin" <${process.env.MAIL_ADDRESS}>`,
+            from: process.env.MAIL_ADDRESS,
             to,
             subject,
             html,
             attachments
         };
 
-        const info = await getTransporter().sendMail(mailOptions);
-        if (process.env.NODE_ENV === 'development') {
-            console.log(chalk.green(`Email sent: ${subject} to ${to}`));
-        }
-        return info;
-    } catch (error) {
-        console.error(chalk.red('Error sending email:'), error);
-        return null;
-    }
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error(chalk.red('Error sending email:'), error);
+                reject(error);
+            } else {
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(chalk.green(`Email sent: ${subject} to ${to}`));
+                }
+                resolve(info.response);
+            }
+        });
+    });
 };
 
 /**
