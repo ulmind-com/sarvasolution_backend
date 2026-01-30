@@ -1,29 +1,10 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import PDFDocument from 'pdfkit';
 import { templates } from './emailTemplates.js';
 import chalk from 'chalk';
 
-// Transport configuration
-const transporter = nodemailer.createTransport({
-    pool: true, // Use pooled connections
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // use TLS
-    auth: {
-        user: process.env.MAIL_ADDRESS,
-        pass: process.env.MAIL_PASSWORD
-    },
-    // Reliability settings
-    tls: {
-        // do not fail on invalid certs
-        rejectUnauthorized: false
-    },
-    // Force IPv4 to avoid IPv6 issues on some cloud providers
-    family: 4,
-    connectionTimeout: 60000,
-    greetingTimeout: 30000,
-    socketTimeout: 60000
-});
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY || 're_cfPgNNhA_7LvcpjJGroaTn7NE2YKvarNX');
 
 /**
  * Generate a Welcome PDF as a Buffer
