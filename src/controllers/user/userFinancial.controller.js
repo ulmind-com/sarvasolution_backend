@@ -71,8 +71,13 @@ export const getPayouts = asyncHandler(async (req, res) => {
 /**
  * Get Genealogy Tree
  */
+/**
+ * Get Genealogy Tree
+ */
 export const getTree = asyncHandler(async (req, res) => {
     const { memberId } = req.params;
+    const { depth } = req.query; // Support custom depth
+
     let targetUser;
 
     if (memberId) {
@@ -83,7 +88,15 @@ export const getTree = asyncHandler(async (req, res) => {
 
     if (!targetUser) throw new ApiError(404, 'User not found');
 
-    const tree = await mlmService.getGenealogyTree(targetUser._id, 3); // Default depth 3
+    // Parse depth with safety limits
+    let treeDepth = 3;
+    if (depth) {
+        treeDepth = parseInt(depth);
+        if (isNaN(treeDepth)) treeDepth = 3;
+        if (treeDepth > 10) treeDepth = 10; // Max limit to prevent performance DoS
+    }
+
+    const tree = await mlmService.getGenealogyTree(targetUser._id, treeDepth);
 
     return res.status(200).json(
         new ApiResponse(200, tree, 'Genealogy tree fetched successfully')
