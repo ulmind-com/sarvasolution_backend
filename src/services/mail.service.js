@@ -57,28 +57,35 @@ export const generateWelcomePDF = async (user) => {
 /**
  * Core Send Email Function (Callback Wrapped in Promise)
  */
+/**
+ * Core Send Email Function (Using Resend)
+ */
 export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
-    return new Promise((resolve, reject) => {
-        const mailOptions = {
-            from: process.env.MAIL_ADDRESS,
-            to,
-            subject,
-            html,
-            attachments
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error(chalk.red('Error sending email:'), error);
-                reject(error);
-            } else {
-                if (process.env.NODE_ENV === 'development') {
-                    console.log(chalk.green(`Email sent: ${subject} to ${to}`));
-                }
-                resolve(info.response);
-            }
+    try {
+        const { data, error } = await resend.emails.send({
+            from: 'SarvaSolution <onboarding@resend.dev>', // Use verified domain or default test domain
+            to: [to],
+            subject: subject,
+            html: html,
+            attachments: attachments.map(att => ({
+                filename: att.filename,
+                content: att.content // Resend accepts Buffer
+            }))
         });
-    });
+
+        if (error) {
+            console.error(chalk.red('Resend Error:'), error);
+            return null;
+        }
+
+        if (process.env.NODE_ENV === 'development') {
+            console.log(chalk.green(`Email sent via Resend: ${subject} to ${to}`));
+        }
+        return data;
+    } catch (err) {
+        console.error(chalk.red('Unexpected Mail Error:'), err);
+        return null;
+    }
 };
 
 /**
