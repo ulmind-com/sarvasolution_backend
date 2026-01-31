@@ -19,62 +19,156 @@ const connectDB = async () => {
     }
 };
 
-/**
- * Recursive function to calculate downline counts
- * Returns the total count of the subtree (including itself)
- */
-const processNode = async (userId) => {
-    if (!userId) return 0;
-
-    const user = await User.findById(userId);
-    if (!user) return 0;
-
-    // Recursively count left and right subtrees
-    const leftCount = user.leftChild ? await processNode(user.leftChild) : 0;
-    const rightCount = user.rightChild ? await processNode(user.rightChild) : 0;
-
-    // Update the user with calculated counts
-    user.leftTeamCount = leftCount;
-    user.rightTeamCount = rightCount;
-
-    await user.save();
-
-    console.log(`Updated ${user.memberId}: Left=${leftCount}, Right=${rightCount}`);
-
-    // Return total count (1 for self + left + right)
-    return 1 + leftCount + rightCount;
-};
-
 const runScript = async () => {
     await connectDB();
-
-    console.log('Starting Team Count Recalculation...');
+    console.log('Starting Sponsor Direct Count Recalculation...');
 
     try {
-        // Find the root user (usually SVS000001 or user with no parentId)
-        // Adjust this finding logic if you have multiple roots, but typically MLM has one root.
-        const rootUser = await User.findOne({ memberId: 'SVS000001' });
+        // 1. Reset all counts
+        console.log('Resetting counts to 0...');
+        await User.updateMany({}, {
+            leftDirectSponsors: 0,
+            rightDirectSponsors: 0,
+            $unset: { leftTeamCount: "", rightTeamCount: "" } // Cleanup old fields
+        });
 
-        if (!rootUser) {
-            console.error('Root user (SVS000001) not found! Attempting to find top-level nodes...');
-            const topLevelUsers = await User.find({ parentId: null });
+        const allUsers = await User.find({}).select('memberId sponsorId parentId');
+        console.log(`Processing ${allUsers.length} users...`);
 
-            for (const topUser of topLevelUsers) {
-                console.log(`Processing tree starting from ${topUser.memberId}...`);
-                await processNode(topUser._id);
+        for (const user of allUsers) {
+            if (!user.sponsorId || !user.parentId) continue;
+
+            const sponsor = await User.findOne({ memberId: user.sponsorId });
+            if (!sponsor) continue;
+
+            // Determine leg: Traverse up from user.parentId until we hit sponsor
+            let iteratorId = user.parentId;
+
+            // Optimization: First check immediate children of sponsor
+            if (sponsor.leftChild && (await User.findById(sponsor.leftChild))?.memberId === user.memberId) {
+                // Cannot happen because user.memberId != user.parentId. 
+                // We need to check if sponsor.leftChild === user.parentId? No.
+                // We need to check if sponsor.leftChild is the ancestor of user.
             }
-        } else {
-            console.log(`Found root user: ${rootUser.memberId}`);
-            await processNode(rootUser._id);
+
+            // Just traversal
+            // Warning: deeply nested trees make this slow. 
+            // Better: Load needed fields for all users into memory for fast lookup
         }
 
-        console.log('Recalculation Complete! 🚀');
-        process.exit(0);
+        // --- In-Memory Optimization ---
+        const userMap = new Map();
+        const usersFull = await User.find({}).select('_id memberId parentId leftChild rightChild leftDirectSponsors rightDirectSponsors');
+        usersFull.forEach(u => userMap.set(u.memberId, u));
 
-    } catch (error) {
-        console.error('Script Failed:', error);
-        process.exit(1);
+        let updates = 0;
+
+        for (const user of usersFull) {
+            if (!user.sponsorId) continue; // Root or anomaly
+
+            // Find sponsor in map
+            // Note: user.sponsorId is a String, userMap keys are memberIds (String)
+            // But wait, the previous `find` didn't select sponsorId.
+        }
+    } catch (e) { console.error(e) }
+};
+// Scratch that, let's stick to the reliable database traversal for correctness over speed for this admin script.
+// Using the same logic as the service ensures consistency.
+
+const processUser = async (user) => {
+    if (!user.sponsorId || !user.parentId) return;
+
+    const sponsor = await User.findOne({ memberId: user.sponsorId });
+    if (!sponsor) return;
+
+    let iterator = await User.findOne({ memberId: user.parentId });
+    let isFound = false;
+
+    // Check if user is direct child of sponsor (Optimization)
+    if (sponsor.memberId === user.parentId) {
+        // User's parent IS the sponsor
+        if (sponsor.leftChild && sponsor.leftChild.toString() === user._id.toString()) {
+            sponsor.leftDirectSponsors += 1;
+        } else if (sponsor.rightChild && sponsor.rightChild.toString() === user._id.toString()) {
+            sponsor.rightDirectSponsors += 1;
+        }
+        await sponsor.save();
+        return;
+    }
+
+    // Traverse up
+    while (iterator) {
+        if (iterator.memberId === sponsor.memberId) {
+            isFound = true;
+            break;
+        }
+        if (!iterator.parentId) break;
+
+        // We need to know which child we came from to identify the leg *relative to the sponsor*
+        // The loop finds the sponsor. But we need to know: Did we reach sponsor from sponsor.left or sponsor.right?
+        // So we need to look *down* from sponsor, or track the path.
+
+        iterator = await User.findOne({ memberId: iterator.parentId });
+    }
+
+    // Re-approach: Find the Child of Sponsor that is an ancestor of User.
+    if (sponsor.leftChild) {
+        const isLeft = await isAncestor(sponsor.leftChild, user._id);
+        if (isLeft) {
+            sponsor.leftDirectSponsors += 1;
+            await sponsor.save();
+            return;
+        }
+    }
+    if (sponsor.rightChild) {
+        const isRight = await isAncestor(sponsor.rightChild, user._id);
+        if (isRight) {
+            sponsor.rightDirectSponsors += 1;
+            await sponsor.save();
+            return;
+        }
     }
 };
 
-runScript();
+// Helper: BFS/DFS to check if 'ancestorId' is actually an ancestor of 'targetId'
+// Or simpler: Check if targetId is in the subtree of startNodeId
+const isAncestor = async (startNodeId, targetId) => {
+    // DFS
+    const stack = [startNodeId];
+    while (stack.length > 0) {
+        const currentId = stack.pop();
+        if (currentId.toString() === targetId.toString()) return true;
+
+        const node = await User.findById(currentId).select('leftChild rightChild');
+        if (node) {
+            if (node.leftChild) stack.push(node.leftChild);
+            if (node.rightChild) stack.push(node.rightChild);
+        }
+    }
+    return false;
+};
+
+const runScriptReal = async () => {
+    await connectDB();
+    console.log('Starting SCRIPT...');
+
+    await User.updateMany({}, {
+        leftDirectSponsors: 0,
+        rightDirectSponsors: 0,
+        $unset: { leftTeamCount: "", rightTeamCount: "" }
+    });
+
+    const allUsers = await User.find({});
+    console.log(`Processing ${allUsers.length} users...`);
+
+    let count = 0;
+    for (const user of allUsers) {
+        await processUser(user);
+        count++;
+        if (count % 10 === 0) process.stdout.write('.');
+    }
+    console.log('\nDone!');
+    process.exit(0);
+};
+
+runScriptReal();

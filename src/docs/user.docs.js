@@ -120,8 +120,8 @@
  *                     sponsorId: { type: string }
  *                     joiningDate: { type: string, format: date-time }
  *                     status: { type: string, enum: [active, inactive, blocked] }
- *                     leftTeamCount: { type: integer }
- *                     rightTeamCount: { type: integer }
+ *                     leftDirectSponsors: { type: integer }
+ *                     rightDirectSponsors: { type: integer }
  *                     left: { type: object }
  *                     right: { type: object }
  */
@@ -164,8 +164,8 @@
  *                     sponsorId: { type: string }
  *                     joiningDate: { type: string, format: date-time }
  *                     status: { type: string, enum: [active, inactive, blocked] }
- *                     leftTeamCount: { type: integer }
- *                     rightTeamCount: { type: integer }
+ *                     leftDirectSponsors: { type: integer }
+ *                     rightDirectSponsors: { type: integer }
  *                     left: { type: object }
  *                     right: { type: object }
  */
