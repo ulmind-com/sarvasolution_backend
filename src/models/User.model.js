@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
     sponsorId: { type: String, default: null },
     parentId: { type: String, default: null },
     position: { type: String, enum: ['left', 'right', 'root'], default: null },
+    sponsorLeg: { type: String, enum: ['left', 'right', 'none'], default: 'none' }, // New: Which leg of the sponsor this user is in
     leftChild: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     rightChild: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
@@ -199,7 +200,7 @@ userSchema.statics.generateMemberId = async function () {
 };
 
 // Indexes
-userSchema.index({ sponsorId: 1 });
+userSchema.index({ sponsorId: 1, sponsorLeg: 1 }); // Compound index for filtering direct team by leg
 userSchema.index({ parentId: 1 });
 userSchema.index({ panCardNumber: 1 });
 userSchema.index({ email: 1 });

@@ -196,3 +196,63 @@
  *                   items:
  *                     $ref: '#/components/schemas/Payout'
  */
+
+/**
+ * @swagger
+ * /api/v1/user/direct-team:
+ *   get:
+ *     summary: Get Direct Team List
+ *     description: Retrieve a paginated list of directly sponsored members, optionally filtered by leg.
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: leg
+ *         schema:
+ *           type: string
+ *           enum: [left, right]
+ *         description: Filter by leg (optional)
+ *     responses:
+ *       200:
+ *         description: Direct team fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     team:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           memberId: { type: string }
+ *                           fullName: { type: string }
+ *                           currentRank: { type: string }
+ *                           totalBV: { type: number }
+ *                           joiningDate: { type: string, format: date-time }
+ *                           status: { type: string }
+ *                           sponsorLeg: { type: string }
+ *                           profilePicture: { type: object, properties: { url: { type: string } } }
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total: { type: integer }
+ *                         page: { type: integer }
+ *                         limit: { type: integer }
+ *                         pages: { type: integer }
+ */

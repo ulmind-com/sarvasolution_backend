@@ -92,6 +92,7 @@ const processUser = async (user) => {
 
     // Helper to update fields
     const updateStats = async (targetSponsor, isLeft) => {
+        // Update Sponsor Counts
         if (isLeft) {
             if (isActive) targetSponsor.leftDirectActive += 1;
             else targetSponsor.leftDirectInactive += 1;
@@ -100,6 +101,13 @@ const processUser = async (user) => {
             else targetSponsor.rightDirectInactive += 1;
         }
         await targetSponsor.save();
+
+        // Update User's Sponsor Leg
+        // Note: 'user' object passed in might be a lean doc or full doc from 'processUser' loop. 
+        // We should fetch precise or update directly.
+        // Since we are iterating, 'user' is the doc.
+        // But we need to make sure we persist this change.
+        await User.updateOne({ _id: user._id }, { sponsorLeg: isLeft ? 'left' : 'right' });
     };
 
     // Check direct parent
