@@ -292,13 +292,42 @@ export const mlmService = {
     },
 
     /**
+     * Propagate Team Count up the upline chain
+     */
+    propagateTeamCount: async (userId, position) => {
+        let current = await User.findById(userId);
+        if (!current) return;
+
+        let parentMemberId = current.parentId;
+        let currentPosition = current.position;
+
+        while (parentMemberId) {
+            const parent = await User.findOne({ memberId: parentMemberId });
+            if (!parent) break;
+
+            if (currentPosition === 'left') {
+                parent.leftTeamCount += 1;
+            } else {
+                parent.rightTeamCount += 1;
+            }
+            await parent.save();
+
+            // Move up
+            currentPosition = parent.position;
+            parentMemberId = parent.parentId;
+        }
+    },
+
+    /**
      * Fetch Genealogy Tree recursively
      * Limit depth to prevent performance issues
      */
     getGenealogyTree: async (userId, depth = 3) => {
         if (depth < 0) return null;
 
-        const user = await User.findById(userId).select('fullName memberId currentRank position leftChild rightChild profilePicture parentId');
+        const user = await User.findById(userId)
+            .select('fullName memberId currentRank position leftChild rightChild profilePicture sponsorId createdAt status leftTeamCount rightTeamCount');
+
         if (!user) return null;
 
         const tree = {
@@ -308,7 +337,11 @@ export const mlmService = {
             rank: user.currentRank,
             position: user.position,
             profileImage: user.profilePicture?.url || null,
-            parentId: user.parentId,
+            sponsorId: user.sponsorId,
+            joiningDate: user.createdAt,
+            status: user.status,
+            leftTeamCount: user.leftTeamCount,
+            rightTeamCount: user.rightTeamCount,
             left: user.leftChild ? await mlmService.getGenealogyTree(user.leftChild, depth - 1) : null,
             right: user.rightChild ? await mlmService.getGenealogyTree(user.rightChild, depth - 1) : null
         };

@@ -22,6 +22,8 @@ const userSchema = new mongoose.Schema({
     personalBV: { type: Number, default: 0 },
     leftLegBV: { type: Number, default: 0 },
     rightLegBV: { type: Number, default: 0 },
+    leftTeamCount: { type: Number, default: 0 }, // New: Total members in left leg
+    rightTeamCount: { type: Number, default: 0 }, // New: Total members in right leg
     totalBV: { type: Number, default: 0 },
     thisMonthBV: { type: Number, default: 0 },
     thisYearBV: { type: Number, default: 0 },

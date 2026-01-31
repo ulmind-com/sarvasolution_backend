@@ -89,6 +89,9 @@ export const register = asyncHandler(async (req, res) => {
         `REG-${newUser.memberId}`
     );
 
+    // 5.1 Team Count Propagation
+    await mlmService.propagateTeamCount(newUser._id, placement.position);
+
     // 6. Notifications & JWT
     mailer.sendWelcome(newUser).catch(e => console.error('Welcome Email Error:', e));
 

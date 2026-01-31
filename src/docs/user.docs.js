@@ -117,7 +117,11 @@
  *                     rank: { type: string }
  *                     position: { type: string }
  *                     profileImage: { type: string }
- *                     parentId: { type: string }
+ *                     sponsorId: { type: string }
+ *                     joiningDate: { type: string, format: date-time }
+ *                     status: { type: string, enum: [active, inactive, blocked] }
+ *                     leftTeamCount: { type: integer }
+ *                     rightTeamCount: { type: integer }
  *                     left: { type: object }
  *                     right: { type: object }
  */
@@ -157,7 +161,11 @@
  *                     rank: { type: string }
  *                     position: { type: string }
  *                     profileImage: { type: string }
- *                     parentId: { type: string }
+ *                     sponsorId: { type: string }
+ *                     joiningDate: { type: string, format: date-time }
+ *                     status: { type: string, enum: [active, inactive, blocked] }
+ *                     leftTeamCount: { type: integer }
+ *                     rightTeamCount: { type: integer }
  *                     left: { type: object }
  *                     right: { type: object }
  */
