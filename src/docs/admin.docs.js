@@ -88,18 +88,24 @@
  *             properties:
  *               fullName:
  *                 type: string
+ *                 example: John Doe
  *               email:
  *                 type: string
+ *                 example: john@example.com
  *               phone:
  *                 type: string
- *               panCardNumber:
- *                 type: string
+ *                 example: "9876543210"
  *               rank:
  *                 type: string
+ *                 enum: [Associate, Bronze, Silver, Gold, Platinum, Diamond, Blue Diamond, Black Diamond, Royal Diamond, Crown Diamond, Ambassador, Crown Ambassador, SSVPL Legend]
+ *                 example: Silver
  *               status:
  *                 type: string
+ *                 enum: [active, inactive, suspended]
+ *                 example: active
  *               joiningPackage:
  *                 type: number
+ *                 example: 500
  *     responses:
  *       200:
  *         description: User updated successfully

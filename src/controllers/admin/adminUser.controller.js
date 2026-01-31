@@ -40,6 +40,13 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
     const { memberId } = req.params;
     const updates = req.body;
 
+    // Sanitize inputs: Remove fields with value "string" (Swagger default) to prevent errors
+    Object.keys(updates).forEach(key => {
+        if (updates[key] === 'string' || updates[key] === '') {
+            delete updates[key];
+        }
+    });
+
     const user = await User.findOne({ memberId });
     if (!user) {
         throw new ApiError(404, 'User not found');
@@ -52,18 +59,14 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
         }
     }
 
-    if (updates.panCardNumber && updates.panCardNumber.toUpperCase() !== user.panCardNumber) {
-        const panCount = await User.countDocuments({ panCardNumber: updates.panCardNumber.toUpperCase() });
-        if (panCount >= 3) {
-            throw new ApiError(400, 'Maximum 3 accounts allowed per PAN card');
-        }
-        updates.panCardNumber = updates.panCardNumber.toUpperCase();
-    }
+    // PAN Card Update DISABLED as per requirement.
+    // Removed logic for PAN limit check.
 
-    // Allowed fields for Admin Update (Exclude structural/financial fields to prevent tree corruption)
+    // Allowed fields for Admin Update
     const allowedUpdates = [
-        'fullName', 'email', 'phone', 'panCardNumber', 'username',
-        'role', 'status', 'address', 'kyc', 'profilePicture'
+        'fullName', 'email', 'phone', 'username',
+        'role', 'status', 'address', 'kyc', 'profilePicture',
+        'currentRank', 'joiningPackage' // Added currentRank and joiningPackage
     ];
 
     // Filter updates
@@ -73,6 +76,11 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
             safeUpdates[key] = updates[key];
         }
     });
+
+    // Map 'rank' input to 'currentRank' field
+    if (updates.rank) {
+        safeUpdates.currentRank = updates.rank;
+    }
 
     // Track updates for notification
     const updatedFields = [];
