@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAllUsers, getUserByMemberId, updateUserByAdmin, verifyKYC } from '../controllers/admin/adminUser.controller.js';
-import { getDashboardMetrics, bulkProcessPayouts, addManualBV, getPayouts } from '../controllers/admin/adminManager.controller.js';
+import { getDashboardMetrics, processPayout, addManualBV, getPayouts, getAllTransactions } from '../controllers/admin/adminManager.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import adminMiddleware from '../middlewares/adminMiddleware.js';
 
@@ -17,8 +17,9 @@ router.patch('/kyc/verify/:memberId', verifyKYC);
 
 // System Management
 router.get('/dashboard-metrics', getDashboardMetrics);
-router.get('/payouts', getPayouts); // New Route
-router.post('/payouts/process-bulk', bulkProcessPayouts);
+router.get('/payouts', getPayouts);
+router.post('/payouts/process', processPayout);
+router.get('/transactions', getAllTransactions); // New Audit Route
 router.post('/bv/allocate-manual', addManualBV);
 
 export default router;

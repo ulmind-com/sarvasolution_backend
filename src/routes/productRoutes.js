@@ -1,5 +1,5 @@
 import express from 'express';
-import { createProduct, getProducts } from '../controllers/product/product.controller.js';
+import { createProduct, getProducts, updateProduct, deleteProduct } from '../controllers/product/product.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import adminMiddleware from '../middlewares/adminMiddleware.js';
 import { uploadProductImage } from '../middlewares/uploadMiddleware.js';
@@ -11,5 +11,9 @@ router.get('/', getProducts);
 
 // Admin only route to create product
 router.post('/', authMiddleware, adminMiddleware, uploadProductImage, createProduct);
+
+// Admin only routes to update and delete products
+router.patch('/:id', authMiddleware, adminMiddleware, uploadProductImage, updateProduct);
+router.delete('/:id', authMiddleware, adminMiddleware, deleteProduct);
 
 export default router;

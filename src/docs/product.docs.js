@@ -75,5 +75,52 @@
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  *       500:
+ *       500:
  *         $ref: '#/components/responses/Error'
+ * 
+ *   patch:
+ *     summary: Update a product (Admin only)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               bv: { type: number }
+ *               price: { type: number }
+ *               description: { type: string }
+ *               segment: { type: string, enum: [aquaculture, agriculture, personal care, health care, home care, luxury goods] }
+ *               isActive: { type: boolean }
+ *               productImage: { type: string, format: binary }
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ * 
+ *   delete:
+ *     summary: Delete (Deactivate) a product (Admin only)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Product deactivated successfully
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */

@@ -6,6 +6,8 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+router.use(authMiddleware);
+
 router.get('/bv-summary', getBVSummary);
 router.get('/funds-status', getFundsStatus);
 router.get('/wallet', getWalletInfo);

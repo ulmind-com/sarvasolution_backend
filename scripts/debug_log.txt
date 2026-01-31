@@ -1,0 +1,7 @@
+[2026-01-31T07:21:37.262Z] Script started...
+[2026-01-31T07:21:37.263Z] Connecting to MongoDB... mongodb+srv://s...
+[2026-01-31T07:21:38.724Z] MongoDB Connected
+[2026-01-31T07:21:39.366Z] Current Balance: 15000
+[2026-01-31T07:21:39.457Z] Successfully credited 5000 to SVS000002
+[2026-01-31T07:21:39.457Z] New Balance: 20000
+[2026-01-31T07:21:39.464Z] Disconnected

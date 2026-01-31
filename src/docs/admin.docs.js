@@ -148,9 +148,37 @@
  *       200:
  *         description: Analytics summary fetched
  * 
- * /api/v1/admin/payouts/process-bulk:
+ * /api/v1/admin/payouts:
+ *   get:
+ *     summary: Get all payout requests (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [pending, completed, rejected, processing]
+ *         description: Filter by status
+ *     responses:
+ *       200:
+ *         description: List of payouts retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Payout'
+ * 
+ * /api/v1/admin/payouts/process:
  *   post:
- *     summary: Bulk process pending payouts (Admin only)
+ *     summary: Verify & Process Payout (Approve/Reject)
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -160,11 +188,14 @@
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [payoutId, status]
  *             properties:
- *               payoutIds: { type: array, items: { type: string } }
+ *               payoutId: { type: string }
+ *               status: { type: string, enum: [completed, rejected] }
+ *               rejectionReason: { type: string }
  *     responses:
  *       200:
- *         description: Payouts processed
+ *         description: Payout processed successfully
  * 
  * /api/v1/admin/bv/allocate-manual:
  *   post:
@@ -186,4 +217,42 @@
  *     responses:
  *       200:
  *         description: BV allocated
+ * 
+ * /api/v1/admin/transactions:
+ *   get:
+ *     summary: Audit all BV transactions (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: memberId
+ *         schema: { type: string }
+ *         description: Filter by member ID (e.g., SVS000001)
+ *       - in: query
+ *         name: type
+ *         schema: { type: string }
+ *         description: Filter by transaction type
+ *     responses:
+ *       200:
+ *         description: Transaction log retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     transactions:
+ *                       type: array
+ *                     pagination:
+ *                       type: object
  */

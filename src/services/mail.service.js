@@ -5,10 +5,15 @@ import chalk from 'chalk';
 
 // Transport configuration
 const transporter = nodemailer.createTransport({
-    service: 'Gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS
     auth: {
         user: process.env.MAIL_ADDRESS,
         pass: process.env.MAIL_PASSWORD
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
@@ -132,6 +137,14 @@ export const mailer = {
             to: user.email,
             subject: `KYC Verification Update: ${status.toUpperCase()}`,
             html: templates.kycStatus(user.fullName, status, reason)
+        });
+    },
+
+    payoutProcessed: async (user, amount, type) => {
+        return await sendEmail({
+            to: user.email,
+            subject: 'Payout Processed Successfully',
+            html: templates.payoutProcessed(user.fullName, amount, type)
         });
     }
 };
