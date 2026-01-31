@@ -22,8 +22,11 @@ const userSchema = new mongoose.Schema({
     personalBV: { type: Number, default: 0 },
     leftLegBV: { type: Number, default: 0 },
     rightLegBV: { type: Number, default: 0 },
-    leftDirectSponsors: { type: Number, default: 0 }, // New: Count of direct sponsors in left leg
-    rightDirectSponsors: { type: Number, default: 0 }, // New: Count of direct sponsors in right leg
+    // Direct Sponsor Breakdown
+    leftDirectActive: { type: Number, default: 0 },
+    leftDirectInactive: { type: Number, default: 0 },
+    rightDirectActive: { type: Number, default: 0 },
+    rightDirectInactive: { type: Number, default: 0 },
     totalBV: { type: Number, default: 0 },
     thisMonthBV: { type: Number, default: 0 },
     thisYearBV: { type: Number, default: 0 },

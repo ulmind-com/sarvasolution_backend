@@ -81,50 +81,57 @@ const processUser = async (user) => {
     const sponsor = await User.findOne({ memberId: user.sponsorId });
     if (!sponsor) return;
 
-    let iterator = await User.findOne({ memberId: user.parentId });
-    let isFound = false;
+    if (user.memberId === 'SVS000004') {
+        console.log(`DEBUG: Processing SVS000004. Sponsor: ${sponsor.memberId}`);
+        console.log(`DEBUG: Parent: ${user.parentId}`);
+        console.log(`DEBUG: Sponsor LeftChild: ${sponsor.leftChild}`);
+        console.log(`DEBUG: User ID: ${user._id}`);
+    }
 
-    // Check if user is direct child of sponsor (Optimization)
-    if (sponsor.memberId === user.parentId) {
-        // User's parent IS the sponsor
-        if (sponsor.leftChild && sponsor.leftChild.toString() === user._id.toString()) {
-            sponsor.leftDirectSponsors += 1;
-        } else if (sponsor.rightChild && sponsor.rightChild.toString() === user._id.toString()) {
-            sponsor.rightDirectSponsors += 1;
+    const isActive = user.status === 'active';
+
+    // Helper to update fields
+    const updateStats = async (targetSponsor, isLeft) => {
+        if (isLeft) {
+            if (isActive) targetSponsor.leftDirectActive += 1;
+            else targetSponsor.leftDirectInactive += 1;
+        } else {
+            if (isActive) targetSponsor.rightDirectActive += 1;
+            else targetSponsor.rightDirectInactive += 1;
         }
-        await sponsor.save();
+        await targetSponsor.save();
+    };
+
+    // Check direct parent
+    if (sponsor.memberId === user.parentId) {
+        if (sponsor.leftChild && sponsor.leftChild.toString() === user._id.toString()) {
+            await updateStats(sponsor, true);
+        } else if (sponsor.rightChild && sponsor.rightChild.toString() === user._id.toString()) {
+            await updateStats(sponsor, false);
+        }
         return;
     }
 
-    // Traverse up
+    // Traverse up to find leg
+    let iterator = await User.findOne({ memberId: user.parentId });
     while (iterator) {
-        if (iterator.memberId === sponsor.memberId) {
-            isFound = true;
-            break;
-        }
+        if (iterator.memberId === sponsor.memberId) break;
         if (!iterator.parentId) break;
-
-        // We need to know which child we came from to identify the leg *relative to the sponsor*
-        // The loop finds the sponsor. But we need to know: Did we reach sponsor from sponsor.left or sponsor.right?
-        // So we need to look *down* from sponsor, or track the path.
-
         iterator = await User.findOne({ memberId: iterator.parentId });
     }
 
-    // Re-approach: Find the Child of Sponsor that is an ancestor of User.
+    // Reliable Ancestor Check
     if (sponsor.leftChild) {
         const isLeft = await isAncestor(sponsor.leftChild, user._id);
         if (isLeft) {
-            sponsor.leftDirectSponsors += 1;
-            await sponsor.save();
+            await updateStats(sponsor, true);
             return;
         }
     }
     if (sponsor.rightChild) {
         const isRight = await isAncestor(sponsor.rightChild, user._id);
         if (isRight) {
-            sponsor.rightDirectSponsors += 1;
-            await sponsor.save();
+            await updateStats(sponsor, false);
             return;
         }
     }
@@ -150,22 +157,26 @@ const isAncestor = async (startNodeId, targetId) => {
 
 const runScriptReal = async () => {
     await connectDB();
-    console.log('Starting SCRIPT...');
+    console.log('Starting Sponsor Direct Count Recalculation (Active/Inactive)...');
 
+    // Reset all
+    console.log('Resetting counts...');
     await User.updateMany({}, {
-        leftDirectSponsors: 0,
-        rightDirectSponsors: 0,
-        $unset: { leftTeamCount: "", rightTeamCount: "" }
+        leftDirectActive: 0,
+        leftDirectInactive: 0,
+        rightDirectActive: 0,
+        rightDirectInactive: 0,
+        $unset: { leftDirectSponsors: "", rightDirectSponsors: "" }
     });
 
-    const allUsers = await User.find({});
+    const allUsers = await User.find({}).select('memberId parentId sponsorId status');
     console.log(`Processing ${allUsers.length} users...`);
 
     let count = 0;
     for (const user of allUsers) {
         await processUser(user);
         count++;
-        if (count % 10 === 0) process.stdout.write('.');
+        if (count % 50 === 0) process.stdout.write('.');
     }
     console.log('\nDone!');
     process.exit(0);

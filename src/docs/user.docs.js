@@ -120,8 +120,10 @@
  *                     sponsorId: { type: string }
  *                     joiningDate: { type: string, format: date-time }
  *                     status: { type: string, enum: [active, inactive, blocked] }
- *                     leftDirectSponsors: { type: integer }
- *                     rightDirectSponsors: { type: integer }
+ *                     leftDirectActive: { type: integer }
+ *                     leftDirectInactive: { type: integer }
+ *                     rightDirectActive: { type: integer }
+ *                     rightDirectInactive: { type: integer }
  *                     left: { type: object }
  *                     right: { type: object }
  */
@@ -164,8 +166,10 @@
  *                     sponsorId: { type: string }
  *                     joiningDate: { type: string, format: date-time }
  *                     status: { type: string, enum: [active, inactive, blocked] }
- *                     leftDirectSponsors: { type: integer }
- *                     rightDirectSponsors: { type: integer }
+ *                     leftDirectActive: { type: integer }
+ *                     leftDirectInactive: { type: integer }
+ *                     rightDirectActive: { type: integer }
+ *                     rightDirectInactive: { type: integer }
  *                     left: { type: object }
  *                     right: { type: object }
  */

@@ -292,7 +292,7 @@ export const mlmService = {
     },
 
     /**
-     * Update Sponsor's Direct Count based on which leg the new user is in
+     * Update Sponsor's Direct Count based on which leg the new user is in and their status
      */
     updateSponsorDirectCount: async (newUser) => {
         const sponsor = await User.findOne({ memberId: newUser.sponsorId });
@@ -301,63 +301,32 @@ export const mlmService = {
         // Trace up from newUser to find which child of Sponsor leads to newUser
         let currentId = newUser._id;
         let parentId = newUser.parentId;
+        const isActive = newUser.status === 'active';
+
+        // Helper to update fields
+        const updateFields = (user, isLeft) => {
+            if (isLeft) {
+                if (isActive) user.leftDirectActive += 1;
+                else user.leftDirectInactive += 1;
+            } else {
+                if (isActive) user.rightDirectActive += 1;
+                else user.rightDirectInactive += 1;
+            }
+        };
 
         // Safety check: if newUser is direct child of sponsor
         if (sponsor.leftChild && sponsor.leftChild.toString() === currentId.toString()) {
-            sponsor.leftDirectSponsors += 1;
+            updateFields(sponsor, true);
             await sponsor.save();
             return;
         }
         if (sponsor.rightChild && sponsor.rightChild.toString() === currentId.toString()) {
-            sponsor.rightDirectSponsors += 1;
+            updateFields(sponsor, false);
             await sponsor.save();
             return;
         }
 
-        // If deep downline, traverse up
-        while (parentId) {
-            // Check if this parent is the sponsor
-            if (parentId === sponsor.memberId) {
-                // Should have been caught by direct child check, but just in case of data inconsistency
-                // We need to know which leg we came from.
-                // Since we don't have back-links easily without querying, let's look at sponsor's children
-                // Check if the current 'currentId' is in left or right subtree of sponsor.
-                // Actually, traversing UP, we stop when 'parent' is 'sponsor'.
-                // But we need to know if we are in left or right leg of sponsor.
-
-                // Better approach:
-                // Check if newUser is in sponsor's left leg or right leg by checking top-down for the root of that leg?
-                // No, top-down is expensive.
-                // Up-traversal:
-                // We are at 'current'. 'parent' is the node above.
-                // If 'parent' == 'sponsor', then 'current' is the child of sponsor. 
-                // We check if 'current' is sponsor.left or sponsor.right.
-                // Wait, 'parentId' stores MemberID string, not ObjectID.
-
-                // Let's rely on the while loop reaching the child of the sponsor.
-                break;
-            }
-
-            const parent = await User.findOne({ memberId: parentId });
-            if (!parent) break;
-
-            if (parent.memberId === sponsor.memberId) {
-                // Found sponsor!
-                // 'currentId' is the node that is the direct child of the sponsor (or deeper?) 
-                // Wait, previous iteration current was child of parent. 
-                // So 'current' is the node effectively connecting to execution.
-                // Let's re-verify the logic.
-            }
-
-            // Actually, simpler logic:
-            // Just traverse up until we find the sponsor.
-            // But we need to keep track of the node that is the DIRECT child of the sponsor.
-            // Let's re-write the traversal logic cleanly.
-            currentId = parent._id;
-            parentId = parent.parentId;
-        }
-
-        // Re-implementation of traversal for determining leg:
+        // If deep downline, find leg
         let iterator = await User.findById(newUser._id);
         while (iterator && iterator.parentId) {
             const parent = await User.findOne({ memberId: iterator.parentId });
@@ -366,9 +335,9 @@ export const mlmService = {
             if (parent.memberId === sponsor.memberId) {
                 // Found the sponsor. Now, is 'iterator' the left or right child?
                 if (parent.leftChild && parent.leftChild.toString() === iterator._id.toString()) {
-                    parent.leftDirectSponsors += 1;
+                    updateFields(parent, true);
                 } else if (parent.rightChild && parent.rightChild.toString() === iterator._id.toString()) {
-                    parent.rightDirectSponsors += 1;
+                    updateFields(parent, false);
                 }
                 await parent.save();
                 return;
@@ -385,7 +354,7 @@ export const mlmService = {
         if (depth < 0) return null;
 
         const user = await User.findById(userId)
-            .select('fullName memberId currentRank position leftChild rightChild profilePicture sponsorId createdAt status leftDirectSponsors rightDirectSponsors');
+            .select('fullName memberId currentRank position leftChild rightChild profilePicture sponsorId createdAt status leftDirectActive leftDirectInactive rightDirectActive rightDirectInactive');
 
         if (!user) return null;
 
@@ -399,8 +368,10 @@ export const mlmService = {
             sponsorId: user.sponsorId,
             joiningDate: user.createdAt,
             status: user.status,
-            leftDirectSponsors: user.leftDirectSponsors,
-            rightDirectSponsors: user.rightDirectSponsors,
+            leftDirectActive: user.leftDirectActive,
+            leftDirectInactive: user.leftDirectInactive,
+            rightDirectActive: user.rightDirectActive,
+            rightDirectInactive: user.rightDirectInactive,
             left: user.leftChild ? await mlmService.getGenealogyTree(user.leftChild, depth - 1) : null,
             right: user.rightChild ? await mlmService.getGenealogyTree(user.rightChild, depth - 1) : null
         };
