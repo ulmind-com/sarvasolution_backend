@@ -75,7 +75,6 @@
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  *       500:
- *       500:
  *         $ref: '#/components/responses/Error'
  * 
  *   patch:
