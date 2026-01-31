@@ -114,6 +114,10 @@
  *                   properties:
  *                     memberId: { type: string }
  *                     fullName: { type: string }
+ *                     rank: { type: string }
+ *                     position: { type: string }
+ *                     profileImage: { type: string }
+ *                     parentId: { type: string }
  *                     left: { type: object }
  *                     right: { type: object }
  */
@@ -150,6 +154,10 @@
  *                   properties:
  *                     memberId: { type: string }
  *                     fullName: { type: string }
+ *                     rank: { type: string }
+ *                     position: { type: string }
+ *                     profileImage: { type: string }
+ *                     parentId: { type: string }
  *                     left: { type: object }
  *                     right: { type: object }
  */

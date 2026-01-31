@@ -298,7 +298,7 @@ export const mlmService = {
     getGenealogyTree: async (userId, depth = 3) => {
         if (depth < 0) return null;
 
-        const user = await User.findById(userId).select('fullName memberId currentRank position leftChild rightChild');
+        const user = await User.findById(userId).select('fullName memberId currentRank position leftChild rightChild profilePicture parentId');
         if (!user) return null;
 
         const tree = {
@@ -307,6 +307,8 @@ export const mlmService = {
             fullName: user.fullName,
             rank: user.currentRank,
             position: user.position,
+            profileImage: user.profilePicture?.url || null,
+            parentId: user.parentId,
             left: user.leftChild ? await mlmService.getGenealogyTree(user.leftChild, depth - 1) : null,
             right: user.rightChild ? await mlmService.getGenealogyTree(user.rightChild, depth - 1) : null
         };
