@@ -18,7 +18,9 @@ router.get('/payouts', getPayouts); // New Route
 router.post('/request-payout', requestPayout);
 
 import { getDirectTeam, getCompleteTeam } from '../controllers/user/user.controller.js';
+import { activateUser } from '../controllers/user/activate_user.controller.js';
 
+router.post('/activate', activateUser);
 router.get('/direct-team', getDirectTeam); // New Route for Direct Team List
 router.get('/team/complete', getCompleteTeam); // Recursively fetch complete team by leg
 

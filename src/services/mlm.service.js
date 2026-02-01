@@ -117,6 +117,13 @@ export const mlmService = {
             const parent = await User.findOne({ memberId: parentMemberId });
             if (!parent) break;
 
+            // Rule: Inactive users do not accumulate BV (Flashout)
+            if (parent.status !== 'active') {
+                currentPosition = parent.position;
+                parentMemberId = parent.parentId;
+                continue;
+            }
+
             if (currentPosition === 'left') {
                 parent.leftLegBV += bvAmount;
             } else {

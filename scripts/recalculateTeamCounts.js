@@ -165,13 +165,28 @@ const runScript = async () => {
             const rCount = getRecursiveTeamCount(user.rightChild);
 
             // Prepare Update
+            // Prepare Update for Team Counts
+            const updateDoc = {
+                leftTeamCount: lCount,
+                rightTeamCount: rCount
+            };
+
+            // Rule: Inactive users have 0 BV (Flashout)
+            if (user.status !== 'active') {
+                updateDoc.personalBV = 0;
+                updateDoc.totalBV = 0;
+                updateDoc.leftLegBV = 0;
+                updateDoc.rightLegBV = 0;
+                updateDoc.thisMonthBV = 0;
+                updateDoc.thisYearBV = 0;
+                updateDoc.carryForwardLeft = 0;
+                updateDoc.carryForwardRight = 0;
+            }
+
             updates.push({
                 updateOne: {
                     filter: { _id: user._id },
-                    update: {
-                        leftTeamCount: lCount,
-                        rightTeamCount: rCount
-                    }
+                    update: updateDoc
                 }
             });
 

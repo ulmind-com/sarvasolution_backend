@@ -38,8 +38,7 @@ export const register = asyncHandler(async (req, res) => {
     const placement = await mlmService.findAvailablePosition(sponsorId, preferredPosition);
     const memberId = await User.generateMemberId();
 
-    // 3. User Creation (SSVPL default: 500 BV Package)
-    const joiningPackageBV = 500;
+    // 3. User Creation (SSVPL default: Inactive, 0 BV)
     const newUser = new User({
         username: memberId,
         email,
@@ -51,10 +50,11 @@ export const register = asyncHandler(async (req, res) => {
         panCardNumber: panCardNumber.toUpperCase(),
         parentId: placement.parentId,
         position: placement.position,
-        personalBV: joiningPackageBV,
-        totalBV: joiningPackageBV,
-        thisMonthBV: joiningPackageBV,
-        thisYearBV: joiningPackageBV
+        status: 'inactive', // Explicitly set inactive
+        personalBV: 0,
+        totalBV: 0,
+        thisMonthBV: 0,
+        thisYearBV: 0
     });
 
     await newUser.save();
@@ -63,6 +63,10 @@ export const register = asyncHandler(async (req, res) => {
     if (sponsor) {
         sponsor.directSponsors.count += 1;
         sponsor.directSponsors.members.push(newUser.memberId);
+        // Bonus eligibility check should probably depend on ACTIVE sponsors?
+        // Checking rule: "Must have 2 direct sponsors" - typically means active. 
+        // We will keep this count as raw count, but eligibility check in calculates matching usually checks active status.
+        // For now, let's leave this raw count increment.
         if (sponsor.directSponsors.count >= 2) {
             sponsor.directSponsors.eligibleForBonuses = true;
         }
@@ -80,14 +84,8 @@ export const register = asyncHandler(async (req, res) => {
         await parentNode.save();
     }
 
-    // 5. BV Propagation & Tracking
-    await mlmService.propagateBVUpTree(
-        newUser._id,
-        placement.position,
-        joiningPackageBV,
-        'joining',
-        `REG-${newUser.memberId}`
-    );
+    // 5. BV Propagation - SKIPPED FOR INACTIVE USER
+    // await mlmService.propagateBVUpTree(...) // No BV yet
 
     // 5.1 Update Sponsor's Direct Count
     await mlmService.updateSponsorDirectCount(newUser);

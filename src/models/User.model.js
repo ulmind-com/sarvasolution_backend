@@ -175,7 +175,7 @@ const userSchema = new mongoose.Schema({
         publicId: { type: String, default: null }
     },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'active' }
+    status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'inactive' }
 
 }, {
     timestamps: true
