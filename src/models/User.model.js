@@ -28,6 +28,11 @@ const userSchema = new mongoose.Schema({
     leftDirectInactive: { type: Number, default: 0 },
     rightDirectActive: { type: Number, default: 0 },
     rightDirectInactive: { type: Number, default: 0 },
+
+    // Total Team Counts (Recursive)
+    leftTeamCount: { type: Number, default: 0 },
+    rightTeamCount: { type: Number, default: 0 }, // Total downline count
+
     totalBV: { type: Number, default: 0 },
     thisMonthBV: { type: Number, default: 0 },
     thisYearBV: { type: Number, default: 0 },

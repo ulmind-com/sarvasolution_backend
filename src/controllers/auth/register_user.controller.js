@@ -92,6 +92,9 @@ export const register = asyncHandler(async (req, res) => {
     // 5.1 Update Sponsor's Direct Count
     await mlmService.updateSponsorDirectCount(newUser);
 
+    // 5.2 Update Total Team Counts (Live Sync)
+    await mlmService.updateTeamCountsUpTree(newUser._id);
+
     // 6. Notifications & JWT
     mailer.sendWelcome(newUser).catch(e => console.error('Welcome Email Error:', e));
 

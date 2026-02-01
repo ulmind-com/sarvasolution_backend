@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import User from '../src/models/User.model.js';
+import chalk from 'chalk';
 
 // Setup environment
 const __filename = fileURLToPath(import.meta.url);
@@ -21,173 +22,230 @@ const connectDB = async () => {
 
 const runScript = async () => {
     await connectDB();
-    console.log('Starting Sponsor Direct Count Recalculation...');
+    console.log(chalk.blue('Starting Perfect Data Sync...'));
 
     try {
         // 1. Reset all counts
-        console.log('Resetting counts to 0...');
+        console.log(chalk.yellow('Resetting all user counts to 0...'));
         await User.updateMany({}, {
-            leftDirectSponsors: 0,
-            rightDirectSponsors: 0,
-            $unset: { leftTeamCount: "", rightTeamCount: "" } // Cleanup old fields
+            leftDirectActive: 0,
+            leftDirectInactive: 0,
+            rightDirectActive: 0,
+            rightDirectInactive: 0,
+            leftTeamCount: 0,
+            rightTeamCount: 0,
+            $unset: { leftDirectSponsors: "", rightDirectSponsors: "" }
         });
 
-        const allUsers = await User.find({}).select('memberId sponsorId parentId');
-        console.log(`Processing ${allUsers.length} users...`);
+        // 2. Fetch all users into memory
+        console.log(chalk.cyan('Fetching all users...'));
+        const allUsers = await User.find({})
+            .select('_id memberId parentId sponsorId leftChild rightChild position status')
+            .lean();
 
-        for (const user of allUsers) {
-            if (!user.sponsorId || !user.parentId) continue;
+        console.log(chalk.green(`Loaded ${allUsers.length} users.`));
 
-            const sponsor = await User.findOne({ memberId: user.sponsorId });
-            if (!sponsor) continue;
+        // Create Maps for O(1) Access
+        const userMap = new Map();
+        const memberIdMap = new Map();
 
-            // Determine leg: Traverse up from user.parentId until we hit sponsor
-            let iteratorId = user.parentId;
+        allUsers.forEach(u => {
+            userMap.set(u._id.toString(), u);
+            memberIdMap.set(u.memberId, u);
+        });
 
-            // Optimization: First check immediate children of sponsor
-            if (sponsor.leftChild && (await User.findById(sponsor.leftChild))?.memberId === user.memberId) {
-                // Cannot happen because user.memberId != user.parentId. 
-                // We need to check if sponsor.leftChild === user.parentId? No.
-                // We need to check if sponsor.leftChild is the ancestor of user.
+        // Memoization Cache for Recursive Team Counts
+        const legCountCache = new Map();
+
+        // --- Helper: Recursive Team Count (Memoized) ---
+        const getRecursiveTeamCount = (userId) => {
+            if (!userId) return 0;
+            const strId = userId.toString();
+
+            if (legCountCache.has(strId)) return legCountCache.get(strId);
+
+            const user = userMap.get(strId);
+            if (!user) {
+                console.log(chalk.red(`Debug: User ${strId} not found in map. Map size: ${userMap.size}`));
+                // Check if map has this key in any form?
+                // console.log('Keys sample:', [...userMap.keys()].slice(0, 5));
+                return 0;
             }
 
-            // Just traversal
-            // Warning: deeply nested trees make this slow. 
-            // Better: Load needed fields for all users into memory for fast lookup
+            // Debug for SVS000012 chain
+            if (user.memberId === 'SVS000015') {
+                console.log(`Debug: calculating for SVS000015. Left: ${user.leftChild}, Right: ${user.rightChild}`);
+            }
+
+            const leftCount = getRecursiveTeamCount(user.leftChild);
+            const rightCount = getRecursiveTeamCount(user.rightChild);
+
+            const total = 1 + leftCount + rightCount; // 1 (self) + subtrees
+            legCountCache.set(strId, total);
+            return total;
+        };
+
+        // --- Helper: Find Sponsor Leg (Traverse Up) ---
+        const findSponsorLeg = (child, sponsorMemberId) => {
+            // Check direct parents until we find sponsor or root
+            let current = child;
+            while (current && current.parentId) {
+                const parentIdStr = typeof current.parentId === 'object' ? current.parentId.toString() : current.parentId;
+                // Wait, parentId in schema is String (memberId) usually, let's check schema.
+                // Schema says: parentId: { type: String, default: null } -> It's memberId!
+
+                // We need to find the User object for this parentMemberId
+                // Optimization: Create memberId Map
+                const parent = allUsers.find(u => u.memberId === parentIdStr);
+
+                if (!parent) break;
+
+                if (parent.memberId === sponsorMemberId) {
+                    // Found Sponsor! Now which child path did we come from?
+                    if (parent.leftChild && parent.leftChild.toString() === current._id.toString()) return 'left';
+                    if (parent.rightChild && parent.rightChild.toString() === current._id.toString()) return 'right';
+
+                    // Note: If 'current' was further down, we need to know which leg of 'parent' 'current' is in.
+                    // But 'current' stores its 'position' relative to 'parent' in schema?
+                    // Schema: position: { type: String, enum: ['left', 'right', 'root'] }
+                    // Yes, user.position tells us which leg of parent they are in.
+
+                    // Actually, simpler:
+                    // If we find the sponsor, we need to know if the *starting user* belongs to sponsor's left or right tree.
+                    // We can re-traverse downwards? No, slow.
+                    // We can trace upwards and remember the "first step" taken from the sponsor?
+                    break;
+                }
+                current = parent;
+            }
+            return null;
+        };
+
+        // Correct approach for Sponsor Leg:
+        // Use the 'position' field?
+        // No, 'position' is relative to immediate parent. Sponsor might be 5 levels up.
+        // We need to see if the user is in the sponsor's left tree or right tree.
+        // We can use the isAncestor check with memoization or simply rely on the DFS property.
+
+        // Optimized Sponsor Update Loop
+        const sponsorUpdates = new Map(); // Map<SponsorID, {lA, lI, rA, rI}>
+
+        const initStats = () => ({ lA: 0, lI: 0, rA: 0, rI: 0 });
+
+        // --- Helper: Check ancestry using map (Traverse Up) ---
+        const isDescendant = (ancestorId, targetId) => {
+            let curr = userMap.get(targetId.toString());
+            const ancestorIdStr = ancestorId.toString();
+
+            while (curr) {
+                if (curr._id.toString() === ancestorIdStr) return true;
+                if (!curr.parentId) break;
+
+                // Optimized Lookup O(1)
+                const parent = memberIdMap.get(curr.parentId);
+                if (!parent) break;
+
+                if (parent._id.toString() === ancestorIdStr) return true;
+                curr = parent;
+            }
+            return false;
+        };
+
+        // Let's iterate all users to calculate their 'Team Counts' first
+        console.log(chalk.cyan('Calculating recursive team counts...'));
+        const updates = [];
+
+        for (const user of allUsers) {
+            // Calculate Total Team Counts
+            // getRecursiveTeamCount returns (self + descendants) of the node passed.
+            // If we pass user.leftChild, it returns count of left child + its descendants.
+            // This IS the total count of the left leg. No subtraction needed.
+            const lCount = getRecursiveTeamCount(user.leftChild);
+
+            const rCount = getRecursiveTeamCount(user.rightChild);
+
+            // Prepare Update
+            updates.push({
+                updateOne: {
+                    filter: { _id: user._id },
+                    update: {
+                        leftTeamCount: lCount,
+                        rightTeamCount: rCount
+                    }
+                }
+            });
+
+            // Handle Sponsor Stats
+            if (user.sponsorId) {
+                // Find sponsor
+                const sponsor = memberIdMap.get(user.sponsorId);
+                if (sponsor) {
+                    const isActive = user.status === 'active';
+                    let leg = null;
+
+                    // Determine Leg
+                    // 1. Check direct children
+                    if (sponsor.leftChild && sponsor.leftChild.toString() === user._id.toString()) leg = 'left';
+                    else if (sponsor.rightChild && sponsor.rightChild.toString() === user._id.toString()) leg = 'right';
+                    else {
+                        // 2. Deep check
+                        if (sponsor.leftChild && isDescendant(sponsor.leftChild, user._id)) leg = 'left';
+                        else if (sponsor.rightChild && isDescendant(sponsor.rightChild, user._id)) leg = 'right';
+                    }
+
+                    if (leg) {
+                        // Queue update for sponsor
+                        // We can't update directly here efficiently, better to aggregate first
+                        const sId = sponsor._id.toString();
+                        if (!sponsorUpdates.has(sId)) sponsorUpdates.set(sId, initStats());
+                        const stats = sponsorUpdates.get(sId);
+
+                        if (leg === 'left') {
+                            if (isActive) stats.lA++; else stats.lI++;
+                        } else {
+                            if (isActive) stats.rA++; else stats.rI++;
+                        }
+
+                        // Also update User's sponsorLeg field
+                        updates.push({
+                            updateOne: {
+                                filter: { _id: user._id },
+                                update: { sponsorLeg: leg }
+                            }
+                        });
+                    }
+                }
+            }
         }
 
-        // --- In-Memory Optimization ---
-        const userMap = new Map();
-        const usersFull = await User.find({}).select('_id memberId parentId leftChild rightChild leftDirectSponsors rightDirectSponsors');
-        usersFull.forEach(u => userMap.set(u.memberId, u));
-
-        let updates = 0;
-
-        for (const user of usersFull) {
-            if (!user.sponsorId) continue; // Root or anomaly
-
-            // Find sponsor in map
-            // Note: user.sponsorId is a String, userMap keys are memberIds (String)
-            // But wait, the previous `find` didn't select sponsorId.
+        // Add Sponsor Stats updates to bulk operations
+        for (const [sId, stats] of sponsorUpdates) {
+            updates.push({
+                updateOne: {
+                    filter: { _id: sId },
+                    update: {
+                        leftDirectActive: stats.lA,
+                        leftDirectInactive: stats.lI,
+                        rightDirectActive: stats.rA,
+                        rightDirectInactive: stats.rI
+                    }
+                }
+            });
         }
-    } catch (e) { console.error(e) }
+
+        console.log(chalk.blue(`Applying ${updates.length} updates...`));
+        // Bulk Write
+        if (updates.length > 0) {
+            await User.bulkWrite(updates);
+        }
+
+        console.log(chalk.green('Sync Complete! All data is perfectly consistent.'));
+        process.exit(0);
+
+    } catch (e) {
+        console.error(chalk.red('Sync Failed:'), e);
+        process.exit(1);
+    }
 };
-// Scratch that, let's stick to the reliable database traversal for correctness over speed for this admin script.
-// Using the same logic as the service ensures consistency.
 
-const processUser = async (user) => {
-    if (!user.sponsorId || !user.parentId) return;
-
-    const sponsor = await User.findOne({ memberId: user.sponsorId });
-    if (!sponsor) return;
-
-    if (user.memberId === 'SVS000004') {
-        console.log(`DEBUG: Processing SVS000004. Sponsor: ${sponsor.memberId}`);
-        console.log(`DEBUG: Parent: ${user.parentId}`);
-        console.log(`DEBUG: Sponsor LeftChild: ${sponsor.leftChild}`);
-        console.log(`DEBUG: User ID: ${user._id}`);
-    }
-
-    const isActive = user.status === 'active';
-
-    // Helper to update fields
-    const updateStats = async (targetSponsor, isLeft) => {
-        // Update Sponsor Counts
-        if (isLeft) {
-            if (isActive) targetSponsor.leftDirectActive += 1;
-            else targetSponsor.leftDirectInactive += 1;
-        } else {
-            if (isActive) targetSponsor.rightDirectActive += 1;
-            else targetSponsor.rightDirectInactive += 1;
-        }
-        await targetSponsor.save();
-
-        // Update User's Sponsor Leg
-        // Note: 'user' object passed in might be a lean doc or full doc from 'processUser' loop. 
-        // We should fetch precise or update directly.
-        // Since we are iterating, 'user' is the doc.
-        // But we need to make sure we persist this change.
-        await User.updateOne({ _id: user._id }, { sponsorLeg: isLeft ? 'left' : 'right' });
-    };
-
-    // Check direct parent
-    if (sponsor.memberId === user.parentId) {
-        if (sponsor.leftChild && sponsor.leftChild.toString() === user._id.toString()) {
-            await updateStats(sponsor, true);
-        } else if (sponsor.rightChild && sponsor.rightChild.toString() === user._id.toString()) {
-            await updateStats(sponsor, false);
-        }
-        return;
-    }
-
-    // Traverse up to find leg
-    let iterator = await User.findOne({ memberId: user.parentId });
-    while (iterator) {
-        if (iterator.memberId === sponsor.memberId) break;
-        if (!iterator.parentId) break;
-        iterator = await User.findOne({ memberId: iterator.parentId });
-    }
-
-    // Reliable Ancestor Check
-    if (sponsor.leftChild) {
-        const isLeft = await isAncestor(sponsor.leftChild, user._id);
-        if (isLeft) {
-            await updateStats(sponsor, true);
-            return;
-        }
-    }
-    if (sponsor.rightChild) {
-        const isRight = await isAncestor(sponsor.rightChild, user._id);
-        if (isRight) {
-            await updateStats(sponsor, false);
-            return;
-        }
-    }
-};
-
-// Helper: BFS/DFS to check if 'ancestorId' is actually an ancestor of 'targetId'
-// Or simpler: Check if targetId is in the subtree of startNodeId
-const isAncestor = async (startNodeId, targetId) => {
-    // DFS
-    const stack = [startNodeId];
-    while (stack.length > 0) {
-        const currentId = stack.pop();
-        if (currentId.toString() === targetId.toString()) return true;
-
-        const node = await User.findById(currentId).select('leftChild rightChild');
-        if (node) {
-            if (node.leftChild) stack.push(node.leftChild);
-            if (node.rightChild) stack.push(node.rightChild);
-        }
-    }
-    return false;
-};
-
-const runScriptReal = async () => {
-    await connectDB();
-    console.log('Starting Sponsor Direct Count Recalculation (Active/Inactive)...');
-
-    // Reset all
-    console.log('Resetting counts...');
-    await User.updateMany({}, {
-        leftDirectActive: 0,
-        leftDirectInactive: 0,
-        rightDirectActive: 0,
-        rightDirectInactive: 0,
-        $unset: { leftDirectSponsors: "", rightDirectSponsors: "" }
-    });
-
-    const allUsers = await User.find({}).select('memberId parentId sponsorId status');
-    console.log(`Processing ${allUsers.length} users...`);
-
-    let count = 0;
-    for (const user of allUsers) {
-        await processUser(user);
-        count++;
-        if (count % 50 === 0) process.stdout.write('.');
-    }
-    console.log('\nDone!');
-    process.exit(0);
-};
-
-runScriptReal();
+runScript();

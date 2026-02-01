@@ -124,6 +124,8 @@
  *                     leftDirectInactive: { type: integer }
  *                     rightDirectActive: { type: integer }
  *                     rightDirectInactive: { type: integer }
+ *                     leftTeamCount: { type: integer, description: "Total recursive members in left leg" }
+ *                     rightTeamCount: { type: integer, description: "Total recursive members in right leg" }
  *                     left: { type: object }
  *                     right: { type: object }
  */
@@ -170,6 +172,8 @@
  *                     leftDirectInactive: { type: integer }
  *                     rightDirectActive: { type: integer }
  *                     rightDirectInactive: { type: integer }
+ *                     leftTeamCount: { type: integer, description: "Total recursive members in left leg" }
+ *                     rightTeamCount: { type: integer, description: "Total recursive members in right leg" }
  *                     left: { type: object }
  *                     right: { type: object }
  */
@@ -247,7 +251,68 @@
  *                           joiningDate: { type: string, format: date-time }
  *                           status: { type: string }
  *                           sponsorLeg: { type: string }
+ *                           leftTeamCount: { type: integer, description: "Total recursive members in left leg" }
+ *                           rightTeamCount: { type: integer, description: "Total recursive members in right leg" }
  *                           profilePicture: { type: object, properties: { url: { type: string } } }
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         total: { type: integer }
+ *                         page: { type: integer }
+ *                         limit: { type: integer }
+ *                         pages: { type: integer }
+ */
+
+/**
+ * @swagger
+ * /api/v1/user/team/complete:
+ *   get:
+ *     summary: Get Complete Downline Team (Recursive)
+ *     description: Retrieve all members in the specified leg (Left or Right), including indirect referrals.
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: leg
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [left, right]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Complete team fetched
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     members:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           memberId: { type: string }
+ *                           fullName: { type: string }
+ *                           rank: { type: string }
+ *                           joiningDate: { type: string, format: date-time }
+ *                           status: { type: string }
+ *                           sponsorId: { type: string }
+ *                           profilePicture: { type: string }
  *                     pagination:
  *                       type: object
  *                       properties:

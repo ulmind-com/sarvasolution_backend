@@ -17,8 +17,9 @@ router.get('/tree/:memberId', getTree);
 router.get('/payouts', getPayouts); // New Route
 router.post('/request-payout', requestPayout);
 
-import { getDirectTeam } from '../controllers/user/user.controller.js';
+import { getDirectTeam, getCompleteTeam } from '../controllers/user/user.controller.js';
 
 router.get('/direct-team', getDirectTeam); // New Route for Direct Team List
+router.get('/team/complete', getCompleteTeam); // Recursively fetch complete team by leg
 
 export default router;

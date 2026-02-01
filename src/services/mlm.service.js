@@ -354,7 +354,7 @@ export const mlmService = {
         if (depth < 0) return null;
 
         const user = await User.findById(userId)
-            .select('fullName memberId currentRank position leftChild rightChild profilePicture sponsorId createdAt status leftDirectActive leftDirectInactive rightDirectActive rightDirectInactive');
+            .select('fullName memberId currentRank position leftChild rightChild profilePicture sponsorId createdAt status leftDirectActive leftDirectInactive rightDirectActive rightDirectInactive leftTeamCount rightTeamCount');
 
         if (!user) return null;
 
@@ -372,10 +372,107 @@ export const mlmService = {
             leftDirectInactive: user.leftDirectInactive,
             rightDirectActive: user.rightDirectActive,
             rightDirectInactive: user.rightDirectInactive,
+            leftTeamCount: user.leftTeamCount || 0,
+            rightTeamCount: user.rightTeamCount || 0,
             left: user.leftChild ? await mlmService.getGenealogyTree(user.leftChild, depth - 1) : null,
             right: user.rightChild ? await mlmService.getGenealogyTree(user.rightChild, depth - 1) : null
         };
 
         return tree;
+    },
+
+    /**
+     * Get Complete Team List for a specific leg (Recursive)
+     */
+    getCompleteLegTeam: async (userId, leg, page = 1, limit = 10) => {
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+
+        const startNodeId = leg === 'left' ? user.leftChild : user.rightChild;
+        if (!startNodeId) {
+            return {
+                members: [],
+                pagination: { total: 0, page, limit, pages: 0 }
+            };
+        }
+
+        // Optimized Aggregation to fetch entire subtree
+        const pipeline = [
+            { $match: { _id: startNodeId } },
+            {
+                $graphLookup: {
+                    from: 'users',
+                    startWith: '$memberId',
+                    connectFromField: 'memberId',
+                    connectToField: 'parentId',
+                    as: 'downline'
+                }
+            },
+            {
+                $project: {
+                    allMembers: { $concatArrays: [["$$ROOT"], "$downline"] }
+                }
+            },
+            { $unwind: "$allMembers" },
+            { $replaceRoot: { newRoot: "$allMembers" } },
+            { $sort: { createdAt: -1 } },
+            {
+                $facet: {
+                    metadata: [{ $count: "total" }],
+                    data: [{ $skip: (page - 1) * limit }, { $limit: parseInt(limit) }]
+                }
+            }
+        ];
+
+        const result = await User.aggregate(pipeline);
+        const data = result[0].data;
+        const total = result[0].metadata[0]?.total || 0;
+
+        return {
+            members: data.map(m => ({
+                memberId: m.memberId,
+                fullName: m.fullName,
+                joiningDate: m.createdAt,
+                status: m.status,
+                rank: m.currentRank,
+                sponsorId: m.sponsorId,
+                profilePicture: m.profilePicture?.url
+            })),
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
+        };
+    },
+
+    /**
+     * Update Team Counts recursively up the tree
+     * Triggered on new user registration
+     */
+    updateTeamCountsUpTree: async (userId) => {
+        let current = await User.findById(userId);
+        if (!current) return;
+
+        let parentMemberId = current.parentId;
+        let currentPosition = current.position;
+
+        while (parentMemberId) {
+            const parent = await User.findOne({ memberId: parentMemberId });
+            if (!parent) break;
+
+            if (currentPosition === 'left') {
+                parent.leftTeamCount = (parent.leftTeamCount || 0) + 1;
+            } else {
+                parent.rightTeamCount = (parent.rightTeamCount || 0) + 1;
+            }
+
+            await parent.save();
+
+            // Move up
+            currentPosition = parent.position;
+            parentMemberId = parent.parentId;
+        }
     }
 };
