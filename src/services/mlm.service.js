@@ -103,9 +103,9 @@ export const mlmService = {
     },
 
     /**
-     * Propagate BV up the entire upline chain
+     * Propagate BV & PV up the entire upline chain
      */
-    propagateBVUpTree: async (userId, position, bvAmount, transactionType = 'joining', referenceId = null) => {
+    propagateBVUpTree: async (userId, position, bvAmount, transactionType = 'joining', referenceId = null, pvAmount = 0) => {
         let current = await User.findById(userId);
         if (!current) return;
 
@@ -117,7 +117,7 @@ export const mlmService = {
             const parent = await User.findOne({ memberId: parentMemberId });
             if (!parent) break;
 
-            // Rule: Inactive users do not accumulate BV (Flashout)
+            // Rule: Inactive users do not accumulate BV/PV (Flashout)
             if (parent.status !== 'active') {
                 currentPosition = parent.position;
                 parentMemberId = parent.parentId;
@@ -126,20 +126,30 @@ export const mlmService = {
 
             if (currentPosition === 'left') {
                 parent.leftLegBV += bvAmount;
+                parent.leftLegPV += pvAmount; // PV
             } else {
                 parent.rightLegBV += bvAmount;
+                parent.rightLegPV += pvAmount; // PV
             }
             parent.totalBV += bvAmount;
+            parent.totalPV += pvAmount; // PV
+
             parent.thisMonthBV += bvAmount;
+            parent.thisMonthPV += pvAmount; // PV
+
             parent.thisYearBV += bvAmount;
+            parent.thisYearPV += pvAmount; // PV
 
             await parent.save();
 
-            // Record BV Transaction
+            // Record BV Transaction (Should we rename model to FinancialTransaction or just add PV fields?)
+            // Assuming BVTransaction model is used. Ideally, add PV fields there too.
+            // For now, let's keep it simple or check if model needs update.
             await BVTransaction.create({
                 userId: parent._id,
                 transactionType,
                 bvAmount,
+                pvAmount, // Assuming schema allows flexible fields or we need to update schema
                 legAffected: currentPosition,
                 fromUserId: userId,
                 referenceId

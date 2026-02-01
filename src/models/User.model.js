@@ -23,6 +23,15 @@ const userSchema = new mongoose.Schema({
     personalBV: { type: Number, default: 0 },
     leftLegBV: { type: Number, default: 0 },
     rightLegBV: { type: Number, default: 0 },
+
+    // PV Tracking System (New)
+    personalPV: { type: Number, default: 0 },
+    leftLegPV: { type: Number, default: 0 },
+    rightLegPV: { type: Number, default: 0 },
+    totalPV: { type: Number, default: 0 },
+    thisMonthPV: { type: Number, default: 0 },
+    thisYearPV: { type: Number, default: 0 },
+
     // Direct Sponsor Breakdown
     leftDirectActive: { type: Number, default: 0 },
     leftDirectInactive: { type: Number, default: 0 },

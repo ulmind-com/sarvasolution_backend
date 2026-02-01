@@ -151,27 +151,64 @@ const runScript = async () => {
             return false;
         };
 
-        // Let's iterate all users to calculate their 'Team Counts' first
-        console.log(chalk.cyan('Calculating recursive team counts...'));
+        // --- Helper: Recursive Financials (Memoized) ---
+        const financialCache = new Map();
+        const getRecursiveFinancials = (userId) => {
+            if (!userId) return { bv: 0, pv: 0 };
+            const strId = userId.toString();
+            if (financialCache.has(strId)) return financialCache.get(strId);
+
+            const user = userMap.get(strId);
+            if (!user) return { bv: 0, pv: 0 };
+
+            // Inactive users contribute 0 to the upline
+            if (user.status !== 'active') {
+                financialCache.set(strId, { bv: 0, pv: 0 });
+                return { bv: 0, pv: 0 };
+            }
+
+            const left = getRecursiveFinancials(user.leftChild);
+            const right = getRecursiveFinancials(user.rightChild);
+
+            const pBV = user.personalBV || 0;
+            const pPV = user.personalPV !== undefined ? user.personalPV : pBV; // Backfill
+
+            const totalBV = pBV + left.bv + right.bv;
+            const totalPV = pPV + left.pv + right.pv;
+
+            financialCache.set(strId, { bv: totalBV, pv: totalPV });
+            return { bv: totalBV, pv: totalPV };
+        };
+
+        // Let's iterate all users to calculate their 'Team Counts' and 'Financials'
+        console.log(chalk.cyan('Calculating recursive team counts & financials...'));
         const updates = [];
 
         for (const user of allUsers) {
-            // Calculate Total Team Counts
-            // getRecursiveTeamCount returns (self + descendants) of the node passed.
-            // If we pass user.leftChild, it returns count of left child + its descendants.
-            // This IS the total count of the left leg. No subtraction needed.
+            // 1. Team Counts
             const lCount = getRecursiveTeamCount(user.leftChild);
-
             const rCount = getRecursiveTeamCount(user.rightChild);
 
+            // 2. Financials
+            const lFin = getRecursiveFinancials(user.leftChild);
+            const rFin = getRecursiveFinancials(user.rightChild);
+
             // Prepare Update
-            // Prepare Update for Team Counts
             const updateDoc = {
                 leftTeamCount: lCount,
-                rightTeamCount: rCount
+                rightTeamCount: rCount,
+                leftLegBV: lFin.bv,
+                rightLegBV: rFin.bv,
+                leftLegPV: lFin.pv,
+                rightLegPV: rFin.pv
             };
 
-            // Rule: Inactive users have 0 BV (Flashout)
+            // Backfill Personal PV for Active Users if 0/undefined
+            if (user.status === 'active' && !user.personalPV && user.personalBV > 0) {
+                updateDoc.personalPV = user.personalBV;
+            }
+
+            // Rule: Inactive users have 0 BV & PV (Flashout)
             if (user.status !== 'active') {
                 updateDoc.personalBV = 0;
                 updateDoc.totalBV = 0;
@@ -181,6 +218,18 @@ const runScript = async () => {
                 updateDoc.thisYearBV = 0;
                 updateDoc.carryForwardLeft = 0;
                 updateDoc.carryForwardRight = 0;
+
+                // PV Flashout
+                updateDoc.personalPV = 0;
+                updateDoc.totalPV = 0;
+                updateDoc.leftLegPV = 0;
+                updateDoc.rightLegPV = 0;
+                updateDoc.thisMonthPV = 0;
+                updateDoc.thisYearPV = 0;
+            } else {
+                // Update Total Cumulative (Group)
+                updateDoc.totalBV = (user.personalBV || 0) + lFin.bv + rFin.bv;
+                updateDoc.totalPV = (updateDoc.personalPV || user.personalPV || 0) + lFin.pv + rFin.pv;
             }
 
             updates.push({

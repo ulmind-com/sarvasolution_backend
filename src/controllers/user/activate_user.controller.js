@@ -29,24 +29,28 @@ export const activateUser = asyncHandler(async (req, res) => {
 
     // 2. Assign Package BV (Flashout rule: start from 0 + package)
     const packageBV = 500; // Standard SSVPL Package
+    const packagePV = 500; // Standard SSVPL PV (1:1 Ratio)
+
     user.personalBV = packageBV;
     user.totalBV = packageBV;
     user.thisMonthBV = packageBV;
     user.thisYearBV = packageBV;
 
+    user.personalPV = packagePV;
+    user.totalPV = packagePV;
+    user.thisMonthPV = packagePV;
+    user.thisYearPV = packagePV;
+
     await user.save();
 
-    // 3. Propagate BV Upstream
+    // 3. Propagate BV & PV Upstream
     await mlmService.propagateBVUpTree(
         user._id,
-        user.position, // position is usually root/left/right relative to parent, wait.
-        // propagateBVUpTree expects: userId, position (relative to parent?)
-        // Let's check propagation logic. It looks at CURRENT user's position to add to parent's leg.
-        // User model has 'position' field which is 'left' or 'right' of parent.
         user.position,
         packageBV,
         'activation',
-        `ACT-${user.memberId}`
+        `ACT-${user.memberId}`,
+        packagePV // New PV argument
     );
 
     // 4. Update Sponsor's Direct Active Count
