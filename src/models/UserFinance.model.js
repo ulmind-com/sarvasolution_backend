@@ -36,7 +36,7 @@ const userFinanceSchema = new mongoose.Schema({
         type: String,
         default: 'Associate',
         enum: [
-            'Associate', 'Bronze', 'Silver', 'Gold', 'Platinum',
+            'Associate', 'Star', 'Bronze', 'Silver', 'Gold', 'Platinum',
             'Diamond', 'Blue Diamond', 'Black Diamond', 'Royal Diamond',
             'Crown Diamond', 'Ambassador', 'Crown Ambassador', 'SSVPL Legend'
         ]

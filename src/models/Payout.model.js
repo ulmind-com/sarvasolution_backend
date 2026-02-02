@@ -24,7 +24,9 @@ const payoutSchema = new mongoose.Schema({
             'ssvpl-super-bonus',
             'lsp-bonus',
             'msp-bonus',
-            'direct-referral'
+            'direct-referral',
+            'withdrawal',
+            'rank-bonus'
         ]
     },
     grossAmount: { type: Number, required: true },

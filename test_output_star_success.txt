@@ -1,0 +1,56 @@
+[dotenv@17.2.3] injecting env (9) from .env -- tip: ⚙️  override existing env vars with { override: true }
+
+
+  SSVPL MLM System - Master Verification Suite (100% Coverage)
+    1. Authentication & Registration
+      ✔ TEST 1: Basic Registration Flow (785ms)
+      ✔ TEST 2: PAN Card Limit Enforcement (1103ms)
+      ✔ TEST 3: Extreme Left Spillover (1104ms)
+    2. KYC Workflow
+      ✔ TEST 1: State Machine (Pending -> Verified -> Resubmit Block) (370ms)
+      ✔ TEST 2: Rejection Allows Resubmission (358ms)
+    3. BV Propagation Engine
+      ✔ TEST 1: Deep Propagation (1088ms)
+      ✔ TEST 2: Inactive User Skip (1090ms)
+    4. Fast Track Bonus
+      ✔ TEST 1: 4-Hour Gap Enforcement
+Daily Limit Reached for FT_TEST
+      ✔ TEST 2: Daily Limit (6 Max)
+      ✔ TEST 3: Carry Forward Persistence
+      ✔ TEST 4: Deductions (Net Calculation)
+      ✔ TEST 5: Rank Deduction (3rd Match)
+    5. Star Matching Bonus
+      ✔ TEST 1: Star Match (10:20 Ratio) (385ms)
+    6. Rank Upgrade
+      1) TEST 1: Star -> Bronze Progression
+    7. Cron Jobs
+Daily counters reset successfully.
+      ✔ TEST 1: Daily Reset (392ms)
+Processing Weekly Payout for 1 users...
+Weekly Payout Completed.
+      ✔ TEST 2: Weekly Payout (371ms)
+    8. Financial System
+      ✔ TEST 1: Withdrawal Request Locking (382ms)
+    9. Concurrency & Stress
+[WARN] Concurrency Data Loss Detected: Expected 1000, Got 500. Atomic $inc required.
+      ✔ TEST 1: 10 Concurrent BV Propagations (824ms)
+
+
+  17 passing (11s)
+  1 failing
+
+  1) SSVPL MLM System - Master Verification Suite (100% Coverage)
+       6. Rank Upgrade
+         TEST 1: Star -> Bronze Progression:
+
+      AssertionError: expected 10 to equal 20
+      + expected - actual
+
+      -10
+      +20
+      
+      at Context.<anonymous> (file:///home/zephyrus/UlMind_Projects/sarvasolution_backend/test/master_test.js:359:52)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+
+

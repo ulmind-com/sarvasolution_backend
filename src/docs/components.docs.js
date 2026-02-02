@@ -45,6 +45,7 @@
  *           enum: [left, right, root]
  *         currentRank:
  *           type: string
+ *           enum: [Associate, Star, Bronze, Silver, Gold, Platinum, Diamond, Blue Diamond, Black Diamond, Royal Diamond, Crown Diamond, Ambassador, Crown Ambassador, SSVPL Legend]
  *         starMatching:
  *           type: number
  *         personalBV:
@@ -62,6 +63,8 @@
  *               type: number
  *             availableBalance:
  *               type: number
+ *             withdrawnAmount:
+ *               type: number
  *         status:
  *           type: string
  *           enum: [active, inactive, suspended]
@@ -75,15 +78,18 @@
  *           type: string
  *         payoutType:
  *           type: string
+ *           enum: [direct-referral, rank-bonus, fast-track-bonus, star-matching-bonus, withdrawal, fast-track-deduction]
  *         grossAmount:
  *           type: number
  *         adminCharge:
+ *           type: number
+ *         tdsDeducted:
  *           type: number
  *         netAmount:
  *           type: number
  *         status:
  *           type: string
- *           enum: [pending, processing, completed, failed]
+ *           enum: [pending, processing, completed, failed, deducted]
  *         scheduledFor:
  *           type: string
  *           format: date-time
@@ -95,10 +101,12 @@
  *           type: string
  *         transactionType:
  *           type: string
+ *           enum: [joining, repurchase, downline, admin-adjustment]
  *         bvAmount:
  *           type: number
  *         legAffected:
  *           type: string
+ *           enum: [left, right, personal, none]
  *         createdAt:
  *           type: string
  *           format: date-time

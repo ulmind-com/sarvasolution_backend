@@ -1,0 +1,62 @@
+[dotenv@17.2.3] injecting env (9) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+
+
+  SSVPL MLM System - Master Verification Suite (100% Coverage)
+    1. Authentication & Registration
+      ✔ TEST 1: Basic Registration Flow (761ms)
+      ✔ TEST 2: PAN Card Limit Enforcement (1086ms)
+      ✔ TEST 3: Extreme Left Spillover (1087ms)
+    2. KYC Workflow
+      ✔ TEST 1: State Machine (Pending -> Verified -> Resubmit Block) (357ms)
+      ✔ TEST 2: Rejection Allows Resubmission (354ms)
+    3. BV Propagation Engine
+      ✔ TEST 1: Deep Propagation (1068ms)
+      ✔ TEST 2: Inactive User Skip (1087ms)
+    4. Fast Track Bonus
+      ✔ TEST 1: 4-Hour Gap Enforcement
+Daily Limit Reached for FT_TEST
+      ✔ TEST 2: Daily Limit (6 Max)
+      ✔ TEST 3: Carry Forward Persistence
+      1) TEST 4: Deductions (Net Calculation)
+      ✔ TEST 5: Rank Deduction (3rd Match)
+    5. Star Matching Bonus
+      ✔ TEST 1: Star Match (10:20 Ratio) (374ms)
+    6. Rank Upgrade
+      ✔ TEST 1: Rank Bonus Creation (360ms)
+    7. Cron Jobs
+Daily counters reset successfully.
+      ✔ TEST 1: Daily Reset (366ms)
+Processing Weekly Payout for 1 users...
+Weekly Payout Completed.
+      ✔ TEST 2: Weekly Payout (364ms)
+    8. Financial System
+      ✔ TEST 1: Withdrawal Request Locking (359ms)
+    9. Concurrency & Stress
+      2) TEST 1: 10 Concurrent BV Propagations
+
+
+  16 passing (11s)
+  2 failing
+
+  1) SSVPL MLM System - Master Verification Suite (100% Coverage)
+       4. Fast Track Bonus
+         TEST 4: Deductions (Net Calculation):
+     TypeError: Cannot read properties of null (reading 'netAmount')
+      at Context.<anonymous> (file:///home/zephyrus/UlMind_Projects/sarvasolution_backend/test/master_test.js:305:27)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+  2) SSVPL MLM System - Master Verification Suite (100% Coverage)
+       9. Concurrency & Stress
+         TEST 1: 10 Concurrent BV Propagations:
+
+      AssertionError: expected 400 to equal 1000
+      + expected - actual
+
+      -400
+      +1000
+      
+      at Context.<anonymous> (file:///home/zephyrus/UlMind_Projects/sarvasolution_backend/test/master_test.js:412:36)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+
+

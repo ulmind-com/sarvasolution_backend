@@ -13,15 +13,16 @@ export const rankService = {
 
         const ranks = [
             { name: 'Associate', stars: 0, bonus: 0 },
-            { name: 'Bronze', stars: 10, bonus: 500 }, // Is bonus 500 or 1000? Prompt image says 500. Previous code said 500.
-            { name: 'Silver', stars: 30, bonus: 2500 },
+            { name: 'Star', stars: 1, bonus: 0 }, // First match (min 10) triggers this
+            { name: 'Bronze', stars: 25, bonus: 500 }, // ~3 matches triggers this
+            { name: 'Silver', stars: 50, bonus: 2500 }, // Adjusted
             { name: 'Gold', stars: 100, bonus: 10000 },
-            { name: 'Platinum', stars: 200, bonus: 25000 }, // Changed from 100 to 200 based on prompt text
-            { name: 'Diamond', stars: 500, bonus: 75000 }, // Changed from 300 to 500
-            { name: 'Ruby', stars: 1000, bonus: 150000 }, // New from prompt
+            { name: 'Platinum', stars: 200, bonus: 25000 },
+            { name: 'Diamond', stars: 500, bonus: 75000 },
+            { name: 'Ruby', stars: 1000, bonus: 150000 },
             { name: 'Sapphire', stars: 2000, bonus: 300000 },
             { name: 'Emerald', stars: 5000, bonus: 800000 },
-            { name: 'Blue Sapphire', stars: 10000, bonus: 2000000 }, // Name match? Prompt says Blue Sapphire.
+            { name: 'Blue Sapphire', stars: 10000, bonus: 2000000 },
             { name: 'Black Pearl', stars: 25000, bonus: 5000000 },
             { name: 'Royal', stars: 50000, bonus: 10000000 },
             { name: 'Legend', stars: 100000, bonus: 25000000 },

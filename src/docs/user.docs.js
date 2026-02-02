@@ -44,6 +44,44 @@
  *         description: Funds status fetched
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ * 
+ * /**
+ * @swagger
+ * /api/v1/user/bonus-status:
+ *   get:
+ *     summary: Get Fast Track & Star Matching Bonus Status
+ *     description: Returns detailed stats for Fast Track daily closings and Star Matching progress.
+ *     tags: [User Financials]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Bonus status retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fastTrack:
+ *                       type: object
+ *                       properties:
+ *                         dailyClosings: { type: number, description: "Max 6 per day" }
+ *                         pendingLeft: { type: number }
+ *                         pendingRight: { type: number }
+ *                         carryForwardLeft: { type: number }
+ *                         carryForwardRight: { type: number }
+ *                         nextClosingWindow: { type: string, format: date-time }
+ *                     starMatching:
+ *                       type: object
+ *                       properties:
+ *                         dailyClosings: { type: number }
+ *                         pendingStarsLeft: { type: number }
+ *                         pendingStarsRight: { type: number }
+ * */
  */
 
 /**
@@ -120,12 +158,14 @@
  *                     sponsorId: { type: string }
  *                     joiningDate: { type: string, format: date-time }
  *                     status: { type: string, enum: [active, inactive, blocked] }
- *                     leftDirectActive: { type: integer }
- *                     leftDirectInactive: { type: integer }
- *                     rightDirectActive: { type: integer }
- *                     rightDirectInactive: { type: integer }
+ *                     leftCompleteActive: { type: integer, description: "Total active members in entire left subtree" }
+ *                     leftCompleteInactive: { type: integer, description: "Total inactive members in entire left subtree" }
+ *                     rightCompleteActive: { type: integer, description: "Total active members in entire right subtree" }
+ *                     rightCompleteInactive: { type: integer, description: "Total inactive members in entire right subtree" }
  *                     leftTeamCount: { type: integer, description: "Total recursive members in left leg" }
  *                     rightTeamCount: { type: integer, description: "Total recursive members in right leg" }
+ *                     leftLegBV: { type: number, description: "Business Volume in left leg" }
+ *                     rightLegBV: { type: number, description: "Business Volume in right leg" }
  *                     left: { type: object }
  *                     right: { type: object }
  */
