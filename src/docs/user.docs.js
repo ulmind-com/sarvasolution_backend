@@ -165,6 +165,8 @@
  *                     rightTeamCount: { type: integer, description: "Total recursive members in right leg" }
  *                     leftLegBV: { type: number, description: "Business Volume in left leg" }
  *                     rightLegBV: { type: number, description: "Business Volume in right leg" }
+ *                     leftLegStars: { type: number, description: "Total accumulated stars in left leg" }
+ *                     rightLegStars: { type: number, description: "Total accumulated stars in right leg" }
  *                     left: { type: object }
  *                     right: { type: object }
  */

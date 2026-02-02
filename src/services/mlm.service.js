@@ -277,11 +277,36 @@ export const mlmService = {
                 return count;
             };
 
+            // Recursive function to count total stars in a subtree
+            const countTotalStars = async (childId) => {
+                if (!childId) return 0;
+
+                const child = await User.findById(childId);
+                if (!child) return 0;
+
+                const childFinance = await UserFinance.findOne({ user: child._id });
+                let stars = childFinance?.starMatching || 0;
+
+                // Recursively sum stars from left and right subtrees
+                if (child.leftChild) {
+                    stars += await countTotalStars(child.leftChild);
+                }
+                if (child.rightChild) {
+                    stars += await countTotalStars(child.rightChild);
+                }
+
+                return stars;
+            };
+
             // Count complete teams for left and right legs
             const leftCompleteActive = await countCompleteTeam(user.leftChild, 'active');
             const leftCompleteInactive = await countCompleteTeam(user.leftChild, 'inactive');
             const rightCompleteActive = await countCompleteTeam(user.rightChild, 'active');
             const rightCompleteInactive = await countCompleteTeam(user.rightChild, 'inactive');
+
+            // Count total stars in left and right legs
+            const leftLegStars = await countTotalStars(user.leftChild);
+            const rightLegStars = await countTotalStars(user.rightChild);
 
             // Build node data
             const nodeData = {
@@ -300,7 +325,9 @@ export const mlmService = {
                 leftTeamCount: leftCompleteActive + leftCompleteInactive,
                 rightTeamCount: rightCompleteActive + rightCompleteInactive,
                 leftLegBV: finance?.leftLegBV || 0,
-                rightLegBV: finance?.rightLegBV || 0
+                rightLegBV: finance?.rightLegBV || 0,
+                leftLegStars,
+                rightLegStars
             };
 
             // Recursively build children if depth allows
