@@ -123,6 +123,86 @@ export const processPayout = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Accept Payout (Approve)
+ * Dedicated endpoint for accepting payout requests
+ */
+export const acceptPayout = asyncHandler(async (req, res) => {
+    const { payoutId } = req.params;
+
+    const payout = await Payout.findById(payoutId);
+    if (!payout) throw new ApiError(404, 'Payout request not found');
+
+    if (payout.status !== 'pending') {
+        throw new ApiError(400, `Cannot accept payout. Current status: ${payout.status}`);
+    }
+
+    const user = await User.findById(payout.userId);
+    if (!user) throw new ApiError(404, 'User associated with payout not found');
+
+    // APPROVE: Money sent to bank
+    // Clear pending withdrawal from user wallet
+    user.wallet.pendingWithdrawal -= payout.netAmount;
+    if (user.wallet.pendingWithdrawal < 0) user.wallet.pendingWithdrawal = 0; // Safety check
+
+    payout.status = 'completed';
+    payout.processedAt = new Date();
+
+    await user.save();
+    await payout.save();
+
+    // Send notification email
+    mailer.payoutProcessed(user, payout.netAmount, payout.payoutType)
+        .catch(err => console.error('Payout notification email error:', err));
+
+    return res.status(200).json(
+        new ApiResponse(200, payout, 'Payout accepted successfully')
+    );
+});
+
+/**
+ * Reject Payout
+ * Dedicated endpoint for rejecting payout requests with reason
+ */
+export const rejectPayout = asyncHandler(async (req, res) => {
+    const { payoutId } = req.params;
+    const { rejectionReason } = req.body;
+
+    // Validation
+    if (!rejectionReason || rejectionReason.trim().length < 10) {
+        throw new ApiError(400, 'Rejection reason is required and must be at least 10 characters');
+    }
+
+    const payout = await Payout.findById(payoutId);
+    if (!payout) throw new ApiError(404, 'Payout request not found');
+
+    if (payout.status !== 'pending') {
+        throw new ApiError(400, `Cannot reject payout. Current status: ${payout.status}`);
+    }
+
+    const user = await User.findById(payout.userId);
+    if (!user) throw new ApiError(404, 'User associated with payout not found');
+
+    // REJECT: Refund money to user wallet
+    user.wallet.availableBalance += payout.grossAmount; // Refund gross amount
+    user.wallet.pendingWithdrawal -= payout.netAmount; // Clear pending
+    user.wallet.withdrawnAmount -= payout.grossAmount; // Revert withdrawal counter
+
+    // Safety checks to prevent negative balances
+    if (user.wallet.pendingWithdrawal < 0) user.wallet.pendingWithdrawal = 0;
+    if (user.wallet.withdrawnAmount < 0) user.wallet.withdrawnAmount = 0;
+
+    payout.status = 'rejected';
+    payout.metadata = { ...payout.metadata, rejectionReason: rejectionReason.trim() };
+
+    await user.save();
+    await payout.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, payout, 'Payout rejected successfully')
+    );
+});
+
+/**
  * Manual BV Allocation (Admin Adjustment)
  */
 export const addManualBV = asyncHandler(async (req, res) => {

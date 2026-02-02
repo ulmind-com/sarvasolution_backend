@@ -1,0 +1,106 @@
+[dotenv@17.2.3] injecting env (9) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+
+══════════════════════════════════════════════════════════════════════
+🚀 SSVPL MLM REALISTIC BALANCE POPULATION
+══════════════════════════════════════════════════════════════════════
+Mode: DRY-RUN
+Max Level: 5
+══════════════════════════════════════════════════════════════════════
+
+
+ℹ️  Connecting to MongoDB...
+✅ Connected to database
+
+ℹ️  PHASE 1: GENERATING BINARY TREE
+══════════════════════════════════════════════════════════════════════
+ℹ️  Total users to create: 243
+ℹ️  Creating Level 0: 1 users (100% active)
+ℹ️  Creating Level 1: 2 users (100% active)
+ℹ️  Creating Level 2: 4 users (75% active)
+ℹ️  Creating Level 3: 24 users (60% active)
+ℹ️  Creating Level 4: 96 users (40% active)
+ℹ️  Creating Level 5: 116 users (20% active)
+✅ Generated 243 user records in memory
+
+ℹ️  PHASE 2: ASSIGNING RANKS & STATUS
+══════════════════════════════════════════════════════════════════════
+✅ Assigned ranks: Gold=1, Silver=2, Bronze=2, Star=7, Associate=70
+
+ℹ️  PHASE 3: CREATING DATABASE RECORDS
+══════════════════════════════════════════════════════════════════════
+ℹ️  DRY-RUN: Skipping database creation
+
+ℹ️  PHASE 4: POPULATING FINANCIAL DATA
+══════════════════════════════════════════════════════════════════════
+ℹ️  DRY-RUN: Skipping financial data creation
+
+ℹ️  PHASE 5: GENERATING PAYOUT HISTORY
+══════════════════════════════════════════════════════════════════════
+ℹ️  DRY-RUN: Skipping payout creation
+
+ℹ️  PHASE 6: GENERATING BV TRANSACTIONS
+══════════════════════════════════════════════════════════════════════
+ℹ️  DRY-RUN: Skipping BV transaction creation
+
+ℹ️  🔄 DRY-RUN COMPLETE - No changes made
+
+ℹ️  PHASE 7: VALIDATION & REPORTING
+══════════════════════════════════════════════════════════════════════
+ℹ️  DRY-RUN: Skipping validation
+
+
+
+══════════════════════════════════════════════════════════════════════
+📊 SSVPL MLM DATA POPULATION REPORT
+══════════════════════════════════════════════════════════════════════
+
+MODE: DRY-RUN
+TIMESTAMP: 2026-02-02T19:09:33.275Z
+
+CREATED RECORDS:
+  Total Users:              243
+  Active Users:             82 (33.7%)
+  Inactive Users:           161 (66.3%)
+  UserFinance Records:      0
+  Payout Records:           0
+  BV Transactions:          0
+
+LEVEL DISTRIBUTION:
+  Level 0 (Root):           1
+  Level 1:                  2
+  Level 2:                  4
+  Level 3:                  24
+  Level 4:                  96
+  Level 5:                  116
+
+RANK DISTRIBUTION:
+  Gold:                     1
+  Silver:                   2
+  Bronze:                   2
+  Star:                     7
+  Associate:                70
+
+FINANCIAL SUMMARY:
+  Total Fast Track:         ₹0
+  Total Star Matching:      ₹0
+  Total Rank Bonuses:       ₹0
+  Avg Balance (Active):     ₹0
+  Avg Balance (Inactive):   ₹0
+
+VALIDATION:
+  TDS Compliance:           N/A (dry-run)
+  Rank Accuracy:            N/A (dry-run)
+  Tree Integrity:           N/A (dry-run)
+  Balance Logic:            N/A (dry-run)
+
+══════════════════════════════════════════════════════════════════════
+Detailed report saved: ./population-report-2026-02-02.json
+══════════════════════════════════════════════════════════════════════
+
+🔄 DRY-RUN COMPLETE - No database changes made
+
+Run with --generate to create the data
+
+ℹ️  🔌 Disconnected from database
+

@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-02-02T19:09:33.275Z",
+  "mode": "dry-run",
+  "config": {
+    "maxLevel": 5,
+    "seed": null
+  },
+  "created": {
+    "users": 243,
+    "activeUsers": 82,
+    "inactiveUsers": 161,
+    "userFinances": 0,
+    "payouts": 0,
+    "bvTransactions": 0
+  },
+  "distribution": {
+    "level0": 1,
+    "level1": 2,
+    "level2": 4,
+    "level3": 24,
+    "level4": 96,
+    "level5": 116
+  },
+  "ranks": {
+    "gold": 1,
+    "silver": 2,
+    "bronze": 2,
+    "star": 7,
+    "associate": 70
+  },
+  "financial": {
+    "totalFastTrackEarnings": 0,
+    "totalStarMatchingEarnings": 0,
+    "totalRankBonuses": 0,
+    "avgBalanceActive": 0,
+    "avgBalanceInactive": 0
+  },
+  "validation": {
+    "tdsCompliance": "N/A (dry-run)",
+    "rankAccuracy": "N/A (dry-run)",
+    "treeIntegrity": "N/A (dry-run)",
+    "balanceLogic": "N/A (dry-run)"
+  }
+}
