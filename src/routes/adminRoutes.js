@@ -1,6 +1,7 @@
 import express from 'express';
 import { getAllUsers, getUserByMemberId, updateUserByAdmin, verifyKYC } from '../controllers/admin/adminUser.controller.js';
 import { getDashboardMetrics, processPayout, addManualBV, getPayouts, getAllTransactions, triggerBonusMatching } from '../controllers/admin/adminManager.controller.js';
+import { fixDatabaseIssues } from '../controllers/admin/fixDatabase.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 import adminMiddleware from '../middlewares/adminMiddleware.js';
 
@@ -22,5 +23,7 @@ router.post('/payouts/process', processPayout);
 router.get('/transactions', getAllTransactions); // New Audit Route
 router.post('/bv/allocate-manual', addManualBV);
 router.post('/trigger-bonus', triggerBonusMatching);
+router.post('/fix-database', fixDatabaseIssues); // Fix data inconsistencies
 
 export default router;
+

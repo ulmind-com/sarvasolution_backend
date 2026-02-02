@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import User from '../src/models/User.model.js';
 import UserFinance from '../src/models/UserFinance.model.js';
+import Payout from '../src/models/Payout.model.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,23 +13,29 @@ dotenv.config();
  * 1. Verifies all users have corresponding UserFinance records
  * 2. Validates tree structure (leftChild, rightChild references)
  * 3. Ensures all fields are properly initialized
- * 4. Reports any inconsistencies
+ * 4. Fixes TDS deductions in payout records
+ * 5. Reports any inconsistencies
  */
 
 const syncDatabase = async () => {
+    const ADMIN_CHARGE_PERCENT = 0.05;
+    const TDS_PERCENT = 0.02;
+
     let stats = {
         totalUsers: 0,
         usersWithoutFinance: 0,
         financeRecordsCreated: 0,
         brokenTreeLinks: 0,
         orphanedFinanceRecords: 0,
-        usersProcessed: 0
+        usersProcessed: 0,
+        totalPayouts: 0,
+        payoutsFixed: 0
     };
 
     try {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('✅ Connected to database\n');
-        console.log('🔄 Starting database synchronization...');
+        console.log('🔄 Starting comprehensive database synchronization...');
         console.log('═'.repeat(60));
 
         // STEP 1: Get all users
@@ -152,7 +159,39 @@ const syncDatabase = async () => {
             }
         }
 
-        // STEP 5: Print summary
+        // STEP 5: Fix TDS in Payout Records
+        console.log('\n💰 Validating and fixing payout TDS deductions...');
+        const allPayouts = await Payout.find({});
+        stats.totalPayouts = allPayouts.length;
+
+        for (const payout of allPayouts) {
+            // Skip deducted, failed, or withdrawal records
+            if (payout.status === 'deducted' || payout.status === 'failed' || payout.payoutType === 'withdrawal') {
+                continue;
+            }
+
+            // Calculate correct values
+            const correctAdminCharge = Math.round(payout.grossAmount * ADMIN_CHARGE_PERCENT * 100) / 100;
+            const correctTDS = Math.round(payout.grossAmount * TDS_PERCENT * 100) / 100;
+            const correctNetAmount = Math.round((payout.grossAmount - correctAdminCharge - correctTDS) * 100) / 100;
+
+            // Check if needs fix
+            const needsFix =
+                payout.tdsDeducted !== correctTDS ||
+                payout.adminCharge !== correctAdminCharge ||
+                payout.netAmount !== correctNetAmount;
+
+            if (needsFix) {
+                console.log(`   ⚠️  Fixing TDS for ${payout.memberId} (${payout.payoutType}): TDS ${payout.tdsDeducted} → ${correctTDS}`);
+                payout.adminCharge = correctAdminCharge;
+                payout.tdsDeducted = correctTDS;
+                payout.netAmount = correctNetAmount;
+                await payout.save();
+                stats.payoutsFixed++;
+            }
+        }
+
+        // STEP 6: Print summary
         console.log('\n');
         console.log('═'.repeat(60));
         console.log('📊 SYNCHRONIZATION SUMMARY');
@@ -163,12 +202,15 @@ const syncDatabase = async () => {
         console.log(`Finance Records Created:      ${stats.financeRecordsCreated}`);
         console.log(`Broken Tree Links:            ${stats.brokenTreeLinks}`);
         console.log(`Orphaned Finance Records:     ${stats.orphanedFinanceRecords}`);
+        console.log(`Total Payouts:                ${stats.totalPayouts}`);
+        console.log(`Payouts Fixed (TDS):          ${stats.payoutsFixed}`);
         console.log('═'.repeat(60));
 
-        if (stats.usersWithoutFinance === 0 && stats.brokenTreeLinks === 0 && stats.orphanedFinanceRecords === 0) {
+        if (stats.usersWithoutFinance === 0 && stats.brokenTreeLinks === 0 &&
+            stats.orphanedFinanceRecords === 0 && stats.payoutsFixed === 0) {
             console.log('\n✅ Database is fully synchronized and consistent!');
         } else {
-            console.log('\n⚠️  Database has some inconsistencies (see details above)');
+            console.log('\n⚠️  Database has been synchronized. Issues found and fixed.');
         }
 
     } catch (error) {
