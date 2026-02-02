@@ -1,14 +1,20 @@
 /**
  * @swagger
  * tags:
- *   - name: Admin
- *     description: Administrative user management
+ *   - name: Admin - Users
+ *     description: Administrative user management operations (Admin Access Only)
+ *   - name: Admin - Payouts
+ *     description: Payout request management and processing (Admin Access Only)
+ *   - name: Admin - System
+ *     description: System management, metrics, and database operations (Admin Access Only)
  * 
  * /api/v1/admin/users:
  *   get:
  *     summary: Get all users (Admin only)
+ *     description: |
+ *       **Admin Access Only** - Retrieve a complete list of all registered users in the system.
  *     tags:
- *       - Admin
+ *       - Admin - Users
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -35,8 +41,10 @@
  * /api/v1/admin/users/{memberId}:
  *   get:
  *     summary: Get user details by member ID (Admin only)
+ *     description: |
+ *       **Admin Access Only** - Retrieve detailed information for a specific user.
  *     tags:
- *       - Admin
+ *       - Admin - Users
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -224,7 +232,9 @@
  *       200:
  *         description: BV allocated
  * 
- * /**
+ */
+
+/**
  * @swagger
  * /api/v1/admin/trigger-bonus:
  *   post:
@@ -251,38 +261,38 @@
  * /api/v1 / admin / transactions:
  * get:
  * summary: Audit all BV transactions(Admin only)
-    * tags: [Admin]
-        * security:
+   * tags: [Admin]
+      * security:
  * - bearerAuth: []
-    * parameters:
+   * parameters:
  * - in: query
-    * name: page
-        * schema: { type: integer, default: 1 }
+   * name: page
+      * schema: { type: integer, default: 1 }
  * - in: query
-    * name: limit
-        * schema: { type: integer, default: 20 }
+   * name: limit
+      * schema: { type: integer, default: 20 }
  * - in: query
-    * name: memberId
-        * schema: { type: string }
+   * name: memberId
+      * schema: { type: string }
  * description: Filter by member ID(e.g., SVS000001)
-    * - in: query
-        * name: type
-            * schema: { type: string }
+   * - in: query
+      * name: type
+         * schema: { type: string }
  * description: Filter by transaction type
-    * responses:
+   * responses:
  * 200:
  * description: Transaction log retrieved
-    * content:
+   * content:
  * application / json:
  * schema:
  * type: object
-    * properties:
+   * properties:
  * success: { type: boolean }
  * data:
  * type: object
-    * properties:
+   * properties:
  * transactions:
  * type: array
-    * pagination:
+   * pagination:
  * type: object
-    */
+   */

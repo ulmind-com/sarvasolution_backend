@@ -1,16 +1,20 @@
 /**
  * @swagger
  * tags:
- *   name: User Financials
- *   description: BV summaries, fund tracking, and payout management
+ *   name: User - Financial
+ *   description: User financial operations - BV summaries, fund tracking, wallet management, and payout requests (Authenticated Users Only)
  */
 
 /**
  * @swagger
  * /api/v1/user/bv-summary:
  *   get:
- *     summary: Get BV balance and transaction history
- *     tags: [User Financials]
+ *     summary: Get BV balance and transaction history (User only)
+ *     description: |
+ *       **User Access Only** - Retrieve your Business Volume (BV) summary and recent transactions.
+ *       
+ *       Returns BV balances for both legs and recent transaction history.
+ *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -35,8 +39,10 @@
  * @swagger
  * /api/v1/user/funds-status:
  *   get:
- *     summary: Get status of all 4 Funds (Bike, House, Royalty, Super)
- *     tags: [User Financials]
+ *     summary: Get status of all 4 Funds (User only)
+ *     description: |
+ *       **User Access Only** - View status of Bike, House, Royalty, and Super funds.
+ *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -44,14 +50,16 @@
  *         description: Funds status fetched
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
- * 
- * /**
+ */
+
+/**
  * @swagger
  * /api/v1/user/bonus-status:
  *   get:
- *     summary: Get Fast Track & Star Matching Bonus Status
- *     description: Returns detailed stats for Fast Track daily closings and Star Matching progress.
- *     tags: [User Financials]
+ *     summary: Get Fast Track & Star Matching Bonus Status (User only)
+ *     description: |
+ *       **User Access Only** - Returns detailed stats for Fast Track daily closings and Star Matching progress.
+ *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -87,8 +95,10 @@
  * @swagger
  * /api/v1/user/wallet:
  *   get:
- *     summary: Get wallet balance and payout history
- *     tags: [User Financials]
+ *     summary: Get wallet balance and payout history (User only)
+ *     description: |
+ *       **User Access Only** - View your wallet balance and complete payout/withdrawal history.
+ *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -100,9 +110,29 @@
  * @swagger
  * /api/v1/user/request-payout:
  *   post:
- *     summary: Request a withdrawal (Payout)
- *     description: Minimum withdrawal is ₹450. Processing occurs every Friday at 11 AM IST.
- *     tags: [User Financials]
+ *     summary: Request a withdrawal/payout (User only)
+ *     description: |
+ *       **User Access Only** - Submit a withdrawal request from your available wallet balance.
+ *       
+ *       **Requirements:**
+ *       - Minimum withdrawal: ₹450
+ *       - Sufficient available balance
+ *       - KYC must be verified
+ *       
+ *       **Deductions:**
+ *       - Admin Charge: 5%
+ *       - TDS: 2%
+ *       
+ *       **Processing Schedule:** Every Friday at 11 AM IST
+ *       
+ *       **Example Calculation:**
+ *       - Requested: ₹500
+ *       - Admin Charge: ₹25 (5%)
+ *       - TDS: ₹10 (2%)
+ *       - Net Amount: ₹465 (amount you receive)
+ *       
+ *       After submitting, the request will be pending admin approval.
+ *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -113,21 +143,63 @@
  *             type: object
  *             required: [amount]
  *             properties:
- *               amount: { type: number, example: 500 }
+ *               amount:
+ *                 type: number
+ *                 minimum: 450
+ *                 example: 1000
+ *                 description: Gross withdrawal amount (before deductions)
  *     responses:
  *       201:
- *         description: Payout request submitted
+ *         description: Payout request submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 statusCode:
+ *                   type: number
+ *                   example: 201
+ *                 message:
+ *                   type: string
+ *                   example: Payout request submitted successfully. Processing on Friday.
+ *                 data:
+ *                   $ref: '#/components/schemas/Payout'
  *       400:
  *         description: Insufficient balance or below minimum
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/responses/Error'
+ *             examples:
+ *               belowMinimum:
+ *                 summary: Amount below minimum
+ *                 value:
+ *                   success: false
+ *                   statusCode: 400
+ *                   message: Minimum withdrawal amount is Rs.450
+ *               insufficientBalance:
+ *                 summary: Not enough balance
+ *                 value:
+ *                   success: false
+ *                   statusCode: 400
+ *                   message: Insufficient balance in wallet
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
 
 /**
  * @swagger
  * /api/v1/user/tree/{memberId}:
  *   get:
- *     summary: Fetch Genealogy Tree Structure
- *     description: Returns a recursive tree structure (Left/Right) for the specified member. If no memberId is provided, returns starting from the logged-in user.
- *     tags: [User Financials]
+ *     summary: Fetch Genealogy Tree Structure (User only)
+ *     description: |
+ *       **User Access Only** - Returns a recursive tree structure (Left/Right) for the specified member.
+ *       
+ *       If no memberId is provided, returns tree starting from the logged-in user.
+ *     tags: [User - Team]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -175,9 +247,10 @@
  * @swagger
  * /api/v1/user/tree_view:
  *   get:
- *     summary: Fetch Genealogy Tree (Simplified)
- *     description: Alias for fetching the tree structure. Supports optional depth parameter.
- *     tags: [User Financials]
+ *     summary: Fetch Genealogy Tree - Simplified (User only)
+ *     description: |
+ *       **User Access Only** - Alias for fetching the tree structure. Supports optional depth parameter.
+ *     tags: [User - Team]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -223,8 +296,10 @@
  * @swagger
  * /api/v1/user/payouts:
  *   get:
- *     summary: Get Payout History
- *     tags: [User Financials]
+ *     summary: Get your payout history (User only)
+ *     description: |
+ *       **User Access Only** - View all your withdrawal requests and their statuses.
+ *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -246,9 +321,10 @@
  * @swagger
  * /api/v1/user/direct-team:
  *   get:
- *     summary: Get Direct Team List
- *     description: Retrieve a paginated list of directly sponsored members, optionally filtered by leg.
- *     tags: [User Financials]
+ *     summary: Get Direct Team List (User only)
+ *     description: |
+ *       **User Access Only** - Retrieve a paginated list of directly sponsored members, optionally filtered by leg.
+ *     tags: [User - Team]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -308,9 +384,10 @@
  * @swagger
  * /api/v1/user/team/complete:
  *   get:
- *     summary: Get Complete Downline Team (Recursive)
- *     description: Retrieve all members in the specified leg (Left or Right), including indirect referrals.
- *     tags: [User Financials]
+ *     summary: Get Complete Downline Team - Recursive (User only)
+ *     description: |
+ *       **User Access Only** - Retrieve all members in the specified leg (Left or Right), including indirect referrals.
+ *     tags: [User - Team]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -361,4 +438,21 @@
  *                         page: { type: integer }
  *                         limit: { type: integer }
  *                         pages: { type: integer }
+ */
+
+/**
+ * @swagger
+ * /api/v1/user/activate:
+ *   post:
+ *     summary: Activate user account with joining package (User only)
+ *     description: |
+ *       **User Access Only** - Activate your account by purchasing the joining package (500 BV).
+ *     tags: [User - Account]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account activated successfully
+ *       400:
+ *         description: Already active or invalid request
  */

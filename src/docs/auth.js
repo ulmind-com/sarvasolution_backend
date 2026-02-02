@@ -2,12 +2,14 @@
  * @swagger
  * /api/v1/register/user:
  *   post:
- *     summary: Register a new user in the SSVPL System (6 fields)
+ *     summary: Register a new user in the SSVPL System (Public)
  *     description: |
+ *       **Public Access** - Register a new user in the MLM system.
+ *       
  *       **Mandatory Step**: All users must register through this endpoint before they can access the system.
  *       Upon registration, the user is placed in the binary tree (Genealogy) and assigned an initial 500 BV package.
  *     tags:
- *       - Auth
+ *       - Public - Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -62,10 +64,13 @@
  * 
  * /api/v1/login/user:
  *   post:
- *     summary: User Login (Mandatory Registration Required)
- *     description: Authenticate using the Member ID (SVSxxxxxx) generated during registration and the chosen password.
+ *     summary: User Login (Public)
+ *     description: |
+ *       **Public Access** - Authenticate using your Member ID and password.
+ *       
+ *       **Mandatory Registration Required** - You must register first to get your Member ID (SVSxxxxxx).
  *     tags:
- *       - Auth
+ *       - Public - Auth
  *     requestBody:
  *       required: true
  *       content:
@@ -103,9 +108,11 @@
  * 
  * /api/v1/profile:
  *   get:
- *     summary: Get logged in user profile
+ *     summary: Get logged in user profile (User only)
+ *     description: |
+ *       **User Access Only** - Retrieve your complete profile information including bank details.
  *     tags:
- *       - Profile
+ *       - User - Profile
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -129,9 +136,11 @@
  *         $ref: '#/components/responses/Unauthorized'
  * 
  *   patch:
- *     summary: Update profile details
+ *     summary: Update profile details (User only)
+ *     description: |
+ *       **User Access Only** - Update your profile information including profile picture, address, and bank details.
  *     tags:
- *       - Profile
+ *       - User - Profile
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -168,9 +177,13 @@
  *         $ref: '#/components/responses/Unauthorized'
  * /api/v1/kyc/submit:
  *   post:
- *     summary: Submit KYC documents (One-time)
+ *     summary: Submit KYC documents - One-time only (User only)
+ *     description: |
+ *       **User Access Only** - Submit your KYC (Know Your Customer) documents for verification.
+ *       
+ *       **One-time submission** - You can only submit KYC documents once. Make sure all details are correct.
  *     tags:
- *       - KYC
+ *       - User - KYC
  *     security:
  *       - bearerAuth: []
  *     requestBody:

@@ -51,7 +51,7 @@
  *           properties:
  *             rejectionReason:
  *               type: string
- *               example: Insufficient KYC documentation
+ *               example: Incomplete KYC documentation
  *             closings:
  *               type: number
  *             bvMatched:
@@ -73,23 +73,6 @@
  *           minLength: 10
  *           example: User has incomplete KYC documents. Please resubmit Aadhaar card.
  *           description: Reason for rejecting the payout (minimum 10 characters)
- *
- *     PayoutListResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *           example: true
- *         statusCode:
- *           type: number
- *           example: 200
- *         message:
- *           type: string
- *           example: Payouts fetched successfully
- *         data:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/Payout'
  */
 
 /**
@@ -97,7 +80,11 @@
  * /api/v1/admin/payouts:
  *   get:
  *     summary: Get all payout requests (Admin only)
- *     description: Retrieve all payout requests with optional status filtering. Includes user details and bank information.
+ *     description: |
+ *       **Admin Access Only** - Retrieve all payout requests with optional status filtering.
+ *       
+ *       This endpoint allows administrators to view and manage all withdrawal requests from users.
+ *       Results include user details and bank information for processing.
  *     tags:
  *       - Admin - Payouts
  *     security:
@@ -117,7 +104,21 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/PayoutListResponse'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 statusCode:
+ *                   type: number
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: Payouts fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Payout'
  *             example:
  *               success: true
  *               statusCode: 200
@@ -144,9 +145,9 @@
  * @swagger
  * /api/v1/admin/payouts/{payoutId}/accept:
  *   patch:
- *     summary: Accept/Approve a pending payout request
+ *     summary: Accept/Approve a pending payout request (Admin only)
  *     description: |
- *       Approves a pending payout request and marks it as completed. 
+ *       **Admin Access Only** - Approves a pending payout request and marks it as completed.
  *       
  *       **Process:**
  *       1. Validates payout exists and is in 'pending' status
@@ -208,7 +209,7 @@
  *             example:
  *               success: false
  *               statusCode: 400
- *               message: Cannot accept payout. Current status: completed
+ *               message: "Cannot accept payout. Current status: completed"
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
@@ -229,9 +230,9 @@
  * @swagger
  * /api/v1/admin/payouts/{payoutId}/reject:
  *   patch:
- *     summary: Reject a pending payout request
+ *     summary: Reject a pending payout request (Admin only)
  *     description: |
- *       Rejects a pending payout request and refunds the amount to user's wallet.
+ *       **Admin Access Only** - Rejects a pending payout request and refunds the amount to user's wallet.
  *       
  *       **Process:**
  *       1. Validates payout exists and is in 'pending' status
@@ -314,7 +315,7 @@
  *                 value:
  *                   success: false
  *                   statusCode: 400
- *                   message: Cannot reject payout. Current status: completed
+ *                   message: "Cannot reject payout. Current status: completed"
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       403:
@@ -329,86 +330,4 @@
  *               success: false
  *               statusCode: 404
  *               message: Payout request not found
- */
-
-/**
- * @swagger
- * /api/v1/user/payouts/request:
- *   post:
- *     summary: Request a payout/withdrawal (User)
- *     description: |
- *       Submit a withdrawal request from available wallet balance.
- *       
- *       **Requirements:**
- *       - Minimum withdrawal: ₹450
- *       - Sufficient available balance
- *       - KYC must be verified
- *       
- *       **Deductions:**
- *       - Admin Charge: 5%
- *       - TDS: 2%
- *       
- *       **Example:** 
- *       - Requested: ₹500
- *       - Admin Charge: ₹25 (5%)
- *       - TDS: ₹10 (2%)
- *       - Net Amount: ₹465
- *     tags:
- *       - User - Financial
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - amount
- *             properties:
- *               amount:
- *                 type: number
- *                 minimum: 450
- *                 example: 1000
- *                 description: Gross withdrawal amount (before deductions)
- *     responses:
- *       201:
- *         description: Payout request submitted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 statusCode:
- *                   type: number
- *                   example: 201
- *                 message:
- *                   type: string
- *                   example: Payout request submitted successfully. Processing on Friday.
- *                 data:
- *                   $ref: '#/components/schemas/Payout'
- *       400:
- *         description: Bad request - Insufficient balance or below minimum
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/responses/Error'
- *             examples:
- *               belowMinimum:
- *                 summary: Amount below minimum
- *                 value:
- *                   success: false
- *                   statusCode: 400
- *                   message: Minimum withdrawal amount is Rs.450
- *               insufficientBalance:
- *                 summary: Not enough balance
- *                 value:
- *                   success: false
- *                   statusCode: 400
- *                   message: Insufficient balance in wallet
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
  */
