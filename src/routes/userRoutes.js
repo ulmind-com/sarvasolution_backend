@@ -1,5 +1,5 @@
 import express from 'express';
-import { getBVSummary, getFundsStatus, requestPayout, getWalletInfo, getTree, getPayouts } from '../controllers/user/userFinancial.controller.js';
+import { getBVSummary, getFundsStatus, requestPayout, getWalletInfo, getTree, getPayouts, getBonusStatus } from '../controllers/user/userFinancial.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -14,7 +14,8 @@ router.get('/wallet', getWalletInfo);
 router.get('/tree', getTree);
 router.get('/tree_view', getTree); // Alias for easy tree implementation
 router.get('/tree/:memberId', getTree);
-router.get('/payouts', getPayouts); // New Route
+router.get('/payouts', getPayouts);
+router.get('/bonus-status', getBonusStatus); // Fast Track & Star Bonus
 router.post('/request-payout', requestPayout);
 
 import { getDirectTeam, getCompleteTeam } from '../controllers/user/user.controller.js';

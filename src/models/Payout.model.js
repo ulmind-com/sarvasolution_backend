@@ -7,7 +7,10 @@ const payoutSchema = new mongoose.Schema({
         type: String,
         required: true,
         enum: [
-            'fast-track',
+            'fast-track', // Keeping just in case
+            'fast-track-bonus',
+            'fast-track-deduction',
+            'star-matching-bonus',
             'star-matching',
             'repurchase-self',
             'beginner-bonus',
@@ -30,7 +33,7 @@ const payoutSchema = new mongoose.Schema({
     netAmount: { type: Number, required: true },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'completed', 'failed'],
+        enum: ['pending', 'processing', 'completed', 'failed', 'deducted'],
         default: 'pending'
     },
     scheduledFor: { type: Date }, // Friday or Month-end

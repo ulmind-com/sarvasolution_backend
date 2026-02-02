@@ -115,3 +115,36 @@ export const getTree = asyncHandler(async (req, res) => {
         new ApiResponse(200, tree, 'Genealogy tree fetched successfully')
     );
 });
+/**
+ * Get Bonus System Status (Fast Track & Star Matching)
+ */
+export const getBonusStatus = asyncHandler(async (req, res) => {
+    const finance = await UserFinance.findOne({ user: req.user._id })
+        .select('fastTrack starMatchingBonus starMatching');
+
+    if (!finance) throw new ApiError(404, 'Financial record not found');
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            fastTrack: {
+                dailyClosings: finance.fastTrack.dailyClosings,
+                lastClosingTime: finance.fastTrack.lastClosingTime,
+                pendingLeft: finance.fastTrack.pendingPairLeft,
+                pendingRight: finance.fastTrack.pendingPairRight,
+                carryForwardLeft: finance.fastTrack.carryForwardLeft,
+                carryForwardRight: finance.fastTrack.carryForwardRight,
+                history: finance.fastTrack.closingHistory
+            },
+            starMatching: {
+                dailyClosings: finance.starMatchingBonus.dailyClosings,
+                lastClosingTime: finance.starMatchingBonus.lastClosingTime,
+                pendingLeft: finance.starMatchingBonus.pendingStarsLeft,
+                pendingRight: finance.starMatchingBonus.pendingStarsRight,
+                carryForwardLeft: finance.starMatchingBonus.carryForwardStarsLeft,
+                carryForwardRight: finance.starMatchingBonus.carryForwardStarsRight,
+                accumulatedStars: finance.starMatching,
+                history: finance.starMatchingBonus.closingHistory
+            }
+        }, 'Bonus status fetched')
+    );
+});

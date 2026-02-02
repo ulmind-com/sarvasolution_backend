@@ -32,7 +32,8 @@ export const payoutService = {
 
         // Deductions
         const adminCharge = requestedAmount * (user.compliance.adminChargePercent / 100);
-        const netAmount = requestedAmount - adminCharge;
+        const tdsAmount = requestedAmount * 0.02; // 2% TDS
+        const netAmount = requestedAmount - adminCharge - tdsAmount;
 
         const payout = await Payout.create({
             userId,
@@ -40,6 +41,7 @@ export const payoutService = {
             payoutType: 'direct-referral', // generic withdrawal type
             grossAmount: requestedAmount,
             adminCharge,
+            tdsDeducted: tdsAmount,
             netAmount,
             status: 'pending',
             scheduledFor: payoutService.getNextPayoutDate()

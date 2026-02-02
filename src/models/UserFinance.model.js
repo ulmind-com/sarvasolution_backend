@@ -100,19 +100,41 @@ const userFinanceSchema = new mongoose.Schema({
     healthEducation: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
 
     // Tracking
+    // Fast Track Bonus (Time-Sensitive Matching)
     fastTrack: {
-        dailyEarnings: { type: Number, default: 0 },
-        weeklyEarnings: { type: Number, default: 0 },
-        monthlyEarnings: { type: Number, default: 0 },
-        totalEarned: { type: Number, default: 0 },
-        dailyClosings: { type: Number, default: 0 }
+        lastClosingTime: { type: Date, default: null },
+        dailyClosings: { type: Number, default: 0 }, // Max 6
+        pendingPairLeft: { type: Number, default: 0 }, // PV Buffer for 4hr window
+        pendingPairRight: { type: Number, default: 0 },
+        carryForwardLeft: { type: Number, default: 0 }, // Official Carry Forward
+        carryForwardRight: { type: Number, default: 0 }, // Should we use the root level ones? Let's keep specific ones here or use root.
+        // Logic check: "Power side PV carry forward". Root level `leftLegPV` accumulates TOTAL.
+        // Carry forward usually tracks UNMATCHED volume. 
+        // Let's use specific fields here for clarity and avoid conflict with standard MLM service.
+        closingHistory: [{
+            timestamp: { type: Date, default: Date.now },
+            leftPV: Number,
+            rightPV: Number,
+            amount: Number,
+            deductedForRank: { type: Boolean, default: false }
+        }],
+        weeklyEarnings: { type: Number, default: 0 }
     },
+    // Star Matching Bonus (Rank Based)
     starMatchingBonus: {
-        dailyEarnings: { type: Number, default: 0 },
-        weeklyEarnings: { type: Number, default: 0 },
-        monthlyEarnings: { type: Number, default: 0 },
-        totalEarned: { type: Number, default: 0 },
-        dailyClosings: { type: Number, default: 0 }
+        lastClosingTime: { type: Date, default: null },
+        dailyClosings: { type: Number, default: 0 }, // Max 6
+        pendingStarsLeft: { type: Number, default: 0 },
+        pendingStarsRight: { type: Number, default: 0 },
+        carryForwardStarsLeft: { type: Number, default: 0 },
+        carryForwardStarsRight: { type: Number, default: 0 },
+        closingHistory: [{
+            timestamp: { type: Date, default: Date.now },
+            leftStars: Number,
+            rightStars: Number,
+            amount: Number
+        }],
+        weeklyEarnings: { type: Number, default: 0 }
     },
 
     // Stock Points

@@ -1,5 +1,6 @@
 import UserFinance from '../models/UserFinance.model.js';
 import User from '../models/User.model.js';
+import { matchingService } from './matching.service.js';
 import BVTransaction from '../models/BVTransaction.model.js';
 import Payout from '../models/Payout.model.js';
 import Configs from '../config/config.js';
@@ -135,9 +136,11 @@ export const mlmService = {
             if (currentPosition === 'left') {
                 userFinance.leftLegBV += bvAmount;
                 userFinance.leftLegPV += pvAmount;
+                userFinance.fastTrack.pendingPairLeft += pvAmount; // Add to Fast Track Buffer
             } else {
                 userFinance.rightLegBV += bvAmount;
                 userFinance.rightLegPV += pvAmount;
+                userFinance.fastTrack.pendingPairRight += pvAmount; // Add to Fast Track Buffer
             }
             userFinance.totalBV += bvAmount;
             userFinance.totalPV += pvAmount;
@@ -150,8 +153,14 @@ export const mlmService = {
 
             await userFinance.save();
 
+            // Trigger Fast Track Bonus (PV Based)
+            if (pvAmount > 0) {
+                await matchingService.processFastTrackMatching(parent._id);
+            }
+
             // Record BV Transaction 
             await BVTransaction.create({
+                // ... (rest of function)
                 userId: parent._id,
                 transactionType,
                 bvAmount,
@@ -221,11 +230,19 @@ export const mlmService = {
         // Matching Amount (10%)
         const grossAmount = matchingBV * 0.10;
         let adminCharge = grossAmount * (user.compliance.adminChargePercent / 100);
-        let netAmount = grossAmount - adminCharge;
+
+        // TDS Calculation (2%)
+        let tdsAmount = grossAmount * 0.02;
+
+        let netAmount = grossAmount - adminCharge - tdsAmount;
 
         if (isDeductionMatch) {
             // Rule 6: 3rd, 6th, 9th, 12th matching bonus auto-deduct for rank upgrade
             netAmount = 0; // Entire amount deducted
+            tdsAmount = 0; // No TDS on 0 payout? Or TDS on gross but user gets 0? 
+            // Usually deducted implies logic "kept by system". 
+            // User prompt said "Deducted amounts are taken". 
+            // For now, let's keep it simple: 0 net, 0 tax liability for user.
         }
 
         // Payout Record
@@ -235,6 +252,7 @@ export const mlmService = {
             payoutType: 'star-matching',
             grossAmount,
             adminCharge,
+            tdsDeducted: tdsAmount,
             netAmount,
             status: isDeductionMatch ? 'completed' : 'pending',
             metadata: {

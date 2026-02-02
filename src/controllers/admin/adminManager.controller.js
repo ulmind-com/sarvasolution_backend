@@ -198,3 +198,38 @@ export const getAllTransactions = asyncHandler(async (req, res) => {
         }, 'Transactions fetched successfully')
     );
 });
+/**
+ * Trigger Bonus Matching Manually (Admin)
+ */
+export const triggerBonusMatching = asyncHandler(async (req, res) => {
+    const { memberId, type } = req.body; // type: 'fast-track' or 'star-matching'
+
+    if (!memberId || !type) {
+        throw new ApiError(400, 'Member ID and bonus type (fast-track/star-matching) are required');
+    }
+
+    const user = await User.findOne({ memberId });
+    if (!user) throw new ApiError(404, 'User not found');
+
+    // Dynamic import inside function is tricky if not ES modules with top-level await support in all contexts (though Node 14+ supports it). 
+    // SAFEST: Move to top.
+    // Or use: const { matchingService } = await import('../../services/matching.service.js');
+
+    // Let's use dynamic import syntax properly:
+    const { matchingService } = await import('../../services/matching.service.js');
+
+    let resultMsg = '';
+    if (type === 'fast-track') {
+        await matchingService.processFastTrackMatching(user._id);
+        resultMsg = 'Fast Track matching triggered';
+    } else if (type === 'star-matching') {
+        await matchingService.processStarMatching(user._id);
+        resultMsg = 'Star Matching triggered';
+    } else {
+        throw new ApiError(400, 'Invalid bonus type');
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, `${resultMsg} successfully`)
+    );
+});
