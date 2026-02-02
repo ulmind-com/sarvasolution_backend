@@ -82,7 +82,6 @@
  *                         pendingStarsLeft: { type: number }
  *                         pendingStarsRight: { type: number }
  * */
- */
 
 /**
  * @swagger
