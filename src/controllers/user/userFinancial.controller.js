@@ -1,3 +1,4 @@
+import UserFinance from '../../models/UserFinance.model.js';
 import User from '../../models/User.model.js';
 import Payout from '../../models/Payout.model.js';
 import BVTransaction from '../../models/BVTransaction.model.js';
@@ -11,7 +12,12 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
  * Get BV Summary for a user
  */
 export const getBVSummary = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id).select('leftLegBV rightLegBV carryForwardLeft carryForwardRight totalBV personalBV thisMonthBV');
+    // Fetch from UserFinance
+    const finance = await UserFinance.findOne({ user: req.user._id })
+        .select('leftLegBV rightLegBV carryForwardLeft carryForwardRight totalBV personalBV thisMonthBV personalPV leftLegPV rightLegPV totalPV thisMonthPV');
+
+    // Fallback if migration hasn't run yet or user is new (should be handled by migration)
+    if (!finance) throw new ApiError(404, 'Financial record not found. Please contact support.');
 
     // Fetch recent transactions
     const transactions = await BVTransaction.find({ userId: req.user._id })
@@ -19,7 +25,7 @@ export const getBVSummary = asyncHandler(async (req, res) => {
         .limit(10);
 
     return res.status(200).json(
-        new ApiResponse(200, { summary: user, recentTransactions: transactions }, 'BV Summary fetched')
+        new ApiResponse(200, { summary: finance, recentTransactions: transactions }, 'BV Summary fetched')
     );
 });
 
@@ -27,9 +33,13 @@ export const getBVSummary = asyncHandler(async (req, res) => {
  * Get Funds Status
  */
 export const getFundsStatus = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id).select('bikeCarFund houseFund royaltyFund ssvplSuperBonus lsp msp');
+    const finance = await UserFinance.findOne({ user: req.user._id })
+        .select('bikeCarFund houseFund royaltyFund ssvplSuperBonus lsp msp');
+
+    if (!finance) throw new ApiError(404, 'Financial record not found');
+
     return res.status(200).json(
-        new ApiResponse(200, user, 'Funds and Stock Point status fetched')
+        new ApiResponse(200, finance, 'Funds and Stock Point status fetched')
     );
 });
 
@@ -51,11 +61,13 @@ export const requestPayout = asyncHandler(async (req, res) => {
  * Get Wallet and Earnings History
  */
 export const getWalletInfo = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.user._id).select('wallet');
+    const finance = await UserFinance.findOne({ user: req.user._id }).select('wallet');
+    if (!finance) throw new ApiError(404, 'Wallet info not found');
+
     const history = await Payout.find({ userId: req.user._id }).sort({ createdAt: -1 });
 
     return res.status(200).json(
-        new ApiResponse(200, { wallet: user.wallet, history }, 'Wallet info fetched')
+        new ApiResponse(200, { wallet: finance.wallet, history }, 'Wallet info fetched')
     );
 });
 

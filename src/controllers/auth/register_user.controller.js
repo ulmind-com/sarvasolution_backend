@@ -1,3 +1,4 @@
+import UserFinance from '../../models/UserFinance.model.js';
 import User from '../../models/User.model.js';
 import { mailer } from '../../services/mail.service.js';
 import { mlmService } from '../../services/mlm.service.js';
@@ -38,7 +39,7 @@ export const register = asyncHandler(async (req, res) => {
     const placement = await mlmService.findAvailablePosition(sponsorId, preferredPosition);
     const memberId = await User.generateMemberId();
 
-    // 3. User Creation (SSVPL default: Inactive, 0 BV)
+    // 3. User Creation (SSVPL default: Inactive)
     const newUser = new User({
         username: memberId,
         email,
@@ -50,14 +51,16 @@ export const register = asyncHandler(async (req, res) => {
         panCardNumber: panCardNumber.toUpperCase(),
         parentId: placement.parentId,
         position: placement.position,
-        status: 'inactive', // Explicitly set inactive
-        personalBV: 0,
-        totalBV: 0,
-        thisMonthBV: 0,
-        thisYearBV: 0
+        status: 'inactive' // Explicitly set inactive
     });
 
     await newUser.save();
+
+    // 3.1 Initialize UserFinance (Financial Logic Separation)
+    await UserFinance.create({
+        user: newUser._id,
+        memberId: newUser.memberId
+    });
 
     // 4. Update Sponsor's Direct Sponsors count
     if (sponsor) {

@@ -1,3 +1,4 @@
+import UserFinance from '../../models/UserFinance.model.js';
 import User from '../../models/User.model.js';
 import { mlmService } from '../../services/mlm.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -26,22 +27,28 @@ export const activateUser = asyncHandler(async (req, res) => {
     // 1. Update Status
     user.status = 'active';
     user.activationDate = new Date();
+    await user.save();
 
     // 2. Assign Package BV (Flashout rule: start from 0 + package)
     const packageBV = 500; // Standard SSVPL Package
     const packagePV = 500; // Standard SSVPL PV (1:1 Ratio)
 
-    user.personalBV = packageBV;
-    user.totalBV = packageBV;
-    user.thisMonthBV = packageBV;
-    user.thisYearBV = packageBV;
+    let userFinance = await UserFinance.findOne({ user: user._id });
+    if (!userFinance) {
+        userFinance = new UserFinance({ user: user._id, memberId: user.memberId });
+    }
 
-    user.personalPV = packagePV;
-    user.totalPV = packagePV;
-    user.thisMonthPV = packagePV;
-    user.thisYearPV = packagePV;
+    userFinance.personalBV = packageBV;
+    userFinance.totalBV = packageBV;
+    userFinance.thisMonthBV = packageBV;
+    userFinance.thisYearBV = packageBV;
 
-    await user.save();
+    userFinance.personalPV = packagePV;
+    userFinance.totalPV = packagePV;
+    userFinance.thisMonthPV = packagePV;
+    userFinance.thisYearPV = packagePV;
+
+    await userFinance.save();
 
     // 3. Propagate BV & PV Upstream
     await mlmService.propagateBVUpTree(
@@ -50,7 +57,7 @@ export const activateUser = asyncHandler(async (req, res) => {
         packageBV,
         'activation',
         `ACT-${user.memberId}`,
-        packagePV // New PV argument
+        packagePV
     );
 
     // 4. Update Sponsor's Direct Active Count
@@ -64,7 +71,7 @@ export const activateUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, {
             memberId: user.memberId,
             status: user.status,
-            personalBV: user.personalBV
+            personalBV: userFinance.personalBV
         }, 'User activated successfully. BV Propagated.')
     );
 });

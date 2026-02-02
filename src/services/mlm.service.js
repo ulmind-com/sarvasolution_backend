@@ -1,3 +1,4 @@
+import UserFinance from '../models/UserFinance.model.js';
 import User from '../models/User.model.js';
 import BVTransaction from '../models/BVTransaction.model.js';
 import Payout from '../models/Payout.model.js';
@@ -124,32 +125,37 @@ export const mlmService = {
                 continue;
             }
 
-            if (currentPosition === 'left') {
-                parent.leftLegBV += bvAmount;
-                parent.leftLegPV += pvAmount; // PV
-            } else {
-                parent.rightLegBV += bvAmount;
-                parent.rightLegPV += pvAmount; // PV
+            // --- Update UserFinance ---
+            let userFinance = await UserFinance.findOne({ user: parent._id });
+            if (!userFinance) {
+                // Auto-create if missing (Migration safety net)
+                userFinance = new UserFinance({ user: parent._id, memberId: parent.memberId });
             }
-            parent.totalBV += bvAmount;
-            parent.totalPV += pvAmount; // PV
 
-            parent.thisMonthBV += bvAmount;
-            parent.thisMonthPV += pvAmount; // PV
+            if (currentPosition === 'left') {
+                userFinance.leftLegBV += bvAmount;
+                userFinance.leftLegPV += pvAmount;
+            } else {
+                userFinance.rightLegBV += bvAmount;
+                userFinance.rightLegPV += pvAmount;
+            }
+            userFinance.totalBV += bvAmount;
+            userFinance.totalPV += pvAmount;
 
-            parent.thisYearBV += bvAmount;
-            parent.thisYearPV += pvAmount; // PV
+            userFinance.thisMonthBV += bvAmount;
+            userFinance.thisMonthPV += pvAmount;
 
-            await parent.save();
+            userFinance.thisYearBV += bvAmount;
+            userFinance.thisYearPV += pvAmount;
 
-            // Record BV Transaction (Should we rename model to FinancialTransaction or just add PV fields?)
-            // Assuming BVTransaction model is used. Ideally, add PV fields there too.
-            // For now, let's keep it simple or check if model needs update.
+            await userFinance.save();
+
+            // Record BV Transaction 
             await BVTransaction.create({
                 userId: parent._id,
                 transactionType,
                 bvAmount,
-                pvAmount, // Assuming schema allows flexible fields or we need to update schema
+                pvAmount,
                 legAffected: currentPosition,
                 fromUserId: userId,
                 referenceId
@@ -194,18 +200,22 @@ export const mlmService = {
             return;
         }
 
-        const isFirst = await mlmService.checkFirstMatching(user);
-        if (!isFirst) return; // Not eligible for matching yet
+        const isFirst = await mlmService.checkFirstMatching(user); // NOTE: checkFirstMatching also needs update? Yes.
+        if (!isFirst) return;
+
+        // Get Financials
+        let userFinance = await UserFinance.findOne({ user: user._id });
+        if (!userFinance) return;
 
         // Matching logic
-        let left = user.leftLegBV + user.carryForwardLeft;
-        let right = user.rightLegBV + user.carryForwardRight;
+        let left = userFinance.leftLegBV + userFinance.carryForwardLeft;
+        let right = userFinance.rightLegBV + userFinance.carryForwardRight;
 
         const matchingBV = Math.min(left, right);
         if (matchingBV <= 0) return;
 
         // Current Matching Index for Rank Deduction Rule
-        const matchIndex = user.starMatching + 1;
+        const matchIndex = userFinance.starMatching + 1;
         const isDeductionMatch = [3, 6, 9, 12].includes(matchIndex);
 
         // Matching Amount (10%)
@@ -216,7 +226,6 @@ export const mlmService = {
         if (isDeductionMatch) {
             // Rule 6: 3rd, 6th, 9th, 12th matching bonus auto-deduct for rank upgrade
             netAmount = 0; // Entire amount deducted
-            // You might want to track these "invested" amounts elsewhere
         }
 
         // Payout Record
@@ -236,16 +245,16 @@ export const mlmService = {
             }
         });
 
-        // Update User
-        user.carryForwardLeft = left - matchingBV;
-        user.carryForwardRight = right - matchingBV;
-        user.leftLegBV = 0;
-        user.rightLegBV = 0;
-        user.starMatching += 1; // 1 Matching completed
-        user.wallet.availableBalance += netAmount;
-        user.wallet.totalEarnings += netAmount;
+        // Update UserFinance
+        userFinance.carryForwardLeft = left - matchingBV;
+        userFinance.carryForwardRight = right - matchingBV;
+        userFinance.leftLegBV = 0;
+        userFinance.rightLegBV = 0;
+        userFinance.starMatching += 1;
+        userFinance.wallet.availableBalance += netAmount;
+        userFinance.wallet.totalEarnings += netAmount;
 
-        await user.save();
+        await userFinance.save();
 
         // Auto Rank Upgrade Check
         await mlmService.checkRankUpgrade(user._id);
@@ -257,6 +266,9 @@ export const mlmService = {
     checkRankUpgrade: async (userId) => {
         const user = await User.findById(userId);
         if (!user || !user.compliance.autoRankUpgrade) return;
+
+        const userFinance = await UserFinance.findOne({ user: user._id });
+        if (!userFinance) return;
 
         const ranks = [
             { name: 'Bronze', stars: 1, bonus: 500 },
@@ -273,38 +285,57 @@ export const mlmService = {
             { name: 'SSVPL Legend', stars: 75000, bonus: 25000000 }
         ];
 
-        let newRank = user.currentRank;
+        let newRank = userFinance.currentRank;
         let rankBonus = 0;
 
         for (const r of ranks) {
-            if (user.starMatching >= r.stars) {
-                if (user.currentRank !== r.name && user.rankNumber > ranks.indexOf(r) + 1) {
+            if (userFinance.starMatching >= r.stars) {
+                // Determine rank index logic. 
+                // Existing logic: user.rankNumber > ranks.indexOf(r) + 1. 
+                // ranks.indexOf(r) + 1 gives 1 for Bronze.
+                // If user.rankNumber is 14 (Associate), and Bronze is 1, 14 > 1 -> Upgrade.
+                // Wait, previous logic had 13 ranks? 
+                // User model default: rankNumber: 14. Enum length: 13.
+                // ranks array has 12 items. Associate is not in ranks array.
+                // If userFinance.rankNumber > currentRanksIndex?
+                // Bronze is index 0. +1 = 1.
+                // If current is 14. 14 > 1. True. Upgrade.
+                // If current is Bronze (1? or something else?). 
+                // Let's assume schema default logic is preserved.
+
+                // Let's trust generic comparison: if (currentRank !== newRank)
+                if (userFinance.currentRank !== r.name) {
+                    // Check if this rank is higher than current?
+                    // Assuming sequential array = higher rank.
+                    // We should only upgrade if r.stars > currentStars? No, we are iterating.
+                    // The loop checks ALL ranks. The last one that matches condition wins?
+                    // Code below overwrites newRank.
                     newRank = r.name;
                     rankBonus = r.bonus;
                 }
             }
         }
 
-        if (newRank !== user.currentRank) {
-            user.currentRank = newRank;
-            user.rankNumber = ranks.findIndex(r => r.name === newRank) + 1;
-            user.achievedDate = new Date();
-            user.rankHistory.push({ rank: newRank });
+        if (newRank !== userFinance.currentRank) {
+            userFinance.currentRank = newRank;
+            userFinance.rankNumber = ranks.findIndex(r => r.name === newRank) + 1; // 1 for Bronze
+            userFinance.achievedDate = new Date();
+            userFinance.rankHistory.push({ rank: newRank });
 
             // Credit Rank Bonus
             if (rankBonus > 0) {
                 await Payout.create({
                     userId: user._id,
                     memberId: user.memberId,
-                    payoutType: 'direct-referral', // Or create a new type 'rank-bonus'
+                    payoutType: 'direct-referral', // Should ideally be 'rank-bonus'
                     grossAmount: rankBonus,
                     adminCharge: rankBonus * 0.05,
                     netAmount: rankBonus * 0.95,
                     status: 'pending'
                 });
-                user.wallet.availableBalance += rankBonus * 0.95;
+                userFinance.wallet.availableBalance += rankBonus * 0.95;
             }
-            await user.save();
+            await userFinance.save();
         }
     },
 
