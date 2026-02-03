@@ -107,6 +107,7 @@ const invoiceTemplate = (data) => `
         .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
         .details { margin: 20px 0; }
         .total { font-size: 18px; font-weight: bold; color: #28a745; }
+        .button { background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 15px 0; }
     </style>
 </head>
 <body>
@@ -119,7 +120,11 @@ const invoiceTemplate = (data) => `
             <p>A new invoice has been generated for your recent purchase.</p>
             <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
             <p class="total">Grand Total: ₹${data.grandTotal}</p>
-            <p>Please find the invoice attached.</p>
+            ${data.pdfUrl ? `
+            <p style="text-align: center;">
+                <a href="${data.pdfUrl}" class="button" target="_blank">📄 Download Invoice PDF</a>
+            </p>
+            ` : '<p>Invoice PDF is being generated and will be available shortly.</p>'}
         </div>
         <p>Best Regards,<br>SSVPL Accounts Team</p>
     </div>
@@ -166,13 +171,7 @@ export const sendInvoiceEmail = async (invoiceData) => {
             from: FROM_EMAIL,
             to: [invoiceData.email],
             subject: `SSVPL Invoice ${invoiceData.invoiceNo}`,
-            html: invoiceTemplate(invoiceData),
-            attachments: [
-                {
-                    filename: `${invoiceData.invoiceNo}.pdf`,
-                    path: invoiceData.pdfUrl
-                }
-            ]
+            html: invoiceTemplate(invoiceData)
         });
         return true;
     } catch (err) {

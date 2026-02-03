@@ -19,10 +19,12 @@ export const generateInvoicePDF = async (invoiceData) => {
             // Upload to Cloudinary
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
-                    resource_type: 'raw',
+                    resource_type: 'image',
                     folder: 'invoices',
                     public_id: `invoice-${invoiceData.invoiceNo}`,
-                    format: 'pdf'
+                    format: 'pdf',
+                    access_mode: 'public',
+                    flags: 'attachment'
                 },
                 (error, result) => {
                     if (error) reject(error);
