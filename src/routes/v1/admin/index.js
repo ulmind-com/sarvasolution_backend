@@ -35,7 +35,7 @@ router.post('/fix-database', fixDatabaseIssues); // Fix data inconsistencies
 // Sub-Modules
 router.use('/product', productRoutes);
 router.use('/franchise', franchiseRoutes);
-router.use('/sale', saleRoutes);
+router.use('/sales', saleRoutes);
 router.use('/request', requestRoutes);
 
 export default router;
