@@ -2,8 +2,8 @@ import Invoice from '../../models/Invoice.model.js';
 import FranchiseInventory from '../../models/FranchiseInventory.model.js';
 import StockTransaction from '../../models/StockTransaction.model.js';
 import Product from '../../models/Product.model.js';
-import { generateInvoicePDF } from './pdf.service.js';
-import { sendInvoiceEmail } from './email.service.js';
+import { generateInvoicePDF } from '../integration/pdf.service.js';
+import { sendInvoiceEmail } from '../integration/email.service.js';
 import { ApiError } from '../../utils/ApiError.js';
 
 /**

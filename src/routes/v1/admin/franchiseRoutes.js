@@ -5,10 +5,10 @@ import {
     updateFranchise,
     blockFranchise,
     unblockFranchise
-} from '../../../../../../controllers/admin/franchise.controller.js';
-import authMiddleware from '../../../../../../middlewares/auth/authMiddleware.js';
-import adminMiddleware from '../../../../../../middlewares/auth/adminMiddleware.js';
-import { validateFranchiseCreation } from '../../../../../../middlewares/validation/franchiseValidation.js';
+} from '../../../controllers/admin/franchise.controller.js';
+import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
+import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
+import { validateFranchiseCreation } from '../../../middlewares/validation/franchiseValidation.js';
 
 const router = express.Router();
 

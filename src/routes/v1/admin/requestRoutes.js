@@ -1,7 +1,7 @@
 import express from 'express';
-import { getAllRequests, approveRequest, rejectRequest } from '../../../../../../controllers/admin/request.controller.js';
-import authMiddleware from '../../../../../../middlewares/auth/authMiddleware.js';
-import adminMiddleware from '../../../../../../middlewares/auth/adminMiddleware.js';
+import { getAllRequests, approveRequest, rejectRequest } from '../../../controllers/admin/request.controller.js';
+import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
+import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
 
 const router = express.Router();
 

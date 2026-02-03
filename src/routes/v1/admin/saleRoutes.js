@@ -1,7 +1,7 @@
 import express from 'express';
-import { sellToFranchise, getSalesHistory } from '../../../../../../controllers/admin/sale.controller.js';
-import authMiddleware from '../../../../../../middlewares/auth/authMiddleware.js';
-import adminMiddleware from '../../../../../../middlewares/auth/adminMiddleware.js';
+import { sellToFranchise, getSalesHistory } from '../../../controllers/admin/sale.controller.js';
+import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
+import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
 
 const router = express.Router();
 
