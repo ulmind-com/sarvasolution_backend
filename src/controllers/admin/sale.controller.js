@@ -23,7 +23,7 @@ export const sellToFranchise = asyncHandler(async (req, res) => {
 
     try {
         // 1. Validate Franchise
-        franchise = await Franchise.findById(franchiseId).session(session);
+        franchise = await Franchise.findOne({ vendorId: franchiseId }).session(session);
         if (!franchise) throw new ApiError(404, 'Franchise not found');
         if (franchise.isBlocked) throw new ApiError(400, 'Franchise is blocked');
 
