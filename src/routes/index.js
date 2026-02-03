@@ -7,6 +7,8 @@ import franchiseRoutes from './franchiseRoutes.js';
 import adminProductRoutes from './admin/productRoutes.js';
 import adminFranchiseRoutes from './admin/franchiseRoutes.js';
 import adminSaleRoutes from './admin/saleRoutes.js';
+import franchiseRequestRoutes from './franchise/requestRoutes.js';
+import adminRequestRoutes from './admin/requestRoutes.js';
 
 const router = express.Router();
 
@@ -26,5 +28,7 @@ router.use('/franchise', franchiseRoutes);
 router.use('/admin/product', adminProductRoutes);
 router.use('/admin/franchise', adminFranchiseRoutes);
 router.use('/admin/sales', adminSaleRoutes);
+router.use('/franchise/requests', franchiseRequestRoutes);
+router.use('/admin/requests', adminRequestRoutes);
 
 export default router;
