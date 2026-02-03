@@ -1,6 +1,6 @@
-import FranchiseInventory from '../../../models/FranchiseInventory.model.js';
-import { ApiResponse } from '../../../utils/ApiResponse.js';
-import { asyncHandler } from '../../../utils/asyncHandler.js';
+import FranchiseInventory from '../../models/FranchiseInventory.model.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
+import { asyncHandler } from '../../utils/asyncHandler.js';
 
 export const getMyInventory = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
