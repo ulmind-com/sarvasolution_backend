@@ -70,13 +70,6 @@
  *     tags: [Admin - Franchise]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: status
- *       - in: query
- *         name: city
- *       - in: query
- *         name: search
  *     responses:
  *       200:
  *         description: List fetched

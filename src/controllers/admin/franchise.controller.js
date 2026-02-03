@@ -52,19 +52,8 @@ export const createFranchise = asyncHandler(async (req, res) => {
 });
 
 export const listFranchises = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, status, city, search } = req.query;
+    const { page = 1, limit = 20 } = req.query;
     const query = { deletedAt: null };
-
-    if (status) query.status = status;
-    if (city) query.city = city;
-    if (search) {
-        query.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { shopName: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { vendorId: { $regex: search, $options: 'i' } }
-        ];
-    }
 
     const franchises = await Franchise.find(query)
         .select('-password')
