@@ -5,7 +5,7 @@ import app from './app.js';
 import connectDB from './config/db.js';
 import Configs from './config/config.js';
 import chalk from 'chalk';
-import { initCrons } from './services/cron.service.js';
+import { initCrons } from './services/business/cron.service.js';
 
 connectDB().then(() => {
     initCrons();

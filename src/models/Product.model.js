@@ -11,19 +11,26 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    price: {
+    price: { // Base Selling Price (Excluding Taxes)
         type: Number,
         required: true,
         min: 0
     },
-    mrp: {
+    mrp: { // Maximum Retail Price (Inclusive of all taxes)
         type: Number,
         required: true,
         min: 0
     },
-    finalPrice: {
+
+    // Tax Components (Percentages)
+    gst: { type: Number, default: 0 },
+    cgst: { type: Number, default: 0 },
+    sgst: { type: Number, default: 0 },
+
+    finalPrice: { // Auto-calculated: Price + Taxes
         type: Number
     },
+
     discount: {
         type: Number,
         default: 0
@@ -44,11 +51,6 @@ const productSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
-    sku: {
-        type: String,
-        unique: true,
-        trim: true
-    },
     category: {
         type: String,
         required: true,
@@ -64,10 +66,6 @@ const productSchema = new mongoose.Schema({
         required: true,
         min: 0,
         default: 0
-    },
-    reorderLevel: {
-        type: Number,
-        default: 10
     },
     isInStock: {
         type: Boolean,
@@ -103,6 +101,20 @@ const productSchema = new mongoose.Schema({
 });
 
 productSchema.index({ productName: 'text', description: 'text' });
+
+// Pre-save hook to calculate Final Price
+productSchema.pre('save', function (next) {
+    // Calculate total tax percentage
+    const totalTaxPercent = (this.gst || 0) + (this.cgst || 0) + (this.sgst || 0);
+
+    // Calculate Tax Amount
+    const taxAmount = this.price * (totalTaxPercent / 100);
+
+    // Final Price = Base Price + Tax
+    this.finalPrice = this.price + taxAmount;
+
+    next();
+});
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

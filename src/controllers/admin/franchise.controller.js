@@ -1,6 +1,6 @@
 import Franchise from '../../models/Franchise.model.js';
-import { generateVendorId } from '../../services/vendorId.service.js';
-import { sendWelcomeEmail, sendStatusEmail } from '../../services/email.service.js';
+import { generateVendorId } from '../../services/integration/vendorId.service.js';
+import { sendWelcomeEmail, sendStatusEmail } from '../../services/integration/email.service.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';

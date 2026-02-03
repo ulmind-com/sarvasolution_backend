@@ -1,8 +1,8 @@
 import User from '../../models/User.model.js';
 import Payout from '../../models/Payout.model.js';
 import BVTransaction from '../../models/BVTransaction.model.js';
-import { mlmService } from '../../services/mlm.service.js';
-import { mailer } from '../../services/mail.service.js';
+import { mlmService } from '../../services/business/mlm.service.js';
+import { mailer } from '../../services/integration/mail.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
@@ -296,7 +296,7 @@ export const triggerBonusMatching = asyncHandler(async (req, res) => {
     // Or use: const { matchingService } = await import('../../services/matching.service.js');
 
     // Let's use dynamic import syntax properly:
-    const { matchingService } = await import('../../services/matching.service.js');
+    const { matchingService } = await import('../../services/business/matching.service.js');
 
     let resultMsg = '';
     if (type === 'fast-track') {

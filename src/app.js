@@ -4,16 +4,16 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
-import errorHandler from './middlewares/errorHandler.js';
-import routes from './routes/index.js';
+import errorHandler from './middlewares/error/errorHandler.js'; // Updated path
+import v1Routes from './routes/v1/index.js'; // Updated path
 
 const app = express();
 
 /**
  * Standard Middlewares
  */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); // Increased limit just in case
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cors());
 app.use(helmet({
     contentSecurityPolicy: false,
@@ -22,17 +22,17 @@ app.use(helmet({
 app.use(morgan('dev'));
 
 /**
- * documentation
+ * Documentation
  */
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /**
  * Centralized v1 Routes
  */
-app.use('/api/v1', routes);
+app.use('/api/v1', v1Routes);
 
 app.get('/', (req, res) => {
-    res.json({ message: 'SarvaSolution Backend API is active' });
+    res.json({ message: 'SarvaSolution Backend API is active (Enterprise V1)' });
 });
 
 /**

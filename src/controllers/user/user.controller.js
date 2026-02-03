@@ -1,7 +1,7 @@
 import User from '../../models/User.model.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
-import { mlmService } from '../../services/mlm.service.js';
+import { mlmService } from '../../services/business/mlm.service.js';
 
 export const getDirectTeam = async (req, res) => {
     try {

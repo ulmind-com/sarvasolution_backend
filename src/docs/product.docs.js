@@ -31,7 +31,7 @@
  *           type: string
  *         category:
  *           type: string
- *           enum: [aquaculture, agriculture, personal care, health care, home care, luxury goods]
+ *           enum: ['aquaculture', 'agriculture', 'personal care', 'health care', 'home care', 'luxury goods']
  *         productImage:
  *           type: object
  *           properties:
@@ -93,13 +93,15 @@
  *                 type: number
  *               category:
  *                 type: string
- *                 enum: [aquaculture, agriculture, personal care, health care, home care, luxury goods]
+ *                 enum: ['aquaculture', 'agriculture', 'personal care', 'health care', 'home care', 'luxury goods']
  *               stockQuantity:
  *                 type: number
- *               reorderLevel:
+ *               gst:
  *                 type: number
- *               sku:
- *                 type: string
+ *               cgst:
+ *                 type: number
+ *               sgst:
+ *                 type: number
  *               hsnCode:
  *                 type: string
  *               productImage:

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import ProductRequest from '../../models/ProductRequest.model.js';
-import { processSaleTransaction, handlePostSaleActions } from '../../services/sales.util.js';
-import { sendStatusEmail } from '../../services/email.service.js'; // Assuming we add a new email helper for requests
+import { processSaleTransaction, handlePostSaleActions } from '../../services/business/sales.service.js';
+import { sendStatusEmail } from '../../services/integration/email.service.js'; // Assuming we add a new email helper for requests
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Invoice from '../../models/Invoice.model.js';
 import Franchise from '../../models/Franchise.model.js';
-import { processSaleTransaction, handlePostSaleActions } from '../../services/sales.util.js'; // Shared Service
+import { processSaleTransaction, handlePostSaleActions } from '../../services/business/sales.service.js'; // Shared Service
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';

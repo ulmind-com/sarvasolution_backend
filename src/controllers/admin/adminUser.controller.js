@@ -1,6 +1,6 @@
 import User from '../../models/User.model.js';
 import BankAccount from '../../models/BankAccount.model.js';
-import { mailer } from '../../services/mail.service.js';
+import { mailer } from '../../services/integration/mail.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';

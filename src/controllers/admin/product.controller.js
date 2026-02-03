@@ -3,22 +3,21 @@ import StockTransaction from '../../models/StockTransaction.model.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { uploadOnCloudinary } from '../../utils/cloudinary.js';
+import { uploadToCloudinary } from '../../services/integration/cloudinary.service.js';
 
 export const createProduct = asyncHandler(async (req, res) => {
     const {
         productName, description, price, mrp, category, stockQuantity,
-        reorderLevel, sku, hsnCode, bv, pv, isFeatured, isActivationPackage
+        hsnCode, bv, pv, isFeatured, isActivationPackage,
+        gst, cgst, sgst // Tax fields
     } = req.body;
 
     if (!req.file) {
         throw new ApiError(400, "Product image is required");
     }
 
-    const productImage = await uploadOnCloudinary(req.file.path);
-    if (!productImage) {
-        throw new ApiError(500, "Failed to upload image");
-    }
+    // Upload to Cloudinary using buffer (integration service)
+    const productImage = await uploadToCloudinary(req.file.buffer, 'sarvasolution/products');
 
     const product = await Product.create({
         productName,
@@ -27,17 +26,15 @@ export const createProduct = asyncHandler(async (req, res) => {
         mrp,
         category,
         stockQuantity,
-        reorderLevel,
-        sku,
         hsnCode,
         bv,
         pv,
         isFeatured,
         isActivationPackage,
-        productImage: {
-            url: productImage.secure_url,
-            publicId: productImage.public_id
-        },
+        gst: Number(gst) || 0,
+        cgst: Number(cgst) || 0,
+        sgst: Number(sgst) || 0,
+        productImage,
         createdBy: req.user._id
     });
 
@@ -95,21 +92,25 @@ export const updateProduct = asyncHandler(async (req, res) => {
     const updateData = { ...req.body };
 
     if (req.file) {
-        const image = await uploadOnCloudinary(req.file.path);
-        updateData.productImage = {
-            url: image.secure_url,
-            publicId: image.public_id
-        };
+        const image = await uploadToCloudinary(req.file.buffer, 'sarvasolution/products');
+        updateData.productImage = image;
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-        req.params.id,
-        updateData,
-        { new: true }
-    );
+    // Ensure numeric parsing for updates
+    if (updateData.gst) updateData.gst = Number(updateData.gst);
+    if (updateData.cgst) updateData.cgst = Number(updateData.cgst);
+    if (updateData.sgst) updateData.sgst = Number(updateData.sgst);
+
+    // Mongoose findByIdAndUpdate bypasses pre-save hooks so we need to calc finalPrice manually or use save()
+    // Using save() pattern is safer for consistency
+    Object.keys(updateData).forEach(key => {
+        product[key] = updateData[key];
+    });
+
+    await product.save(); // Triggers pre-save hook for finalPrice
 
     return res.status(200).json(
-        new ApiResponse(200, updatedProduct, "Product updated successfully")
+        new ApiResponse(200, product, "Product updated successfully")
     );
 });
 
@@ -229,11 +230,14 @@ export const getStockHistory = asyncHandler(async (req, res) => {
 });
 
 export const getLowStockAlerts = asyncHandler(async (req, res) => {
+    // Reorder level removed, using strict 0 check or default 10?
+    // User asked to remove storage of reorderLevel.
+    // We can assume hardcoded low stock threshold or check if stock < 10.
     const products = await Product.find({
-        $expr: { $lte: ["$stockQuantity", "$reorderLevel"] },
+        stockQuantity: { $lte: 10 },
         isActive: true,
         deletedAt: null
-    }).select('productName stockQuantity reorderLevel');
+    }).select('productName stockQuantity');
 
     return res.status(200).json(
         new ApiResponse(200, products, "Low stock alerts fetched")
