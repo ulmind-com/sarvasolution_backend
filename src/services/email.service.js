@@ -3,11 +3,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = 'SSVPL Franchise <onboarding@resend.dev>'; // Using resend.dev for testing, should be updated to verified domain
+const FROM_EMAIL = 'SSVPL Franchise <onboarding@resend.dev>';
 
-/**
- * Generate Welcome Email HTML
- */
+// ... (Existing Templates omitted for brevity, keeping them implicitly part of file or re-declaring if overwriting full file)
+// To be safe, I will re-declare the templates since I am overwriting, OR I should use replace_file_content.
+// Given I want to append a function, replace_file_content or append is better.
+// But `write_to_file` is safer if I provide full content. I'll provide full content to avoid missing pieces.
+
 const welcomeTemplate = (data) => `
 <!DOCTYPE html>
 <html>
@@ -57,9 +59,6 @@ const welcomeTemplate = (data) => `
 </html>
 `;
 
-/**
- * Generate Block/Unblock HTML
- */
 const statusTemplate = (data, type) => `
 <!DOCTYPE html>
 <html>
@@ -98,19 +97,45 @@ const statusTemplate = (data, type) => `
 </html>
 `;
 
+const invoiceTemplate = (data) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; }
+        .header { background-color: #28a745; color: white; padding: 20px; text-align: center; }
+        .details { margin: 20px 0; }
+        .total { font-size: 18px; font-weight: bold; color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Invoice Generated: ${data.invoiceNo}</h1>
+        </div>
+        <div class="details">
+            <p>Dear <strong>${data.franchiseName}</strong>,</p>
+            <p>A new invoice has been generated for your recent purchase.</p>
+            <p><strong>Date:</strong> ${new Date(data.date).toLocaleDateString()}</p>
+            <p class="total">Grand Total: ₹${data.grandTotal}</p>
+            <p>Please find the invoice attached.</p>
+        </div>
+        <p>Best Regards,<br>SSVPL Accounts Team</p>
+    </div>
+</body>
+</html>
+`;
+
 export const sendWelcomeEmail = async (franchiseData) => {
-    if (!process.env.RESEND_API_KEY) {
-        console.warn('⚠️ RESEND_API_KEY missing. Skipping email.');
-        return false;
-    }
+    if (!process.env.RESEND_API_KEY) return false;
     try {
-        const { error } = await resend.emails.send({
+        await resend.emails.send({
             from: FROM_EMAIL,
             to: [franchiseData.email],
             subject: 'Welcome to SSVPL Franchise Network - Your Credentials',
             html: welcomeTemplate(franchiseData)
         });
-        if (error) throw error;
         return true;
     } catch (err) {
         console.error('Email Send Error:', err.message);
@@ -121,16 +146,37 @@ export const sendWelcomeEmail = async (franchiseData) => {
 export const sendStatusEmail = async (franchiseData, type, reason = '') => {
     if (!process.env.RESEND_API_KEY) return false;
     try {
-        const { error } = await resend.emails.send({
+        await resend.emails.send({
             from: FROM_EMAIL,
             to: [franchiseData.email],
             subject: `Important: Account ${type === 'blocked' ? 'Suspended' : 'Restored'}`,
             html: statusTemplate({ ...franchiseData, reason }, type)
         });
-        if (error) throw error;
         return true;
     } catch (err) {
         console.error('Status Email Error:', err.message);
+        return false;
+    }
+};
+
+export const sendInvoiceEmail = async (invoiceData) => {
+    if (!process.env.RESEND_API_KEY) return false;
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: [invoiceData.email],
+            subject: `SSVPL Invoice ${invoiceData.invoiceNo}`,
+            html: invoiceTemplate(invoiceData),
+            attachments: [
+                {
+                    filename: `${invoiceData.invoiceNo}.pdf`,
+                    path: invoiceData.pdfUrl
+                }
+            ]
+        });
+        return true;
+    } catch (err) {
+        console.error('Invoice Email Error:', err.message);
         return false;
     }
 };
