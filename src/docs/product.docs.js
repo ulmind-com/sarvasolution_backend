@@ -165,12 +165,9 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required: [quantityToAdd, reason]
+ *             required: [quantityToAdd]
  *             properties:
  *               quantityToAdd: { type: number, min: 1 }
- *               reason: { type: string, minLength: 5 }
- *               batchNo: { type: string }
- *               referenceNo: { type: string }
  *     responses:
  *       200:
  *         description: Stock added successfully
@@ -195,28 +192,14 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required: [quantityToRemove, reason]
+ *             required: [quantityToRemove]
  *             properties:
  *               quantityToRemove: { type: number, min: 1 }
- *               reason: { type: string, minLength: 5 }
- *               referenceNo: { type: string }
  *     responses:
  *       200:
  *         description: Stock removed successfully
  */
 
-/**
- * @swagger
- * /api/v1/admin/product/alerts/low-stock:
- *   get:
- *     summary: Get low stock alerts
- *     tags: [Admin - Products]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of products with low stock
- */
 
 /**
  * @swagger

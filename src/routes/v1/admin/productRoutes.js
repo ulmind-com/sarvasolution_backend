@@ -9,8 +9,7 @@ import {
     toggleProductStatus,
     addStock,
     removeStock,
-    getStockHistory,
-    getLowStockAlerts
+    getStockHistory
 } from '../../../controllers/admin/product.controller.js';
 
 import { uploadProductImage } from '../../../middlewares/upload/uploadMiddleware.js';
@@ -38,7 +37,6 @@ router.patch('/approve/:productId', approveProduct);
 router.patch('/toggle-status/:productId', toggleProductStatus);
 
 // Stock Management
-router.get('/alerts/low-stock', getLowStockAlerts);
 router.patch('/stock/add/:productId', addStock);
 router.patch('/stock/remove/:productId', removeStock);
 router.get('/stock/history/:productId', getStockHistory);

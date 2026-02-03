@@ -157,7 +157,7 @@ export const toggleProductStatus = asyncHandler(async (req, res) => {
 });
 
 export const addStock = asyncHandler(async (req, res) => {
-    const { quantityToAdd, reason, batchNo, referenceNo } = req.body;
+    const { quantityToAdd } = req.body;
     const { productId } = req.params;
 
     const product = await Product.findById(productId);
@@ -175,8 +175,7 @@ export const addStock = asyncHandler(async (req, res) => {
         quantity: quantityToAdd,
         previousStock,
         newStock: product.stockQuantity,
-        reason,
-        referenceNo,
+        reason: 'Stock added by admin',
         performedBy: req.user._id
     });
 
@@ -186,7 +185,7 @@ export const addStock = asyncHandler(async (req, res) => {
 });
 
 export const removeStock = asyncHandler(async (req, res) => {
-    const { quantityToRemove, reason, referenceNo } = req.body;
+    const { quantityToRemove } = req.body;
     const { productId } = req.params;
 
     const product = await Product.findById(productId);
@@ -208,8 +207,7 @@ export const removeStock = asyncHandler(async (req, res) => {
         quantity: quantityToRemove,
         previousStock,
         newStock: product.stockQuantity,
-        reason,
-        referenceNo,
+        reason: 'Stock removed by admin',
         performedBy: req.user._id
     });
 
@@ -229,17 +227,4 @@ export const getStockHistory = asyncHandler(async (req, res) => {
     );
 });
 
-export const getLowStockAlerts = asyncHandler(async (req, res) => {
-    // Reorder level removed, using strict 0 check or default 10?
-    // User asked to remove storage of reorderLevel.
-    // We can assume hardcoded low stock threshold or check if stock < 10.
-    const products = await Product.find({
-        stockQuantity: { $lte: 10 },
-        isActive: true,
-        deletedAt: null
-    }).select('productName stockQuantity');
 
-    return res.status(200).json(
-        new ApiResponse(200, products, "Low stock alerts fetched")
-    );
-});
