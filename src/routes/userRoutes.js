@@ -1,5 +1,6 @@
 import express from 'express';
 import { getBVSummary, getFundsStatus, requestPayout, getWalletInfo, getTree, getPayouts, getBonusStatus } from '../controllers/user/userFinancial.controller.js';
+import { getUserProducts, getProductDetails } from '../controllers/user/product.controller.js';
 import authMiddleware from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
@@ -17,6 +18,10 @@ router.get('/tree/:memberId', getTree);
 router.get('/payouts', getPayouts);
 router.get('/bonus-status', getBonusStatus); // Fast Track & Star Bonus
 router.post('/request-payout', requestPayout);
+
+// Product Browsing
+router.get('/products', getUserProducts);
+router.get('/products/:productId', getProductDetails);
 
 import { getDirectTeam, getCompleteTeam } from '../controllers/user/user.controller.js';
 import { activateUser } from '../controllers/user/activate_user.controller.js';

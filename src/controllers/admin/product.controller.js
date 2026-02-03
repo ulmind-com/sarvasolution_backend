@@ -1,4 +1,5 @@
 import Product from '../../models/Product.model.js';
+import StockTransaction from '../../models/StockTransaction.model.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -235,5 +236,138 @@ export const toggleProductStatus = asyncHandler(async (req, res) => {
             _id: product._id,
             isActive: product.isActive
         }, `Product ${product.isActive ? 'activated' : 'deactivated'}`)
+    );
+});
+
+/**
+ * @desc    Add stock to inventory
+ * @route   PATCH /api/v1/admin/product/stock/add/:productId
+ * @access  Admin
+ */
+export const addStock = asyncHandler(async (req, res) => {
+    const { productId } = req.params;
+    const { quantityToAdd, reason, batchNo, referenceNo } = req.body;
+
+    if (!quantityToAdd || quantityToAdd <= 0) {
+        throw new ApiError(400, 'Quantity to add must be a positive number');
+    }
+    if (!reason || reason.length < 5) {
+        throw new ApiError(400, 'A valid reason (min 5 chars) is required');
+    }
+
+    const product = await Product.findById(productId);
+    if (!product || product.deletedAt) {
+        throw new ApiError(404, 'Product not found');
+    }
+
+    const previousStock = product.stockQuantity;
+    product.stockQuantity += Number(quantityToAdd);
+
+    // Auto-update batch if provided
+    if (batchNo) product.batchNo = batchNo;
+
+    await product.save();
+
+    // Log Transaction
+    await StockTransaction.create({
+        product: product._id,
+        transactionType: 'add',
+        quantity: Number(quantityToAdd),
+        previousStock,
+        newStock: product.stockQuantity,
+        reason,
+        referenceNo,
+        performedBy: req.user._id,
+        metadata: { batchNo }
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, product, 'Stock added successfully')
+    );
+});
+
+/**
+ * @desc    Remove/Deduct stock from inventory
+ * @route   PATCH /api/v1/admin/product/stock/remove/:productId
+ * @access  Admin
+ */
+export const removeStock = asyncHandler(async (req, res) => {
+    const { productId } = req.params;
+    const { quantityToRemove, reason, referenceNo } = req.body;
+
+    if (!quantityToRemove || quantityToRemove <= 0) {
+        throw new ApiError(400, 'Quantity to remove must be a positive number');
+    }
+    if (!reason || reason.length < 5) {
+        throw new ApiError(400, 'A valid reason (min 5 chars) is required');
+    }
+
+    const product = await Product.findById(productId);
+    if (!product || product.deletedAt) {
+        throw new ApiError(404, 'Product not found');
+    }
+
+    if (product.stockQuantity < quantityToRemove) {
+        throw new ApiError(400, `Insufficient stock. Current: ${product.stockQuantity}`);
+    }
+
+    const previousStock = product.stockQuantity;
+    product.stockQuantity -= Number(quantityToRemove);
+    await product.save();
+
+    // Log Transaction
+    await StockTransaction.create({
+        product: product._id,
+        transactionType: 'remove',
+        quantity: Number(quantityToRemove),
+        previousStock,
+        newStock: product.stockQuantity,
+        reason,
+        referenceNo,
+        performedBy: req.user._id
+    });
+
+    // Check alerting
+    const alert = product.stockQuantity <= product.reorderLevel
+        ? { level: 'low_stock', message: 'Stock below reorder level!' }
+        : null;
+
+    return res.status(200).json(
+        new ApiResponse(200, { product, alert }, 'Stock removed successfully')
+    );
+});
+
+/**
+ * @desc    Get stock transaction history
+ * @route   GET /api/v1/admin/product/stock-history/:productId
+ * @access  Admin
+ */
+export const getStockHistory = asyncHandler(async (req, res) => {
+    const transactions = await StockTransaction.find({ product: req.params.productId })
+        .sort({ createdAt: -1 })
+        .populate('performedBy', 'fullName email')
+        .limit(100);
+
+    return res.status(200).json(
+        new ApiResponse(200, transactions, 'Stock history retrieved')
+    );
+});
+
+/**
+ * @desc    Get low stock alerts
+ * @route   GET /api/v1/admin/product/low-stock-alerts
+ * @access  Admin
+ */
+export const getLowStockAlerts = asyncHandler(async (req, res) => {
+    // Pipeline to find products where stock <= reorderLevel
+    // Note: Can't easily use simple query for field comparison without $where or aggregation
+    const products = await Product.find({
+        isActive: true,
+        deletedAt: null,
+        $expr: { $lte: ["$stockQuantity", "$reorderLevel"] }
+    }).select('productName stockQuantity reorderLevel sku');
+
+    return res.status(200).json(
+        new ApiResponse(200, products, 'Low stock alerts retrieved')
     );
 });
