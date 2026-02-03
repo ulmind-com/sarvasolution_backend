@@ -5,8 +5,10 @@ import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
 
 const router = express.Router();
 
-router.use(authMiddleware);
+// Public Routes (No Authentication Required)
+router.get('/products/:productId', getProductDetails);
 
+// Protected Routes (Authentication Required)
 router.use(authMiddleware);
 
 router.get('/bv-summary', getBVSummary);
@@ -19,9 +21,8 @@ router.get('/payouts', getPayouts);
 router.get('/bonus-status', getBonusStatus); // Fast Track & Star Bonus
 router.post('/request-payout', requestPayout);
 
-// Product Browsing
+// Product Browsing (authenticated)
 router.get('/products', getUserProducts);
-router.get('/products/:productId', getProductDetails);
 
 import { getDirectTeam, getCompleteTeam } from '../../../controllers/user/user.controller.js';
 import { activateUser } from '../../../controllers/user/activate_user.controller.js';
