@@ -58,8 +58,8 @@
  * tags:
  *   name: Admin - Products
  *   description: Product Inventory Management (Admin Only)
- *
  */
+
 /**
  * @swagger
  * tags:
@@ -79,10 +79,43 @@
  *       required: true
  *       content:
  *         multipart/form-data:
- *           // ... (Same as before)
+ *           schema:
+ *             type: object
+ *             required: [productName, description, price, mrp, category, stockQuantity, productImage]
+ *             properties:
+ *               productName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               mrp:
+ *                 type: number
+ *               category:
+ *                 type: string
+ *                 enum: [aquaculture, agriculture, personal care, health care, home care, luxury goods]
+ *               stockQuantity:
+ *                 type: number
+ *               reorderLevel:
+ *                 type: number
+ *               sku:
+ *                 type: string
+ *               hsnCode:
+ *                 type: string
+ *               productImage:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { $ref: '#/components/schemas/Product' }
+ *                 message: { type: string }
  */
 
 /**
@@ -100,6 +133,12 @@
  *       - in: query
  *         name: limit
  *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *       - in: query
+ *         name: category
+ *         schema: { type: string }
  *     responses:
  *       200:
  *         description: List of products
@@ -244,5 +283,3 @@
  *       404:
  *         description: Product not found
  */
-
-// ... (Other endpoints kept for brevity, will rewrite completely in real file)
