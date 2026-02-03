@@ -179,3 +179,26 @@ export const sendInvoiceEmail = async (invoiceData) => {
         return false;
     }
 };
+
+export const sendInvoiceEmailWithAttachment = async (data) => {
+    if (!process.env.RESEND_API_KEY) return false;
+    try {
+        await resend.emails.send({
+            from: FROM_EMAIL,
+            to: [data.email],
+            subject: `SSVPL Invoice ${data.invoiceNo}`,
+            html: invoiceTemplate(data),
+            attachments: [
+                {
+                    filename: data.pdfFilename,
+                    content: data.pdfBuffer
+                }
+            ]
+        });
+        return true;
+    } catch (err) {
+        console.error('Invoice Email Error:', err.message);
+        return false;
+    }
+};
+

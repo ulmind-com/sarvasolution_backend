@@ -2,8 +2,8 @@ import Invoice from '../../models/Invoice.model.js';
 import FranchiseInventory from '../../models/FranchiseInventory.model.js';
 import StockTransaction from '../../models/StockTransaction.model.js';
 import Product from '../../models/Product.model.js';
-import { generateInvoicePDF } from '../integration/pdf.service.js';
-import { sendInvoiceEmail } from '../integration/email.service.js';
+import { generateInvoicePDFBuffer } from '../integration/pdf.service.js';
+import { sendInvoiceEmailWithAttachment } from '../integration/email.service.js';
 import { ApiError } from '../../utils/ApiError.js';
 
 /**
@@ -133,7 +133,10 @@ export const processSaleTransaction = async ({
             pincode: franchise.shopAddress.pincode
         },
         createdBy: user._id,
-        status: 'sent'
+        status: 'paid',
+        paymentStatus: 'paid',
+        paidAmount: grandTotal,
+        paymentDate: new Date()
     }], { session });
 
     return { invoice: invoice[0], processedItems, grandTotal, subTotal, gstAmount, gstRate };
@@ -144,7 +147,6 @@ export const processSaleTransaction = async ({
  * Call this AFTER committing the transaction
  */
 export const handlePostSaleActions = async (invoice, processedItems, franchise) => {
-    let pdfUrl = '';
     try {
         const invoiceDataForPdf = {
             invoiceNo: invoice.invoiceNo,
@@ -157,25 +159,27 @@ export const handlePostSaleActions = async (invoice, processedItems, franchise) 
             deliveryAddress: invoice.deliveryAddress
         };
 
-        pdfUrl = await generateInvoicePDF(invoiceDataForPdf);
+        // Generate PDF Buffer (no Cloudinary upload)
+        const pdfBuffer = await generateInvoicePDFBuffer(invoiceDataForPdf);
 
-        // Update Invoice with PDF URL
-        await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl });
-
-        // Send Email
-        await sendInvoiceEmail({
+        // Send Email with PDF attachment
+        const emailSent = await sendInvoiceEmailWithAttachment({
             email: franchise.email,
             franchiseName: franchise.name,
             invoiceNo: invoice.invoiceNo,
             date: invoice.invoiceDate,
             grandTotal: invoice.grandTotal,
-            pdfUrl
+            pdfBuffer,
+            pdfFilename: `${invoice.invoiceNo}.pdf`
         });
 
-        return pdfUrl;
+        // Update invoice email status
+        await Invoice.findByIdAndUpdate(invoice._id, { emailSent });
+
+        return emailSent;
 
     } catch (error) {
         console.error('Post-Sale Action Error (PDF/Email):', error);
-        return null; // Don't crash flow if email fails
+        return false; // Don't crash flow if email fails
     }
 };

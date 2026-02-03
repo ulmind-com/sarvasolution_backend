@@ -47,9 +47,9 @@ export const sellToFranchise = asyncHandler(async (req, res) => {
     }
 
     // 3. Post-Transaction (PDF & Email)
-    let pdfUrl = '';
+    let emailSent = false;
     if (transactionResult) {
-        pdfUrl = await handlePostSaleActions(
+        emailSent = await handlePostSaleActions(
             transactionResult.invoice,
             transactionResult.processedItems,
             franchise
@@ -58,8 +58,8 @@ export const sellToFranchise = asyncHandler(async (req, res) => {
 
     return res.status(201).json(
         new ApiResponse(201, {
-            invoice: { ...transactionResult.invoice.toObject(), pdfUrl },
-            emailSent: !!pdfUrl
+            invoice: transactionResult.invoice,
+            emailSent
         }, 'Sale processed successfully')
     );
 });

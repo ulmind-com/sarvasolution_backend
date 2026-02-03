@@ -1,39 +1,21 @@
 import PDFDocument from 'pdfkit';
-import { cloudinary } from '../../config/cloudinary.js';
-import streamifier from 'streamifier';
 
 /**
- * Generate Invoice PDF
+ * Generate Invoice PDF Buffer
  * @param {Object} invoiceData - Invoice object populated with details
- * @returns {Promise<string>} - Cloudinary Secure URL of the generated PDF
+ * @returns {Promise<Buffer>} - PDF file as Buffer
  */
-export const generateInvoicePDF = async (invoiceData) => {
+export const generateInvoicePDFBuffer = async (invoiceData) => {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ margin: 50, size: 'A4' });
         const buffers = [];
 
         doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', async () => {
+        doc.on('end', () => {
             const pdfBuffer = Buffer.concat(buffers);
-
-            // Upload to Cloudinary
-            const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                    resource_type: 'image',
-                    folder: 'invoices',
-                    public_id: `invoice-${invoiceData.invoiceNo}`,
-                    format: 'pdf',
-                    access_mode: 'public',
-                    flags: 'attachment'
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result.secure_url);
-                }
-            );
-
-            streamifier.createReadStream(pdfBuffer).pipe(uploadStream);
+            resolve(pdfBuffer);
         });
+        doc.on('error', reject);
 
         // --- PDF Generation Logic ---
 
