@@ -9,8 +9,9 @@ import { uploadSingle, uploadKYC } from '../middlewares/uploadMiddleware.js';
 
 const router = express.Router();
 
-router.post('/register/user', register); // Removed uploadSingle from register as it only requires 6 text fields now
+router.post('/register/user', register);
 router.post('/login/user', login);
+router.post('/admin/login', login); // Shared login logic for now
 router.get('/profile', authMiddleware, getProfile);
 router.patch('/profile', authMiddleware, uploadSingle, updateProfile);
 router.post('/kyc/submit', authMiddleware, uploadKYC, submitKYC);

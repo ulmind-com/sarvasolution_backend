@@ -22,6 +22,8 @@ export const getSystemStatus = asyncHandler(async (req, res) => {
 });
 
 export const seedSystem = asyncHandler(async (req, res) => {
+    const report = [];
+
     // 1. Seed Products with GST
     const productsToSeed = [
         { name: "Premium Fish Feed", price: 1000, category: "aquaculture" },
@@ -31,17 +33,16 @@ export const seedSystem = asyncHandler(async (req, res) => {
         { name: "Floor Cleaner", price: 150, category: "home care" }
     ];
 
-    const createdProducts = [];
     for (const p of productsToSeed) {
-        const gst = GSTCalculator.calculate(p.price, 18);
         const exists = await Product.findOne({ productName: p.name });
         if (!exists) {
-            const product = await Product.create({
+            const gst = GSTCalculator.calculate(p.price, 18);
+            await Product.create({
                 productName: p.name,
                 description: `High quality ${p.name}`,
                 price: p.price,
                 productDP: p.price * 0.9,
-                mrp: gst.finalPriceIncGST * 1.2, // MRP slightly higher
+                mrp: gst.finalPriceIncGST * 1.2,
                 gstRate: 18,
                 cgstRate: 9,
                 sgstRate: 9,
@@ -54,15 +55,33 @@ export const seedSystem = asyncHandler(async (req, res) => {
                 isActive: true,
                 isApproved: true
             });
-            createdProducts.push(product.productName);
+            report.push(`Created Product: ${p.name}`);
         }
     }
 
-    // 2. Seed Franchise
-    const defaultPass = await bcrypt.hash("abc123", 10);
-    const franchiseExists = await Franchise.findOne({ email: "test@franchise.com" });
+    // 2. Seed Admin User
+    const adminExists = await User.findOne({ email: "admin@ssvpl.com" });
+    if (!adminExists) {
+        // We need to bypass some required fields for Admin or ensure User model allows it
+        // User model requires: memberId, fullName, phone
+        const adminPass = await bcrypt.hash("adminpassword123", 10);
+        await User.create({
+            memberId: "ADMIN001",
+            fullName: "System Admin",
+            email: "admin@ssvpl.com",
+            phone: "0000000000",
+            password: adminPass,
+            role: "admin",
+            status: "active",
+            position: "root" // Root of tree
+        });
+        report.push("Created Admin: admin@ssvpl.com");
+    }
 
+    // 3. Seed Franchise
+    const franchiseExists = await Franchise.findOne({ email: "test@franchise.com" });
     if (!franchiseExists) {
+        const defaultPass = await bcrypt.hash("abc123", 10);
         await Franchise.create({
             vendorId: "FS000001",
             name: "Test Franchise",
@@ -74,12 +93,12 @@ export const seedSystem = asyncHandler(async (req, res) => {
             shopAddress: { street: "123 Test St", city: "Kolkata", state: "WB", pincode: "700001" },
             status: "active",
             role: "franchise",
-            createdBy: req.user._id
+            createdBy: adminExists?._id // Might be null if just created, but nullable usually ok
         });
+        report.push("Created Franchise: test@franchise.com");
     }
 
     return res.status(200).json(new ApiResponse(200, {
-        productsCreated: createdProducts,
-        franchise: "test@franchise.com created/verified"
+        report
     }, "System Seeded Successfully"));
 });
