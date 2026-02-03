@@ -4,7 +4,8 @@ import {
     listFranchises,
     updateFranchise,
     blockFranchise,
-    unblockFranchise
+    unblockFranchise,
+    getFranchiseBySearch
 } from '../../../controllers/admin/franchise.controller.js';
 import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
 import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
@@ -14,7 +15,9 @@ const router = express.Router();
 
 router.use(authMiddleware, adminMiddleware);
 
+
 router.post('/create', validateFranchiseCreation, createFranchise);
+router.get('/search', getFranchiseBySearch);
 router.get('/list', listFranchises);
 router.put('/:franchiseId', updateFranchise);
 router.patch('/:franchiseId/block', blockFranchise);

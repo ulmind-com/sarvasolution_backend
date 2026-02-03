@@ -64,6 +64,34 @@
 
 /**
  * @swagger
+ * /api/v1/admin/franchise/search:
+ *   get:
+ *     summary: Search franchise by vendorId or name
+ *     tags: [Admin - Franchise]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: vendorId
+ *         schema:
+ *           type: string
+ *         description: Franchise vendor ID (e.g., FS000001)
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Franchise owner name (case-insensitive)
+ *     responses:
+ *       200:
+ *         description: Franchise details fetched successfully
+ *       400:
+ *         description: Please provide either vendorId or name
+ *       404:
+ *         description: Franchise not found
+ */
+
+/**
+ * @swagger
  * /api/v1/admin/franchise/list:
  *   get:
  *     summary: List franchises with filters

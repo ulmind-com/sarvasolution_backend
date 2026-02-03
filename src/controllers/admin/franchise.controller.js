@@ -135,3 +135,32 @@ export const unblockFranchise = asyncHandler(async (req, res) => {
         new ApiResponse(200, { _id: franchise._id, status: franchise.status }, "Franchise unblocked")
     );
 });
+
+export const getFranchiseBySearch = asyncHandler(async (req, res) => {
+    const { vendorId, name } = req.query;
+
+    if (!vendorId && !name) {
+        throw new ApiError(400, "Please provide either vendorId or name to search");
+    }
+
+    let franchise;
+
+    if (vendorId) {
+        franchise = await Franchise.findOne({ vendorId }).select('-password');
+    } else if (name) {
+        // Case-insensitive search by name
+        franchise = await Franchise.findOne({
+            name: { $regex: new RegExp(`^${name}$`, 'i') },
+            deletedAt: null
+        }).select('-password');
+    }
+
+    if (!franchise) {
+        throw new ApiError(404, "Franchise not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, franchise, "Franchise details fetched successfully")
+    );
+});
+
