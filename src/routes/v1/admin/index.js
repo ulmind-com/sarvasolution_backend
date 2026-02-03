@@ -5,6 +5,11 @@ import { fixDatabaseIssues } from '../../../controllers/admin/fixDatabase.contro
 import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
 import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
 
+import productRoutes from './productRoutes.js';
+import franchiseRoutes from './franchiseRoutes.js';
+import saleRoutes from './saleRoutes.js';
+import requestRoutes from './requestRoutes.js';
+
 const router = express.Router();
 
 // All routes here require both authentication and admin role
@@ -26,6 +31,12 @@ router.get('/transactions', getAllTransactions); // New Audit Route
 router.post('/bv/allocate-manual', addManualBV);
 router.post('/trigger-bonus', triggerBonusMatching);
 router.post('/fix-database', fixDatabaseIssues); // Fix data inconsistencies
+
+// Sub-Modules
+router.use('/product', productRoutes);
+router.use('/franchise', franchiseRoutes);
+router.use('/sale', saleRoutes);
+router.use('/request', requestRoutes);
 
 export default router;
 
