@@ -6,7 +6,7 @@ export const getMyInventory = asyncHandler(async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
 
     const inventory = await FranchiseInventory.find({ franchise: req.franchise._id })
-        .populate('product', 'productName productImage.url price mrp category stockQuantity')
+        .populate('product', 'productName productImage.url price mrp category stockQuantity description hsnCode gst cgst sgst bv pv productDP')
         .sort({ updatedAt: -1 })
         .skip((page - 1) * limit)
         .limit(Number(limit));
