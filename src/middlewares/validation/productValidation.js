@@ -8,17 +8,18 @@ export const validateProductInput = async (req, res, next) => {
             description,
             price,
             mrp,
-            category
+            category,
+            productDP
         } = req.body;
 
         // 1. Basic Required Fields Check
-        if (!productName || !description || !price || !mrp || !category) {
-            throw new ApiError(400, 'Missing required fields: Name, Description, Price, MRP, Category are mandatory.');
+        if (!productName || !description || !price || !mrp || !category || !productDP) {
+            throw new ApiError(400, 'Missing required fields: Name, Description, Price, MRP, Category, ProductDP are mandatory.');
         }
 
         // 2. Numeric Validations
-        if (Number(price) < 0 || Number(mrp) < 0) {
-            throw new ApiError(400, 'Price and MRP must be positive numbers.');
+        if (Number(price) < 0 || Number(mrp) < 0 || Number(productDP) < 0) {
+            throw new ApiError(400, 'Price, MRP, and ProductDP must be positive numbers.');
         }
 
         // 3. Logic: MRP vs Price

@@ -81,7 +81,7 @@
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [productName, description, price, mrp, category, stockQuantity, productImage]
+ *             required: [productName, description, price, mrp, category, stockQuantity, productDP, productImage]
  *             properties:
  *               productName:
  *                 type: string
@@ -96,6 +96,15 @@
  *                 enum: ['aquaculture', 'agriculture', 'personal care', 'health care', 'home care', 'luxury goods']
  *               stockQuantity:
  *                 type: number
+ *               productDP:
+ *                 type: number
+ *                 description: Dealer Price / Distribution Price
+ *               bv:
+ *                 type: number
+ *                 description: Business Volume
+ *               pv:
+ *                 type: number
+ *                 description: Point Value
  *               gst:
  *                 type: number
  *               cgst:

@@ -43,6 +43,11 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    productDP: { // Dealer Price / Distribution Price
+        type: Number,
+        required: true,
+        min: 0
+    },
     hsnCode: {
         type: String,
         trim: true

@@ -8,7 +8,7 @@ import { uploadToCloudinary } from '../../services/integration/cloudinary.servic
 export const createProduct = asyncHandler(async (req, res) => {
     const {
         productName, description, price, mrp, category, stockQuantity,
-        hsnCode, bv, pv, isFeatured, isActivationPackage,
+        hsnCode, bv, pv, productDP, isFeatured, isActivationPackage,
         gst, cgst, sgst // Tax fields
     } = req.body;
 
@@ -27,8 +27,9 @@ export const createProduct = asyncHandler(async (req, res) => {
         category,
         stockQuantity,
         hsnCode,
-        bv,
-        pv,
+        bv: Number(bv) || 0,
+        pv: Number(pv) || 0,
+        productDP: Number(productDP),
         isFeatured,
         isActivationPackage,
         gst: Number(gst) || 0,
