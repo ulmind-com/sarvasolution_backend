@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import cloudnary from '../../config/cloudinary.js';
+import { cloudinary } from '../../config/cloudinary.js';
 import streamifier from 'streamifier';
 
 /**
@@ -17,7 +17,7 @@ export const generateInvoicePDF = async (invoiceData) => {
             const pdfBuffer = Buffer.concat(buffers);
 
             // Upload to Cloudinary
-            const uploadStream = cloudnary.uploader.upload_stream(
+            const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     resource_type: 'raw',
                     folder: 'invoices',
