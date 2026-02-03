@@ -6,74 +6,54 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import bcrypt from 'bcryptjs';
 
-/**
- * @desc    Create New Franchise (Simplified / Standard)
- * @route   POST /api/v1/admin/franchise/create
- */
 export const createFranchise = asyncHandler(async (req, res) => {
-    const { name, shopName, email, phone, city, shopAddress, password } = req.body;
+    const { name, shopName, email, phone, password, city, shopAddress } = req.body;
 
-    // 1. Validation (Bypass strict checks in simplified mode if fields missing)
-    if (!name || !email || !phone) {
-        throw new ApiError(400, "Name, Email and Phone are required");
-    }
+    const existingEmail = await Franchise.findOne({ email });
+    if (existingEmail) throw new ApiError(409, "Email already registered");
 
-    // 2. Check Uniqueness
-    const existing = await Franchise.findOne({ $or: [{ email }, { phone }] });
-    if (existing) {
-        throw new ApiError(409, "Franchise with email or phone already exists");
-    }
+    const existingPhone = await Franchise.findOne({ phone });
+    if (existingPhone) throw new ApiError(409, "Phone number already in use");
 
-    // 3. Generate Vendor ID
     const vendorId = await generateVendorId();
 
-    // 4. Password Handling (Default: abc123)
-    const rawPassword = password || "abc123";
-    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 5. Create Franchise
     const franchise = await Franchise.create({
         vendorId,
         name,
-        shopName: shopName || `${name}'s Shop`,
+        shopName,
         email: email.toLowerCase(),
         phone,
         password: hashedPassword,
-        city: city || 'Unknown',
-        shopAddress: shopAddress || { street: 'Pending', state: 'Pending', pincode: '000000' },
-        status: 'active',
-        isBlocked: false,
-        createdBy: req.user._id,
-        role: 'franchise'
+        city,
+        shopAddress,
+        createdBy: req.user._id
     });
 
-    // 6. Send Email (Fail-safe: don't block creation if email fails)
-    try {
-        await sendWelcomeEmail({
-            vendorId,
-            name,
-            shopName: franchise.shopName,
-            email,
-            password: rawPassword, // Send raw password once
-            shopAddress: franchise.shopAddress,
-            city: franchise.city
-        });
-    } catch (emailErr) {
-        console.error("Welcome email failed:", emailErr.message);
-        // Continue, don't throw
-    }
+    const emailSent = await sendWelcomeEmail({
+        vendorId,
+        name,
+        shopName,
+        email,
+        password,
+        city,
+        shopAddress
+    });
 
-    // Return sanitized data
     const createdFranchise = await Franchise.findById(franchise._id).select('-password');
 
     return res.status(201).json(
-        new ApiResponse(201, { franchise: createdFranchise, tempPassword: rawPassword }, "Franchise created successfully")
+        new ApiResponse(201, {
+            franchise: createdFranchise,
+            emailSent
+        }, "Franchise created successfully")
     );
 });
 
 export const listFranchises = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, search, status, city } = req.query;
-    const query = {};
+    const { page = 1, limit = 20, status, city, search } = req.query;
+    const query = { deletedAt: null };
 
     if (status) query.status = status;
     if (city) query.city = city;
@@ -81,6 +61,7 @@ export const listFranchises = asyncHandler(async (req, res) => {
         query.$or = [
             { name: { $regex: search, $options: 'i' } },
             { shopName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
             { vendorId: { $regex: search, $options: 'i' } }
         ];
     }
@@ -94,73 +75,74 @@ export const listFranchises = asyncHandler(async (req, res) => {
     const total = await Franchise.countDocuments(query);
 
     return res.status(200).json(
-        new ApiResponse(200, { franchises, total, page: Number(page) }, "Franchises fetched")
+        new ApiResponse(200, {
+            franchises,
+            pagination: {
+                total,
+                currentPage: Number(page),
+                totalPages: Math.ceil(total / limit)
+            }
+        }, "Franchises fetched successfully")
     );
-});
-
-export const getFranchiseDetails = asyncHandler(async (req, res) => {
-    const franchise = await Franchise.findById(req.params.franchiseId).select('-password');
-    if (!franchise) throw new ApiError(404, "Franchise not found");
-    return res.status(200).json(new ApiResponse(200, franchise, "Franchise Details"));
 });
 
 export const updateFranchise = asyncHandler(async (req, res) => {
     const { franchiseId } = req.params;
-    const updateData = req.body;
+    const updates = req.body;
 
-    // Prevent password update here? For now allowing basic info update
-    delete updateData.password;
-    delete updateData.vendorId;
+    // Prevent updating immutable fields
+    delete updates.vendorId;
+    delete updates.password;
+    delete updates.role;
+    delete updates.email; // Usually email changes require separate verification
 
-    const franchise = await Franchise.findByIdAndUpdate(franchiseId, updateData, { new: true }).select('-password');
+    const franchise = await Franchise.findByIdAndUpdate(franchiseId, updates, { new: true }).select('-password');
     if (!franchise) throw new ApiError(404, "Franchise not found");
 
-    return res.status(200).json(new ApiResponse(200, franchise, "Franchise updated"));
+    return res.status(200).json(
+        new ApiResponse(200, franchise, "Franchise updated successfully")
+    );
 });
 
-export const deleteFranchise = asyncHandler(async (req, res) => {
-    // Soft delete usually better, but for now hard delete? Or status closed?
-    // Let's go with hard delete for "Cleanup" or soft delete via status.
-    // The previous implementation might have been hard delete.
-    const franchise = await Franchise.findByIdAndDelete(req.params.franchiseId);
-    if (!franchise) throw new ApiError(404, "Franchise not found");
-    return res.status(200).json(new ApiResponse(200, null, "Franchise deleted"));
-});
-
-export const listFranchiseRequests = asyncHandler(async (req, res) => {
-    // Placeholder for franchise requests/applications if implemented separately
-    // For now returning empty or implementation of pending status franchises
-    const requests = await Franchise.find({ status: 'pending' });
-    return res.status(200).json(new ApiResponse(200, requests, "Requests fetched"));
-});
-
-export const updateFranchiseStatus = asyncHandler(async (req, res) => {
+export const blockFranchise = asyncHandler(async (req, res) => {
     const { franchiseId } = req.params;
-    const { status, reason } = req.body;
+    const { reason } = req.body;
 
     const franchise = await Franchise.findById(franchiseId);
     if (!franchise) throw new ApiError(404, "Franchise not found");
 
-    franchise.status = status;
-    franchise.isBlocked = (status === 'blocked');
-    if (status === 'blocked') {
-        franchise.blockedAt = new Date();
-        franchise.blockReason = reason;
-        franchise.blockedBy = req.user._id;
-    } else {
-        franchise.isBlocked = false;
-        franchise.blockedAt = null;
-        franchise.blockReason = null;
-    }
+    franchise.status = 'blocked';
+    franchise.isBlocked = true;
+    franchise.blockedAt = new Date();
+    franchise.blockedBy = req.user._id;
+    franchise.blockReason = reason;
 
     await franchise.save();
 
-    // Send Email
-    await sendStatusEmail({
-        email: franchise.email,
-        name: franchise.name,
-        vendorId: franchise.vendorId
-    }, status === 'blocked' ? 'blocked' : 'unblocked', reason);
+    await sendStatusEmail(franchise, 'blocked', reason);
 
-    return res.status(200).json(new ApiResponse(200, franchise, `Franchise ${status}`));
+    return res.status(200).json(
+        new ApiResponse(200, { _id: franchise._id, status: franchise.status }, "Franchise blocked")
+    );
+});
+
+export const unblockFranchise = asyncHandler(async (req, res) => {
+    const { franchiseId } = req.params;
+
+    const franchise = await Franchise.findById(franchiseId);
+    if (!franchise) throw new ApiError(404, "Franchise not found");
+
+    franchise.status = 'active';
+    franchise.isBlocked = false;
+    franchise.blockedAt = null;
+    franchise.blockedBy = null;
+    franchise.blockReason = null;
+
+    await franchise.save();
+
+    await sendStatusEmail(franchise, 'unblocked');
+
+    return res.status(200).json(
+        new ApiResponse(200, { _id: franchise._id, status: franchise.status }, "Franchise unblocked")
+    );
 });

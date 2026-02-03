@@ -8,18 +8,13 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
  * Handle user login
  */
 export const login = asyncHandler(async (req, res) => {
-    const { memberId, email, password } = req.body;
+    const { memberId, password } = req.body;
 
-    if ((!memberId && !email) || !password) {
-        throw new ApiError(400, 'Member ID/Email and password are required');
+    if (!memberId || !password) {
+        throw new ApiError(400, 'Member ID and password are required');
     }
 
-    const user = await User.findOne({
-        $or: [
-            { memberId: memberId },
-            { email: email?.toLowerCase() }
-        ]
-    });
+    const user = await User.findOne({ memberId });
     if (!user) {
         throw new ApiError(401, 'Invalid credentials');
     }

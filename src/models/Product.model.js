@@ -4,7 +4,6 @@ const productSchema = new mongoose.Schema({
     productName: {
         type: String,
         required: true,
-        unique: true,
         trim: true,
         index: true
     },
@@ -12,67 +11,53 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // PRICING
-    price: { // Base Price (Distributor Price / Cost Price context? No, usually Admin Selling Price Base)
+    price: {
         type: Number,
         required: true,
         min: 0
     },
-    productDP: { // Dealer Price (Price for Franchise)
+    mrp: {
         type: Number,
         required: true,
-        default: function () { return this.price; } // Default to price if not set
+        min: 0
     },
-    mrp: { // Maximum Retail Price (Should match Final Price Inc GST)
-        type: Number,
-        required: true
+    finalPrice: {
+        type: Number
     },
-
-    // GST BREAKDOWN
-    gstRate: {
+    discount: {
         type: Number,
-        required: true,
-        enum: [0, 5, 12, 18, 28],
-        default: 18
-    },
-    cgstRate: Number,
-    sgstRate: Number,
-    igstRate: Number,
-    gstAmount: Number,
-    finalPriceIncGST: Number, // Should be close to MRP
-
-    // BUSINESS METRICS
-    bv: {
-        type: Number,
-        required: true,
         default: 0
     },
-    pv: {
+    bv: { // Business Volume
         type: Number,
-        required: true,
         default: 0
     },
-
-    // INVENTORY
+    pv: { // Point Value
+        type: Number,
+        default: 0
+    },
     hsnCode: {
         type: String,
-        required: true,
-        default: '000000'
+        trim: true
     },
     batchNo: {
         type: String,
-        trim: true,
-        default: () => `BATCH-${Date.now()}` // Auto-generate if missing
+        trim: true
     },
     sku: {
         type: String,
+        unique: true,
         trim: true
     },
     category: {
         type: String,
         required: true,
         enum: ['aquaculture', 'agriculture', 'personal care', 'health care', 'home care', 'luxury goods'],
-        default: 'aquaculture'
+        index: true
+    },
+    productImage: {
+        url: { type: String, required: true },
+        publicId: { type: String, required: true }
     },
     stockQuantity: {
         type: Number,
@@ -84,25 +69,18 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 10
     },
-
-    // MEDIA
-    productImage: {
-        url: { type: String, default: 'https://via.placeholder.com/400x400.png?text=No+Image' },
-        publicId: { type: String, default: 'placeholder' }
-    },
-
-    // STATUS flags
     isInStock: {
         type: Boolean,
         default: true
     },
     isActive: {
         type: Boolean,
-        default: true // Changed to TRUE by default to reduce friction
+        default: true,
+        index: true
     },
     isApproved: {
         type: Boolean,
-        default: true // Auto-approve admin products
+        default: true // Admin created -> approved
     },
     isFeatured: {
         type: Boolean,
@@ -112,6 +90,10 @@ const productSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     deletedAt: {
         type: Date,
         default: null
@@ -120,8 +102,7 @@ const productSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Text index for search
-productSchema.index({ productName: 'text', description: 'text', category: 'text' });
+productSchema.index({ productName: 'text', description: 'text' });
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

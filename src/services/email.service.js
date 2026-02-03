@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = 'SSVPL Franchise <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.MAIL_ADDRESS || 'SSVPL Franchise <onboarding@resend.dev>';
 
 // ... (Existing Templates omitted for brevity, keeping them implicitly part of file or re-declaring if overwriting full file)
 // To be safe, I will re-declare the templates since I am overwriting, OR I should use replace_file_content.

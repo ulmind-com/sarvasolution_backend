@@ -9,7 +9,6 @@ import adminFranchiseRoutes from './admin/franchiseRoutes.js';
 import adminSaleRoutes from './admin/saleRoutes.js';
 import franchiseRequestRoutes from './franchise/requestRoutes.js';
 import adminRequestRoutes from './admin/requestRoutes.js';
-import adminDebugRoutes from './admin/debugRoutes.js';
 
 const router = express.Router();
 
@@ -31,6 +30,5 @@ router.use('/admin/franchise', adminFranchiseRoutes);
 router.use('/admin/sales', adminSaleRoutes);
 router.use('/franchise/requests', franchiseRequestRoutes);
 router.use('/admin/requests', adminRequestRoutes);
-router.use('/admin/debug', adminDebugRoutes);
 
 export default router;
