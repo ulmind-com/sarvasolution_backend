@@ -47,14 +47,8 @@ export const getFundsStatus = asyncHandler(async (req, res) => {
  * Request a payout / withdrawal
  */
 export const requestPayout = asyncHandler(async (req, res) => {
-    const { amount } = req.body;
-    if (!amount) throw new ApiError(400, 'Withdrawal amount is required');
-
-    const payout = await payoutService.requestWithdrawal(req.user._id, Number(amount));
-
-    return res.status(201).json(
-        new ApiResponse(201, payout, 'Payout request submitted successfully. Processing on Friday.')
-    );
+    // Manual requests are disabled
+    throw new ApiError(403, 'Manual payout requests are disabled. Payouts are generated automatically on Friday nights.');
 });
 
 /**

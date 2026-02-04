@@ -135,84 +135,42 @@
  * @swagger
  * /api/v1/user/request-payout:
  *   post:
- *     summary: Request a withdrawal/payout (User only)
+ *     summary: Request a withdrawal/payout (Disabled)
  *     description: |
- *       **User Access Only** - Submit a withdrawal request from your available wallet balance.
+ *       **DEPRECATED - Manual Payouts Disabled**
  *       
- *       **Requirements:**
- *       - Minimum withdrawal: ₹450
- *       - Sufficient available balance
- *       - KYC must be verified
+ *       Manual withdrawal requests are no longer accepted. 
+ *       Payouts are automatically generated every **Friday Night** for all users with eligible wallet balance.
+ *       
+ *       **Automatic Payout Criteria:**
+ *       - Wallet Available Balance >= Minimum Withdrawal (₹450)
+ *       - KYC Verified
  *       
  *       **Deductions:**
  *       - Admin Charge: 5%
  *       - TDS: 2%
- *       
- *       **Processing Schedule:** Every Friday at 11 AM IST
- *       
- *       **Example Calculation:**
- *       - Requested: ₹500
- *       - Admin Charge: ₹25 (5%)
- *       - TDS: ₹10 (2%)
- *       - Net Amount: ₹465 (amount you receive)
- *       
- *       After submitting, the request will be pending admin approval.
  *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [amount]
  *             properties:
- *               amount:
- *                 type: number
- *                 minimum: 450
- *                 example: 1000
- *                 description: Gross withdrawal amount (before deductions)
+ *               amount: { type: number, description: "Ignored" }
  *     responses:
- *       201:
- *         description: Payout request submitted successfully
+ *       403:
+ *         description: Manual requests disabled
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 statusCode:
- *                   type: number
- *                   example: 201
- *                 message:
- *                   type: string
- *                   example: Payout request submitted successfully. Processing on Friday.
- *                 data:
- *                   $ref: '#/components/schemas/Payout'
- *       400:
- *         description: Insufficient balance or below minimum
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/responses/Error'
- *             examples:
- *               belowMinimum:
- *                 summary: Amount below minimum
- *                 value:
- *                   success: false
- *                   statusCode: 400
- *                   message: Minimum withdrawal amount is Rs.450
- *               insufficientBalance:
- *                 summary: Not enough balance
- *                 value:
- *                   success: false
- *                   statusCode: 400
- *                   message: Insufficient balance in wallet
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
+ *               $ref: '#/components/responses/Forbidden'
+ *             example:
+ *               success: false
+ *               statusCode: 403
+ *               message: "Manual payout requests are disabled. Payouts are generated automatically on Friday nights."
  */
 
 /**

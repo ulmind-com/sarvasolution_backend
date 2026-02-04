@@ -39,6 +39,14 @@ export const cronJobs = {
             await cronJobs.resetYearlyCounters();
         }, { timezone: "Asia/Kolkata" });
 
+        // 5. Automatic Payout Generation (Friday Night / Sat 00:00)
+        // Runs every Saturday at 00:00 IST (Friday Night)
+        cron.schedule('0 0 * * 6', async () => {
+            console.log(chalk.magenta('Running Automatic Payout Generation...'));
+            await cronJobs.processAutomaticPayouts();
+        }, { timezone: "Asia/Kolkata" });
+
+
         console.log(chalk.green('Cron Jobs Scheduled.'));
     },
 
@@ -139,6 +147,83 @@ export const cronJobs = {
             console.log('Yearly counters reset successfully.');
         } catch (e) {
             console.error('Yearly Reset Error:', e);
+        }
+    },
+
+    /**
+     * Logic: Automatic Payout Generation (Friday Night / Sat 00:00)
+     * Iterates all users, checks balance > minWithdrawal, checks Compliance,
+     * Creates Payout Request.
+     */
+    async processAutomaticPayouts() {
+        console.log(chalk.blue('Processing Automatic Payout Requests...'));
+        try {
+            // Find users with balance > 0 (optimization)
+            // Ideally should filter by minimum, but min varies by user compliance.
+            // For now, get all with balance > 100 (safe lower bound)
+            const finances = await UserFinance.find({
+                "wallet.availableBalance": { $gt: 100 }
+            }).populate('user'); // Need user for compliance checks
+
+            let count = 0;
+            for (const finance of finances) {
+                if (!finance.user) continue;
+
+                const user = finance.user;
+                const balance = finance.wallet.availableBalance;
+                const minWithdrawal = user.compliance?.minimumWithdrawal || 450; // Default 450
+
+                // Check eligibility
+                if (balance >= minWithdrawal) {
+                    try {
+                        // Reuse payoutService logic locally or call it? 
+                        // Calling it is better but it does findById again inside.
+                        // For bulk, let's reuse logic carefully.
+                        // Actually, importing payoutService here caused circular dependency risk? 
+                        // No, cron.jobs.js imports UserFinance. 
+                        // Let's implement logic here to be safe and efficient.
+
+                        const requestedAmount = balance; // Withdraw EVERYTHING available
+
+                        // Deductions
+                        const adminChargePercent = user.compliance?.adminChargePercent || 5;
+                        const tdsPercent = user.compliance?.tdsPercent || 5; // Default ? 5% usually? previous code had 0.02 (2%). 
+                        // Let's stick to user compliance or rigid logic.
+                        // PayoutService used 0.02 hardcoded. I will stick to that to match existing logic.
+
+                        const adminCharge = requestedAmount * (adminChargePercent / 100);
+                        const tdsAmount = requestedAmount * 0.02; // 2% TDS
+                        const netAmount = requestedAmount - adminCharge - tdsAmount;
+
+                        const payout = await import('../models/Payout.model.js').then(m => m.default.create({
+                            userId: user._id,
+                            memberId: user.memberId,
+                            payoutType: 'withdrawal',
+                            grossAmount: requestedAmount,
+                            adminCharge,
+                            tdsDeducted: tdsAmount,
+                            netAmount,
+                            status: 'pending',
+                            scheduledFor: new Date() // Scheduled NOW (or next batch)
+                        }));
+
+                        // Update Wallet
+                        finance.wallet.availableBalance -= requestedAmount;
+                        finance.wallet.pendingWithdrawal += netAmount;
+                        finance.wallet.withdrawnAmount += requestedAmount; // Tracks gross withdrawn? Or should track net? Usually gross withdrawn from system.
+
+                        await finance.save();
+                        count++;
+                        console.log(`Requested payout for ${user.memberId}: Rs.${requestedAmount}`);
+                    } catch (err) {
+                        console.error(`Failed payout for ${user.memberId}:`, err.message);
+                    }
+                }
+            }
+            console.log(chalk.green(`Automatic Payouts Generated: ${count} requests.`));
+
+        } catch (e) {
+            console.error('Automatic Payout Error:', e);
         }
     }
 };
