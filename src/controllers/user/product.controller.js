@@ -4,134 +4,47 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 
 /**
- * @desc    Get products with advanced filtering (User)
+ * @desc    Get all products with pagination (simplified)
  * @route   GET /api/v1/user/products
  * @access  Authenticated User
  */
 export const getUserProducts = asyncHandler(async (req, res) => {
     const {
         page = 1,
-        limit = 12,
-        search,
-        category,
-        minPrice,
-        maxPrice,
-        minBV,
-        maxBV,
-        sortBy = 'price',
-        order = 'asc',
-        inStock,
-        isFeatured
+        limit = 12
     } = req.query;
 
-    const pipeline = [];
+    const skip = (page - 1) * limit;
 
-    // 1. Base Match: Active, Approved, Not Deleted
-    const matchStage = {
+    // Get all active, approved products (no filtering)
+    const products = await Product.find({
         isActive: true,
         isApproved: true,
         deletedAt: null
-    };
+    })
+        .select('productName description price mrp finalPrice discount bv pv productDP category productImage stockQuantity isInStock isFeatured hsnCode')
+        .skip(skip)
+        .limit(Number(limit))
+        .sort({ createdAt: -1 }) // Newest first
+        .lean();
 
-    // 2. Dynamic Filtering
-    if (category) matchStage.category = category;
-    if (isFeatured === 'true') matchStage.isFeatured = true;
-
-    // Price Range
-    if (minPrice || maxPrice) {
-        matchStage.finalPrice = {};
-        if (minPrice) matchStage.finalPrice.$gte = Number(minPrice);
-        if (maxPrice) matchStage.finalPrice.$lte = Number(maxPrice);
-    }
-
-    // BV Range
-    if (minBV || maxBV) {
-        matchStage.bv = {};
-        if (minBV) matchStage.bv.$gte = Number(minBV);
-        if (maxBV) matchStage.bv.$lte = Number(maxBV);
-    }
-
-    // Stock Filter
-    if (inStock === 'true') {
-        matchStage.stockQuantity = { $gt: 0 };
-    }
-
-    // Text Search (indexed fields: name, description)
-    if (search) {
-        matchStage.$text = { $search: search };
-    }
-
-    pipeline.push({ $match: matchStage });
-
-    // 3. Sorting
-    const sortStage = {};
-    if (search) {
-        // If searching, sort by score first
-        sortStage.score = { $meta: "textScore" };
-    }
-    // Then user selected sort
-    sortStage[sortBy] = order === 'asc' ? 1 : -1;
-    pipeline.push({ $sort: sortStage });
-
-    // 4. Projection (Optimize payload)
-    pipeline.push({
-        $project: {
-            productName: 1,
-            description: 1, // Maybe truncate?
-            price: 1,
-            mrp: 1,
-            finalPrice: 1,
-            discount: 1,
-            bv: 1,
-            pv: 1,
-            category: 1,
-            productImage: 1,
-            stockQuantity: 1,
-            isFeatured: 1,
-            hsnCode: 1,
-            createdAt: 1,
-            isInStock: { $gt: ["$stockQuantity", 0] }, // Compute dynamically
-            score: { $meta: "textScore" } // Only if searching
-        }
+    // Get total count for pagination
+    const totalProducts = await Product.countDocuments({
+        isActive: true,
+        isApproved: true,
+        deletedAt: null
     });
-
-    // 5. Pagination with Facet
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    const skip = (pageNum - 1) * limitNum;
-
-    pipeline.push({
-        $facet: {
-            products: [
-                { $skip: skip },
-                { $limit: limitNum }
-            ],
-            totalCount: [
-                { $count: 'count' }
-            ],
-            // Extra: Aggregations for UI Filters
-            availableCategories: [
-                { $group: { _id: "$category", count: { $sum: 1 } } }
-            ]
-        }
-    });
-
-    const result = await Product.aggregate(pipeline);
-    const { products, totalCount, availableCategories } = result[0];
-    const total = totalCount.length > 0 ? totalCount[0].count : 0;
 
     return res.status(200).json(
         new ApiResponse(200, {
             products,
             pagination: {
-                currentPage: pageNum,
-                totalPages: Math.ceil(total / limitNum),
-                totalProducts: total,
-                limit: limitNum,
-                hasNextPage: pageNum * limitNum < total
-            },
-            filters: {
-                availableCategories: availableCategories.map(c => ({ category: c._id, count: c.count }))
+                currentPage: Number(page),
+                totalPages: Math.ceil(totalProducts / limit),
+                totalProducts,
+                limit: Number(limit),
+                hasNextPage: page * limit < totalProducts,
+                hasPrevPage: page > 1
             }
         }, 'Products fetched successfully')
     );
