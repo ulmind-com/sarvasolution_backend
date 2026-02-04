@@ -318,6 +318,9 @@ export const sellToUser = asyncHandler(async (req, res) => {
             // Don't fail the sale if email fails
         }
 
+        // Commit the transaction
+        await session.commitTransaction();
+
         return res.status(201).json(
             new ApiResponse(201, {
                 sale: sale[0],
