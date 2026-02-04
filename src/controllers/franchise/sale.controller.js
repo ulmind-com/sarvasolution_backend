@@ -182,6 +182,9 @@ export const sellToUser = asyncHandler(async (req, res) => {
 
         // 11. Post-transaction: Generate PDF and send email
         let emailSent = false;
+        let pdfCloudinaryUrl = null;
+        let pdfPublicId = null;
+
         try {
             // Get franchise details for PDF (Sender)
             const franchise = await Franchise.findById(req.franchise._id);
@@ -278,8 +281,6 @@ export const sellToUser = asyncHandler(async (req, res) => {
             });
 
             // Upload PDF to Cloudinary
-            let pdfCloudinaryUrl = null;
-            let pdfPublicId = null;
             try {
                 const pdfUploadResult = await uploadPDFToCloudinary(
                     pdfBuffer,
