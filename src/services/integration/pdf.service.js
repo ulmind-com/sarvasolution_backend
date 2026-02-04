@@ -1,13 +1,13 @@
 import PDFDocument from 'pdfkit';
 
 /**
- * Generate Invoice PDF Buffer
- * @param {Object} invoiceData - Invoice object populated with details
+ * Generate Invoice PDF Buffer (Redesigned)
+ * @param {Object} data - Invoice data object
  * @returns {Promise<Buffer>} - PDF file as Buffer
  */
-export const generateInvoicePDFBuffer = async (invoiceData) => {
+export const generateInvoicePDFBuffer = async (data) => {
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
         const buffers = [];
 
         doc.on('data', buffers.push.bind(buffers));
@@ -17,92 +17,183 @@ export const generateInvoicePDFBuffer = async (invoiceData) => {
         });
         doc.on('error', reject);
 
-        // --- PDF Generation Logic ---
+        // --- Helper Functions ---
+        const drawRect = (x, y, w, h) => doc.rect(x, y, w, h).stroke();
+        const drawLine = (x1, y1, x2, y2) => doc.moveTo(x1, y1).lineTo(x2, y2).stroke();
 
-        // 1. Header
-        doc.fillColor('#444444')
-            .fontSize(20)
-            .text('SSVPL MLM Solutions', 50, 57)
-            .fontSize(10)
-            .text('GSTIN: 19XXXXXXXXXX', 50, 80)
-            .text('Kolkata, West Bengal', 50, 95)
-            .moveDown();
+        // --- 1. Header (Top Block) ---
+        // Logo Placeholder (Using text for now, assume logo path passed if needed)
+        // doc.image('path/to/logo.png', 40, 40, { width: 50 }); 
 
-        // 2. Invoice Details
-        doc.fontSize(20).text('INVOICE', 400, 57, { align: 'right' })
-            .fontSize(10)
-            .text(`Invoice No: ${invoiceData.invoiceNo}`, 400, 80, { align: 'right' })
-            .text(`Date: ${new Date(invoiceData.invoiceDate).toLocaleDateString()}`, 400, 95, { align: 'right' })
-            .moveDown();
+        doc.font('Helvetica-Bold').fontSize(16).text('GST INVOICE', 0, 40, { align: 'center' });
+        doc.moveDown();
 
-        // 3. Bill To
-        const delivery = invoiceData.deliveryAddress;
-        doc.text(`Bill To:`, 50, 130)
-            .font('Helvetica-Bold').text(delivery.franchiseName || 'Franchise', 50, 145)
-            .font('Helvetica').text(delivery.shopName, 50, 160)
-            .text(`${delivery.fullAddress}, ${delivery.city}`, 50, 175)
-            .text(`${delivery.state} - ${delivery.pincode}`, 50, 190)
-            .moveDown();
+        // Top Border Line
+        const startY = 70;
+        drawLine(30, startY, 565, startY);
 
-        // 4. Table Header
-        const invoiceTableTop = 230;
-        doc.font('Helvetica-Bold');
-        generateTableRow(doc, invoiceTableTop, 'Item', 'HSN', 'Qty', 'Price', 'Amount');
-        generateHr(doc, invoiceTableTop + 20);
+        // --- 2. Information Block (Left & Right) ---
+        doc.font('Helvetica').fontSize(9);
+
+        // Left Column (Sender/GST Info)
+        let leftY = startY + 10;
+        doc.text(`GST No. : ${data.sender.gstin}`, 40, leftY);
+        leftY += 12;
+        doc.text(`Tax is payable on Reverse Charge : ${data.details.reverseCharge}`, 40, leftY);
+        leftY += 12;
+        doc.text(`GST Invoice No. : ${data.details.invoiceNo}`, 40, leftY);
+        leftY += 12;
+        doc.text(`Date : ${new Date(data.details.invoiceDate).toLocaleDateString()}`, 40, leftY);
+
+        // Right Column (Transport Info)
+        let rightY = startY + 10;
+        const rightX = 300;
+        doc.text(`Transportation Mode: ${data.details.transportMode}`, rightX, rightY);
+        rightY += 12;
+        doc.text(`Transport No : N`, rightX, rightY); // Placeholder
+        rightY += 12;
+        doc.text(`E-Way Bill No. : N`, rightX, rightY);
+        rightY += 12;
+        doc.text(`L.R No : N`, rightX, rightY);
+
+        // Separator Line
+        drawLine(30, leftY + 20, 565, leftY + 20);
+
+        // --- 3. Parties Block (Receiver vs Sender) ---
+        const partiesY = leftY + 30;
+
+        // Bill To (Receiver - Left)
+        doc.font('Helvetica-Bold').text('Details Of Receiver(Billed To)', 40, partiesY);
         doc.font('Helvetica');
+        let recY = partiesY + 15;
+        doc.text(`Name : ${data.receiver.name}`, 40, recY);
+        recY += 12;
+        doc.text(`Address : ${data.receiver.address}`, 40, recY);
+        recY += 12;
+        doc.text(`State : ${data.receiver.state}`, 40, recY);
+        recY += 12;
+        doc.text(`State Code : ${data.receiver.stateCode || 'N/A'}`, 40, recY);
+        recY += 12;
+        doc.text(`Contact : ${data.receiver.phone}`, 40, recY);
 
-        // 5. Table Rows
-        let i = 0;
-        let position = 0;
-        invoiceData.items.forEach(item => {
-            position = invoiceTableTop + (i + 1) * 30;
-            // Prevent page overflow simple check omitted for brevity (pdfkit handles new pages if careful, but for long lists need logic)
-            generateTableRow(
-                doc,
-                position,
-                item.product.productName || 'Product', // Ensure populated or handled
-                item.hsnCode || 'N/A',
-                item.quantity,
-                `₹${item.productDP}`,
-                `₹${item.amount}`
-            );
-            generateHr(doc, position + 20);
-            i++;
+        // Ship To (Sender/Franchise - Right)
+        doc.font('Helvetica-Bold').text('Details Of Sender(Ship To)', rightX, partiesY);
+        doc.font('Helvetica');
+        let sendY = partiesY + 15;
+        doc.text(`Name : ${data.sender.name}`, rightX, sendY);
+        sendY += 12;
+        doc.text(`Address : ${data.sender.address}, ${data.sender.city}`, rightX, sendY);
+        sendY += 12;
+        doc.text(`State : ${data.sender.state}`, rightX, sendY);
+        sendY += 12;
+        doc.text(`Contact No : ${data.sender.phone}`, rightX, sendY);
+
+        // --- 4. Table Grid ---
+        const tableTop = Math.max(recY, sendY) + 20;
+        const colWidths = [25, 120, 35, 30, 35, 30, 40, 40, 45, 35, 45, 45, 45, 45];
+        // Cols: Sl, Desc, HSN, Qty, Batch, UOM, Rate, MRP, Gross, Disc, Taxable, CGST, SGST, IGST
+        // X Positions Calculation
+        let currentX = 30;
+        const colX = colWidths.map(w => {
+            const x = currentX;
+            currentX += w;
+            return x;
         });
 
-        // 6. Totals
-        const subtotalPosition = invoiceTableTop + (i + 1) * 30 + 20;
+        // Headers
+        const headers = [
+            'Sl', 'Description of Goods', 'HSN', 'QTY', 'Batch', 'UOM', 'Rate', 'MRP',
+            'Gross', 'Disc', 'Taxable', 'CGST', 'SGST', 'IGST'
+        ];
 
-        doc.font('Helvetica-Bold');
-        doc.text('Subtotal:', 350, subtotalPosition)
-            .text(`₹${invoiceData.subTotal}`, 450, subtotalPosition, { align: 'right' });
+        // Draw Table Header
+        drawRect(30, tableTop, 535, 30); // 535 is total width
+        // Vertical lines for columns
+        colX.forEach((x, i) => {
+            if (i > 0) drawLine(x, tableTop, x, tableTop + 30);
+        });
 
-        doc.text(`GST (${invoiceData.gstRate}%):`, 350, subtotalPosition + 20)
-            .text(`₹${invoiceData.gstAmount}`, 450, subtotalPosition + 20, { align: 'right' });
+        doc.font('Helvetica-Bold').fontSize(7);
+        headers.forEach((h, i) => {
+            doc.text(h, colX[i] + 2, tableTop + 10, { width: colWidths[i] - 4, align: 'center' });
+        });
 
-        doc.fontSize(14).text('Total:', 350, subtotalPosition + 45)
-            .text(`₹${invoiceData.grandTotal}`, 450, subtotalPosition + 45, { align: 'right' });
+        // Table Rows
+        let rowY = tableTop + 30;
+        doc.font('Helvetica').fontSize(7);
 
-        // 7. Footer
-        doc.fontSize(10).text('Payment Terms: Net 15 Days', 50, 700, { align: 'center', width: 500 });
+        data.items.forEach((item, index) => {
+            const rowHeight = 20;
+
+            // Draw Row Box
+            drawRect(30, rowY, 535, rowHeight);
+            colX.forEach((x, i) => {
+                if (i > 0) drawLine(x, rowY, x, rowY + rowHeight);
+            });
+
+            // Fill Data
+            const values = [
+                index + 1,
+                item.productName,
+                item.hsnCode || '-',
+                item.quantity,
+                item.batchNo || '-',
+                'Nos', // UOM
+                item.rate.toFixed(2),
+                item.mrp.toFixed(2),
+                (item.rate * item.quantity).toFixed(2), // Gross
+                '0', // Disc
+                item.taxableValue.toFixed(2),
+                item.cgstAmount ? item.cgstAmount.toFixed(2) : '-',
+                item.sgstAmount ? item.sgstAmount.toFixed(2) : '-',
+                item.igstAmount ? item.igstAmount.toFixed(2) : '-'
+            ];
+
+            values.forEach((v, i) => {
+                doc.text(String(v), colX[i] + 2, rowY + 6, { width: colWidths[i] - 4, align: i === 1 ? 'left' : 'center' });
+            });
+
+            rowY += rowHeight;
+        });
+
+        // --- 5. Totals Section ---
+        const footerStart = rowY;
+
+        // Total PV (Left side logic from image "Total P.V : 41.45")
+        drawRect(30, footerStart, 150, 20);
+        doc.font('Helvetica-Bold').text(`Total P.V : ${data.totals.totalPV}`, 35, footerStart + 6);
+
+        // Gross Total
+        drawRect(180, footerStart, 385, 20); // Spanning right
+        doc.text('Gross Total', 400, footerStart + 6);
+        doc.text(data.totals.grandTotal.toFixed(2), 500, footerStart + 6, { align: 'right', width: 60 });
+
+        // Tax Rows
+        let currentFooterY = footerStart + 20;
+        const addFooterRow = (label, value) => {
+            drawRect(180, currentFooterY, 385, 20);
+            doc.text(label, 400, currentFooterY + 6);
+            doc.text(value, 500, currentFooterY + 6, { align: 'right', width: 60 });
+            currentFooterY += 20;
+        };
+
+        addFooterRow('CGST', data.totals.totalCGST.toFixed(2));
+        addFooterRow('SGST', data.totals.totalSGST.toFixed(2));
+        addFooterRow('IGST', data.totals.totalIGST.toFixed(2));
+        addFooterRow('Net Amount', data.totals.grandTotal.toFixed(2));
+        addFooterRow('Discount', '0.00');
+        addFooterRow('Transport Charge', '0.00');
+
+        // Payable (Bold)
+        drawRect(180, currentFooterY, 385, 25);
+        doc.fontSize(9).text('Payable', 400, currentFooterY + 8);
+        doc.text(Math.round(data.totals.grandTotal), 500, currentFooterY + 8, { align: 'right', width: 60 });
+
+        // --- 6. Signature ---
+        const sigY = currentFooterY + 50;
+        doc.fontSize(8).text('Authorised Signature', 450, sigY);
+        doc.text(`For ${data.sender.shopName}`, 400, sigY + 15, { align: 'right', width: 150 });
 
         doc.end();
     });
 };
-
-function generateTableRow(doc, y, item, hsn, qty, price, amount) {
-    doc.fontSize(10)
-        .text(item, 50, y, { width: 200 })
-        .text(hsn, 260, y, { width: 50, align: 'right' })
-        .text(qty, 320, y, { width: 50, align: 'right' })
-        .text(price, 380, y, { width: 70, align: 'right' })
-        .text(amount, 0, y, { align: 'right' }); // auto aligns to right margin
-}
-
-function generateHr(doc, y) {
-    doc.strokeColor('#aaaaaa')
-        .lineWidth(1)
-        .moveTo(50, y)
-        .lineTo(550, y)
-        .stroke();
-}

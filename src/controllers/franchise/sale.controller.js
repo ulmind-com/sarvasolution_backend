@@ -157,47 +157,100 @@ export const sellToUser = asyncHandler(async (req, res) => {
             // TODO: Trigger commission calculations
         }
 
-        await user.save({ session });
-
-        // 10. Commit transaction
-        await session.commitTransaction();
-
         // 11. Post-transaction: Generate PDF and send email
         let emailSent = false;
         try {
-            // Get franchise details for PDF
+            // Get franchise details for PDF (Sender)
             const franchise = await Franchise.findById(req.franchise._id);
 
-            // Populate product details for PDF
+            // Determine Tax Type (IGST or CGST+SGST)
+            // Logic: If Franchise State differs from User State -> IGST, else CGST+SGST
+            // Defaulting to West Bengal for Franchise if missing (common logic, or use 'N/A')
+            const franchiseState = franchise.shopAddress?.state || 'West Bengal';
+            const userState = user.address?.state || 'West Bengal';
+            const isInterState = franchiseState.toLowerCase() !== userState.toLowerCase();
+
+            // Populate product details for PDF with calculated fields
             const populatedItems = await Promise.all(
                 processedItems.map(async (item) => {
                     const product = await Product.findById(item.product);
+
+                    // Tax Calculation per item
+                    // Assuming product.price is taxable value? 
+                    // No, usually Price in DB is base price. 
+                    // Let's assume item.amount (qty * price) is the Taxable Value.
+                    const taxableValue = item.amount;
+
+                    // Calculate Tax amounts per item for the table
+                    const gstPercent = 18; // Standard or from product? Using 18 as per previous code
+                    // Ideally: const gstPercent = (product.gst + product.cgst + product.sgst) || 18;
+
+                    let cgstRate = 0, sgstRate = 0, igstRate = 0;
+                    let cgstAmount = 0, sgstAmount = 0, igstAmount = 0;
+
+                    if (isInterState) {
+                        igstRate = gstPercent;
+                        igstAmount = (taxableValue * igstRate) / 100;
+                    } else {
+                        cgstRate = gstPercent / 2;
+                        sgstRate = gstPercent / 2;
+                        cgstAmount = (taxableValue * cgstRate) / 100;
+                        sgstAmount = (taxableValue * sgstRate) / 100;
+                    }
+
                     return {
                         ...item,
-                        product: {
-                            productName: product.productName,
-                            hsnCode: product.hsnCode
-                        }
+                        productName: product.productName,
+                        hsnCode: product.hsnCode,
+                        batchNo: product.batchNo,
+                        mrp: product.mrp,
+                        rate: product.price, // Base rate
+                        taxableValue: taxableValue,
+                        cgstRate, cgstAmount,
+                        sgstRate, sgstAmount,
+                        igstRate, igstAmount
                     };
                 })
             );
 
             // Generate PDF
             const pdfBuffer = await generateInvoicePDFBuffer({
-                invoiceNo: saleNo,
-                invoiceDate: new Date(),
-                items: populatedItems,
-                subTotal,
-                gstRate,
-                gstAmount,
-                grandTotal,
-                deliveryAddress: {
-                    franchiseName: user.fullName,
-                    shopName: franchise?.shopName || 'SSVPL Member',
-                    fullAddress: user.address?.street || 'Address not provided',
+                details: {
+                    invoiceNo: saleNo,
+                    invoiceDate: new Date(),
+                    reverseCharge: 'No', // Hardcoded for now
+                    transportMode: 'N/A',
+                    vehicleNo: 'N/A'
+                },
+                sender: {
+                    name: franchise.name,
+                    shopName: franchise.shopName,
+                    address: franchise.shopAddress?.street || '',
+                    city: franchise.city,
+                    state: franchise.shopAddress?.state || '',
+                    pincode: franchise.shopAddress?.pincode || '',
+                    phone: franchise.phone,
+                    gstin: 'N/A' // Franchise model doesn't have GST field yet
+                },
+                receiver: {
+                    name: user.fullName,
+                    address: user.address?.street || '',
                     city: user.address?.city || '',
                     state: user.address?.state || '',
-                    pincode: user.address?.zipCode || ''
+                    pincode: user.address?.zipCode || '',
+                    phone: user.phone,
+                    gstin: 'N/A' // User GST usually N/A for B2C
+                },
+                items: populatedItems,
+                totals: {
+                    totalPV,
+                    subTotal, // Taxable Value Total
+                    gstRate,
+                    totalCGST: isInterState ? 0 : gstAmount / 2,
+                    totalSGST: isInterState ? 0 : gstAmount / 2,
+                    totalIGST: isInterState ? gstAmount : 0,
+                    grandTotal,
+                    amountInWords: 'Rupees ...' // Can add a util for number to words later
                 }
             });
 
