@@ -110,8 +110,24 @@ export const sellToUser = asyncHandler(async (req, res) => {
         const count = await FranchiseSale.countDocuments().session(session);
         const saleNo = `FS-${currentYear}-${String(count + 1).padStart(5, '0')}`;
 
-        // 6. Determine if user will be activated
-        const willActivate = isFirstPurchase && totalPV >= 1 && user.status === 'inactive';
+        // 6. Determine if user will be activated & Validate First Purchase Criteria
+        let willActivate = false;
+
+        if (isFirstPurchase) {
+            // CRITICAL: First purchase must be >= 1 PV
+            if (totalPV < 1) {
+                throw new ApiError(400, 'First purchase must have at least 1 PV to generate the bill.');
+            }
+            willActivate = (user.status === 'inactive');
+        } else {
+            // REPURCHASE LOGIC: "PV has no value"
+            // If it is a repurchase, we zero out the PV for this transaction and only count BV.
+            // User requested: "if user repurchase = true then only show BV"
+            totalPV = 0;
+
+            // Note: processedItems still have PV data from product, but the Transaction Total PV is forced to 0.
+            // This ensures no PV is added to the user's accumulation below.
+        }
 
         // 7. Create sale record
         const sale = await FranchiseSale.create([{
@@ -125,7 +141,7 @@ export const sellToUser = asyncHandler(async (req, res) => {
             gstRate,
             gstAmount,
             grandTotal,
-            totalPV,
+            totalPV, // Will be 0 for repurchase
             totalBV,
             isFirstPurchase,
             userActivated: willActivate,
@@ -134,8 +150,11 @@ export const sellToUser = asyncHandler(async (req, res) => {
         }], { session });
 
         // 8. Update user PV/BV and First Purchase Flag
+        // totalPV is already 0 if repurchase, so safe to add.
         user.personalPV += totalPV;
         user.personalBV += totalBV;
+
+        // Update Accumulators
         user.totalPV += totalPV;
         user.totalBV += totalBV;
         user.thisMonthPV += totalPV;
