@@ -138,9 +138,9 @@ export const getUserProducts = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Get single product details with related items
+ * @desc    Get single product details with ALL information including stock
  * @route   GET /api/v1/user/products/:productId
- * @access  Authenticated User
+ * @access  Public (No authentication required)
  */
 export const getProductDetails = asyncHandler(async (req, res) => {
     const { productId } = req.params;
@@ -150,14 +150,22 @@ export const getProductDetails = asyncHandler(async (req, res) => {
         isActive: true,
         isApproved: true,
         deletedAt: null
-    }).lean();
+    })
+        .select('-deletedAt -__v') // Exclude internal fields
+        .lean();
 
     if (!product) {
         throw new ApiError(404, 'Product not found');
     }
 
-    // Add virtuals manually since we used lean()
+    // Add computed fields
     product.isInStock = product.stockQuantity > 0;
+    product.stockStatus = product.stockQuantity > 0 ? 'In Stock' : 'Out of Stock';
+
+    // Calculate discount percentage if applicable
+    if (product.mrp && product.finalPrice) {
+        product.discountPercentage = Math.round(((product.mrp - product.finalPrice) / product.mrp) * 100);
+    }
 
     // Fetch related products (same category)
     const relatedProducts = await Product.find({
@@ -165,10 +173,11 @@ export const getProductDetails = asyncHandler(async (req, res) => {
         _id: { $ne: productId },
         isActive: true,
         isApproved: true,
-        deletedAt: null
+        deletedAt: null,
+        stockQuantity: { $gt: 0 } // Only in-stock related products
     })
-        .select('productName finalPrice productImage')
-        .limit(4)
+        .select('productName finalPrice mrp productImage stockQuantity bv pv')
+        .limit(6)
         .lean();
 
     return res.status(200).json(

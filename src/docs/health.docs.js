@@ -4,7 +4,7 @@
  *   get:
  *     summary: Health check
  *     tags:
- *       - System
+ *       - Public - Health
  *     responses:
  *       200:
  *         description: Server is healthy
