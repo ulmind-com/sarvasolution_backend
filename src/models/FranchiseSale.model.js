@@ -126,6 +126,14 @@ const franchiseSaleSchema = new mongoose.Schema({
         default: 'cash'
     },
 
+    // PDF Invoice
+    pdfUrl: {
+        type: String
+    },
+    pdfPublicId: {
+        type: String
+    },
+
     // Metadata
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,

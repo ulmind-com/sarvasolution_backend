@@ -9,6 +9,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { generateInvoicePDFBuffer } from '../../services/integration/pdf.service.js';
 import { sendInvoiceEmailWithAttachment } from '../../services/integration/email.service.js';
+import { uploadPDFToCloudinary } from '../../services/integration/cloudinary.service.js';
 
 /**
  * Get User by MemberId
@@ -254,6 +255,30 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 }
             });
 
+            // Upload PDF to Cloudinary
+            let pdfCloudinaryUrl = null;
+            let pdfPublicId = null;
+            try {
+                const pdfUploadResult = await uploadPDFToCloudinary(
+                    pdfBuffer,
+                    'sarvasolution/invoices',
+                    `invoice_${saleNo}`
+                );
+                pdfCloudinaryUrl = pdfUploadResult.url;
+                pdfPublicId = pdfUploadResult.publicId;
+
+                // Update the sale record with PDF URL
+                await FranchiseSale.findByIdAndUpdate(sale[0]._id, {
+                    pdfUrl: pdfCloudinaryUrl,
+                    pdfPublicId: pdfPublicId
+                });
+
+                console.log(`[PDF] Uploaded to Cloudinary: ${pdfCloudinaryUrl}`);
+            } catch (pdfUploadError) {
+                console.error('Error uploading PDF to Cloudinary:', pdfUploadError);
+                // Don't fail the sale if PDF upload fails
+            }
+
             // Send email with PDF attachment
             emailSent = await sendInvoiceEmailWithAttachment({
                 email: user.email,
@@ -278,7 +303,8 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 totalPV,
                 totalBV,
                 grandTotal,
-                emailSent
+                emailSent,
+                pdfUrl: pdfCloudinaryUrl
             }, `Sale completed successfully${activationMessage}${emailSent ? ' - Invoice sent to user email' : ''}`)
         );
 
