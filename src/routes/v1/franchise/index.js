@@ -12,6 +12,6 @@ router.post('/login', loginFranchise);
 // Protected Routes
 router.use('/inventory', inventoryRoutes);
 router.use('/sale', saleRoutes);
-router.use('/request', requestRoutes);
+router.use('/requests', requestRoutes); // Pluralized to match user preference
 
 export default router;

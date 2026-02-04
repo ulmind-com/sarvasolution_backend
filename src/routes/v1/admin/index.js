@@ -36,7 +36,7 @@ router.post('/fix-database', fixDatabaseIssues); // Fix data inconsistencies
 router.use('/product', productRoutes);
 router.use('/franchise', franchiseRoutes);
 router.use('/sales', saleRoutes);
-router.use('/request', requestRoutes);
+router.use('/requests', requestRoutes); // Pluralized to match user preference
 
 export default router;
 
