@@ -7,6 +7,31 @@
 
 /**
  * @swagger
+ * /api/v1/user/first-purchase-status:
+ *   get:
+ *     summary: Check if user has made first purchase (User only)
+ *     description: |
+ *       **User Access Only** - Check if the explicit first purchase flag is set.
+ *     tags: [User - Account]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Status fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isFirstPurchaseDone: { type: boolean }
+ * */
+
+/**
+ * @swagger
  * /api/v1/user/bv-summary:
  *   get:
  *     summary: Get BV balance and transaction history (User only)

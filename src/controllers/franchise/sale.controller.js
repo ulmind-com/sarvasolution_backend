@@ -18,7 +18,7 @@ export const getUserByMemberId = asyncHandler(async (req, res) => {
     const { memberId } = req.params;
 
     const user = await User.findOne({ memberId })
-        .select('memberId fullName email phone status personalPV totalPV isActive');
+        .select('memberId fullName email phone status personalPV totalPV isActive isFirstPurchaseDone');
 
     if (!user) {
         throw new ApiError(404, 'User not found with this Member ID');
@@ -42,8 +42,8 @@ export const sellToUser = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'User not found with this Member ID');
     }
 
-    // Check if this is first purchase
-    const isFirstPurchase = user.personalPV === 0 && user.totalPV === 0;
+    // Check if this is first purchase (using explicit flag)
+    const isFirstPurchase = !user.isFirstPurchaseDone;
 
     // 2. Start transaction
     const session = await mongoose.startSession();
@@ -132,7 +132,7 @@ export const sellToUser = asyncHandler(async (req, res) => {
             createdBy: req.franchise._id
         }], { session });
 
-        // 8. Update user PV/BV
+        // 8. Update user PV/BV and First Purchase Flag
         user.personalPV += totalPV;
         user.personalBV += totalBV;
         user.totalPV += totalPV;
@@ -141,6 +141,11 @@ export const sellToUser = asyncHandler(async (req, res) => {
         user.thisMonthBV += totalBV;
         user.thisYearPV += totalPV;
         user.thisYearBV += totalBV;
+
+        // Mark first purchase as done if it was the first purchase
+        if (isFirstPurchase) {
+            user.isFirstPurchaseDone = true;
+        }
 
         // 9. ACTIVATION LOGIC - First purchase with PV >= 1
         let activationMessage = '';

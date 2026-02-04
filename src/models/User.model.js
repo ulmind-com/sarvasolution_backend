@@ -105,7 +105,9 @@ const userSchema = new mongoose.Schema({
         bonusEarned: { type: Number, default: 0 },
         eligibleForPrize: { type: Boolean, default: false }
     },
+    isFirstPurchaseDone: { type: Boolean, default: false }, // Explicit flag for first purchase status
     beginnerBonus: {
+
         units: { type: Number, default: 0 },
         cappingReached: { type: Number, default: 0 },
         cappingLimit: { type: Number, default: 10 },
