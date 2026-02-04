@@ -205,12 +205,21 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 
 // Generate unique member ID
 userSchema.statics.generateMemberId = async function () {
-    const lastUser = await this.findOne().sort({ memberId: -1 });
+    // Find the last VALID memberId
+    const lastUser = await this.findOne({
+        memberId: { $regex: /^SVS\d+$/ }
+    }).sort({ memberId: -1 });
+
     if (!lastUser) {
         return 'SVS000001';
     }
 
-    const lastIdNum = parseInt(lastUser.memberId.replace('SVS', ''), 10);
+    let lastIdNum = parseInt(lastUser.memberId.replace('SVS', ''), 10);
+    if (isNaN(lastIdNum)) {
+        // Fallback if parsing fails differently, though regex above guards this
+        lastIdNum = 0;
+    }
+
     const newId = lastIdNum + 1;
     return `SVS${String(newId).padStart(6, '0')}`;
 };

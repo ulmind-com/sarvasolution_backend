@@ -1,0 +1,38 @@
+* Host localhost:8000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8000...
+* Connected to localhost (::1) port 8000
+* using HTTP/1.x
+> GET / HTTP/1.1
+> Host: localhost:8000
+> User-Agent: curl/8.15.0
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/1.1 200 OK
+< Access-Control-Allow-Origin: *
+< Cross-Origin-Opener-Policy: same-origin
+< Cross-Origin-Resource-Policy: cross-origin
+< Origin-Agent-Cluster: ?1
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=15552000; includeSubDomains
+< X-Content-Type-Options: nosniff
+< X-DNS-Prefetch-Control: off
+< X-Download-Options: noopen
+< X-Frame-Options: SAMEORIGIN
+< X-Permitted-Cross-Domain-Policies: none
+< X-XSS-Protection: 0
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 65
+< ETag: W/"41-dTFma7tgON9jb7MPj2bk+q/O7x0"
+< Date: Wed, 04 Feb 2026 16:35:25 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [65 bytes data]
+100    65  100    65    0     0   6103      0 --:--:-- --:--:-- --:--:--  6500
+* Connection #0 to host localhost left intact
+{"message":"SarvaSolution Backend API is active (Enterprise V1)"}

@@ -158,6 +158,9 @@ export const sellToUser = asyncHandler(async (req, res) => {
             // TODO: Trigger commission calculations
         }
 
+        // Save User Updates (Activation, PV/BV, FirstPurchaseFlag)
+        await user.save({ session });
+
         // 11. Post-transaction: Generate PDF and send email
         let emailSent = false;
         try {
