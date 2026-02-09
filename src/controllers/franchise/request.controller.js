@@ -30,7 +30,7 @@ export const getAdminInventory = asyncHandler(async (req, res) => {
     }
 
     const products = await Product.find(query)
-        .select('productName category price mrp stockQuantity productImage hsnCode description') // Hide cost metrics
+        .select('_id productId productName category price mrp stockQuantity productImage hsnCode description') // Include _id and productId
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(Number(limit));
@@ -83,6 +83,7 @@ export const createRequest = asyncHandler(async (req, res) => {
 
         requestItems.push({
             product: product._id,
+            productId: product.productId,
             requestedQuantity: item.requestedQuantity,
             productDP: product.price,
             productMRP: product.mrp,

@@ -7,6 +7,12 @@ const productSchema = new mongoose.Schema({
         trim: true,
         index: true
     },
+    productId: {
+        type: String,
+        unique: true,
+        index: true,
+        trim: true
+    },
     description: {
         type: String,
         required: true
@@ -107,8 +113,15 @@ const productSchema = new mongoose.Schema({
 
 productSchema.index({ productName: 'text', description: 'text' });
 
-// Pre-save hook to calculate Final Price
-productSchema.pre('save', function (next) {
+// Pre-save hook to auto-generate productId and calculate Final Price
+productSchema.pre('save', async function (next) {
+    // Auto-generate productId if not exists
+    if (!this.productId) {
+        const year = new Date().getFullYear();
+        const count = await this.constructor.countDocuments();
+        this.productId = `PRD-${year}-${String(count + 1).padStart(5, '0')}`;
+    }
+
     // Calculate total tax percentage
     const totalTaxPercent = (this.gst || 0) + (this.cgst || 0) + (this.sgst || 0);
 

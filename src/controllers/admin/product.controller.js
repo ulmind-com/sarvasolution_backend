@@ -150,10 +150,7 @@ export const toggleProductStatus = asyncHandler(async (req, res) => {
     await product.save();
 
     return res.status(200).json(
-        new ApiResponse(200, {
-            _id: product._id,
-            isActive: product.isActive
-        }, `Product ${product.isActive ? 'activated' : 'deactivated'}`)
+        new ApiResponse(200, product, `Product ${product.isActive ? 'activated' : 'deactivated'}`)
     );
 });
 

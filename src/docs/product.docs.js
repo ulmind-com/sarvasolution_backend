@@ -7,6 +7,12 @@
  *       properties:
  *         _id:
  *           type: string
+ *           example: "507f1f77bcf86cd799439011"
+ *           description: MongoDB ObjectId
+ *         productId:
+ *           type: string
+ *           example: "PRD-2026-00001"
+ *           description: Auto-generated human-readable product ID
  *         productName:
  *           type: string
  *         description:

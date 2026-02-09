@@ -24,7 +24,7 @@ export const getAllRequests = asyncHandler(async (req, res) => {
 
     const requests = await ProductRequest.find(query)
         .populate('franchise', 'name shopName vendorId city mobile')
-        .populate('items.product', 'productName')
+        .populate('items.product', '_id productId productName')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(Number(limit));

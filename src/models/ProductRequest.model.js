@@ -6,6 +6,10 @@ const productRequestItemSchema = new mongoose.Schema({
         ref: 'Product',
         required: true
     },
+    productId: {
+        type: String,
+        trim: true
+    },
     requestedQuantity: {
         type: Number,
         required: true,

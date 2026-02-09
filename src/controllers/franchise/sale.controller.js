@@ -88,6 +88,7 @@ export const sellToUser = asyncHandler(async (req, res) => {
 
             processedItems.push({
                 product: product._id,
+                productId: product.productId,
                 quantity: item.quantity,
                 price: product.price,
                 productDP: product.productDP,

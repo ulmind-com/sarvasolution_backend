@@ -6,6 +6,10 @@ const franchiseSaleItemSchema = new mongoose.Schema({
         ref: 'Product',
         required: true
     },
+    productId: {
+        type: String,
+        trim: true
+    },
     quantity: {
         type: Number,
         required: true,

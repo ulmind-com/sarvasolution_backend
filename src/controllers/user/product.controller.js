@@ -22,7 +22,7 @@ export const getUserProducts = asyncHandler(async (req, res) => {
         isApproved: true,
         deletedAt: null
     })
-        .select('productName description price mrp finalPrice discount bv pv productDP category productImage stockQuantity isInStock isFeatured hsnCode')
+        .select('_id productId productName description price mrp finalPrice discount bv pv productDP category productImage stockQuantity isInStock isFeatured hsnCode')
         .skip(skip)
         .limit(Number(limit))
         .sort({ createdAt: -1 }) // Newest first
@@ -89,7 +89,7 @@ export const getProductDetails = asyncHandler(async (req, res) => {
         deletedAt: null,
         stockQuantity: { $gt: 0 } // Only in-stock related products
     })
-        .select('productName finalPrice mrp productImage stockQuantity bv pv')
+        .select('_id productId productName finalPrice mrp productImage stockQuantity bv pv')
         .limit(6)
         .lean();
 
