@@ -62,11 +62,12 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
     // PAN Card Update DISABLED as per requirement.
     // Removed logic for PAN limit check.
 
-    // Allowed fields for Admin Update
+    // Allowed fields for Admin Update - Admin can update EVERYTHING
     const allowedUpdates = [
         'fullName', 'email', 'phone', 'username',
         'role', 'status', 'address', 'kyc', 'profilePicture',
-        'currentRank', 'joiningPackage' // Added currentRank and joiningPackage
+        'currentRank', 'joiningPackage',
+        'panCardNumber', 'aadharCardNumber', 'bankDetails' // Added sensitive fields
     ];
 
     // Filter updates

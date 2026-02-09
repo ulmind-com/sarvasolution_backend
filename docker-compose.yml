@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  ssvpl-mlm-api:
+    image: samiransamanta/ssvpl-mlm:latest
+    container_name: ssvpl-mlm-api
+    restart: always
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - PORT=${PORT:-8000}
+      - NODE_ENV=${NODE_ENV:-production}
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - MAIL_ADDRESS=${MAIL_ADDRESS}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ssvpl-network
+
+networks:
+  ssvpl-network:
+    driver: bridge

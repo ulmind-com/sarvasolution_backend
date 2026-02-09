@@ -62,11 +62,13 @@ export const updateProfile = asyncHandler(async (req, res) => {
         updatedFields.push('PAN Card Number');
     }
 
-    // Update basic fields
-    if (fullName && fullName !== user.fullName) {
-        user.fullName = fullName;
-        updatedFields.push('Full Name');
+    // Aadhar Card Update
+    if (body.aadharCardNumber && body.aadharCardNumber !== user.aadharCardNumber) {
+        user.aadharCardNumber = body.aadharCardNumber;
+        updatedFields.push('Aadhar Card Number');
     }
+
+    // Update basic fields (Removed fullName to prevent user from changing it)
     if (email && email !== user.email) {
         user.email = email;
         updatedFields.push('Email Address');
