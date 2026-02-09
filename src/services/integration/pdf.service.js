@@ -159,9 +159,15 @@ export const generateInvoicePDFBuffer = async (data) => {
         // --- 5. Totals Section ---
         const footerStart = rowY;
 
-        // Total PV (Left side logic from image "Total P.V : 41.45")
+        // Total PV or BV (Conditional based on purchase type)
+        // First Purchase: Show "Total P.V"
+        // Repurchase: Show "Total B.V"
         drawRect(30, footerStart, 150, 20);
-        doc.font('Helvetica-Bold').text(`Total P.V : ${data.totals.totalPV}`, 35, footerStart + 6);
+        if (data.isFirstPurchase) {
+            doc.font('Helvetica-Bold').text(`Total P.V : ${data.totals.totalPV}`, 35, footerStart + 6);
+        } else {
+            doc.font('Helvetica-Bold').text(`Total B.V : ${data.totals.totalBV || 0}`, 35, footerStart + 6);
+        }
 
         // Gross Total
         drawRect(180, footerStart, 385, 20); // Spanning right

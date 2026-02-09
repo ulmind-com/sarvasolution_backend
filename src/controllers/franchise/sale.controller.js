@@ -73,9 +73,22 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 throw new ApiError(400, `Insufficient stock for ${product.productName}. Available: ${franchiseStock?.stockQuantity || 0}`);
             }
 
-            // Calculate values
-            const itemPV = product.pv * item.quantity;
-            const itemBV = product.bv * item.quantity;
+            // Calculate values based on purchase type
+            // FIRST PURCHASE: Only PV, BV = 0
+            // REPURCHASE: Only BV, PV = 0
+            let itemPV = 0;
+            let itemBV = 0;
+
+            if (isFirstPurchase) {
+                // First purchase: Only calculate PV
+                itemPV = product.pv * item.quantity;
+                itemBV = 0;
+            } else {
+                // Repurchase: Only calculate BV
+                itemPV = 0;
+                itemBV = product.bv * item.quantity;
+            }
+
             const amount = product.price * item.quantity;
 
             totalPV += itemPV;
@@ -92,10 +105,10 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 quantity: item.quantity,
                 price: product.price,
                 productDP: product.productDP,
-                pv: product.pv,
-                bv: product.bv,
-                totalPV: itemPV,
-                totalBV: itemBV,
+                pv: product.pv,  // Keep product PV for reference
+                bv: product.bv,  // Keep product BV for reference
+                totalPV: itemPV, // Will be 0 for repurchase
+                totalBV: itemBV, // Will be 0 for first purchase
                 amount,
                 hsnCode: product.hsnCode
             });
@@ -111,23 +124,21 @@ export const sellToUser = asyncHandler(async (req, res) => {
         const count = await FranchiseSale.countDocuments().session(session);
         const saleNo = `FS-${currentYear}-${String(count + 1).padStart(5, '0')}`;
 
-        // 6. Determine if user will be activated & Validate First Purchase Criteria
+        // 6. Validate Purchase Type and Determine Activation
+        // At this point, totalPV and totalBV are already correctly calculated based on isFirstPurchase
         let willActivate = false;
 
         if (isFirstPurchase) {
-            // CRITICAL: First purchase must be >= 1 PV
+            // FIRST PURCHASE: Must have >= 1 PV to activate account
+            // totalBV is already 0 from item processing
             if (totalPV < 1) {
-                throw new ApiError(400, 'First purchase must have at least 1 PV to generate the bill.');
+                throw new ApiError(400, 'First purchase must have at least 1 PV to activate the account and generate the bill.');
             }
             willActivate = (user.status === 'inactive');
         } else {
-            // REPURCHASE LOGIC: "PV has no value"
-            // If it is a repurchase, we zero out the PV for this transaction and only count BV.
-            // User requested: "if user repurchase = true then only show BV"
-            totalPV = 0;
-
-            // Note: processedItems still have PV data from product, but the Transaction Total PV is forced to 0.
-            // This ensures no PV is added to the user's accumulation below.
+            // REPURCHASE: Only BV matters
+            // totalPV is already 0 from item processing
+            // No minimum BV requirement for repurchase
         }
 
         // 7. Create sale record
@@ -150,22 +161,22 @@ export const sellToUser = asyncHandler(async (req, res) => {
             createdBy: req.franchise._id
         }], { session });
 
-        // 8. Update user PV/BV and First Purchase Flag
-        // totalPV is already 0 if repurchase, so safe to add.
-        user.personalPV += totalPV;
-        user.personalBV += totalBV;
-
-        // Update Accumulators
-        user.totalPV += totalPV;
-        user.totalBV += totalBV;
-        user.thisMonthPV += totalPV;
-        user.thisMonthBV += totalBV;
-        user.thisYearPV += totalPV;
-        user.thisYearBV += totalBV;
-
-        // Mark first purchase as done if it was the first purchase
+        // 8. Update user PV/BV based on purchase type
         if (isFirstPurchase) {
+            // FIRST PURCHASE: Only add PV, no BV
+            user.personalPV += totalPV;
+            user.totalPV += totalPV;
+            user.thisMonthPV += totalPV;
+            user.thisYearPV += totalPV;
+
+            // Mark first purchase as done
             user.isFirstPurchaseDone = true;
+        } else {
+            // REPURCHASE: Only add BV, no PV
+            user.personalBV += totalBV;
+            user.totalBV += totalBV;
+            user.thisMonthBV += totalBV;
+            user.thisYearBV += totalBV;
         }
 
         // 9. ACTIVATION LOGIC - First purchase with PV >= 1
@@ -269,8 +280,10 @@ export const sellToUser = asyncHandler(async (req, res) => {
                     gstin: 'N/A' // User GST usually N/A for B2C
                 },
                 items: populatedItems,
+                isFirstPurchase, // Pass purchase type flag for conditional display
                 totals: {
                     totalPV,
+                    totalBV, // Include totalBV for repurchase display
                     subTotal, // Taxable Value Total
                     gstRate,
                     totalCGST: isInterState ? 0 : gstAmount / 2,
