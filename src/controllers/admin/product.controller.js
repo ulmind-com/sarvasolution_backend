@@ -74,7 +74,7 @@ export const getAllProducts = asyncHandler(async (req, res) => {
 });
 
 export const getProductById = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.productId);
     if (!product || product.deletedAt) {
         throw new ApiError(404, "Product not found");
     }
@@ -84,29 +84,41 @@ export const getProductById = asyncHandler(async (req, res) => {
 });
 
 export const updateProduct = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.productId);
     if (!product || product.deletedAt) {
-        throw new ApiError(404, "Product not found");
+        throw new ApiError(404, "Product not found or has been deleted");
     }
 
     const updateData = { ...req.body };
 
+    // Handle image upload if provided
     if (req.file) {
         const image = await uploadToCloudinary(req.file.buffer, 'sarvasolution/products');
         updateData.productImage = image;
     }
 
-    // Ensure numeric parsing for updates (gst removed, cgst and sgst kept)
-    if (updateData.cgst) updateData.cgst = Number(updateData.cgst);
-    if (updateData.sgst) updateData.sgst = Number(updateData.sgst);
+    // Parse numeric fields
+    if (updateData.price !== undefined) updateData.price = Number(updateData.price);
+    if (updateData.mrp !== undefined) updateData.mrp = Number(updateData.mrp);
+    if (updateData.productDP !== undefined) updateData.productDP = Number(updateData.productDP);
+    if (updateData.bv !== undefined) updateData.bv = Number(updateData.bv);
+    if (updateData.pv !== undefined) updateData.pv = Number(updateData.pv);
+    if (updateData.cgst !== undefined) updateData.cgst = Number(updateData.cgst);
+    if (updateData.sgst !== undefined) updateData.sgst = Number(updateData.sgst);
+    if (updateData.stockQuantity !== undefined) updateData.stockQuantity = Number(updateData.stockQuantity);
+    if (updateData.discount !== undefined) updateData.discount = Number(updateData.discount);
 
-    // Mongoose findByIdAndUpdate bypasses pre-save hooks so we need to calc finalPrice manually or use save()
-    // Using save() pattern is safer for consistency
+    // Parse boolean fields
+    if (updateData.isFeatured !== undefined) updateData.isFeatured = updateData.isFeatured === 'true' || updateData.isFeatured === true;
+    if (updateData.isActivationPackage !== undefined) updateData.isActivationPackage = updateData.isActivationPackage === 'true' || updateData.isActivationPackage === true;
+    if (updateData.isActive !== undefined) updateData.isActive = updateData.isActive === 'true' || updateData.isActive === true;
+
+    // Update product fields
     Object.keys(updateData).forEach(key => {
         product[key] = updateData[key];
     });
 
-    await product.save(); // Triggers pre-save hook for finalPrice
+    await product.save(); // Triggers pre-save hook for finalPrice calculation
 
     return res.status(200).json(
         new ApiResponse(200, product, "Product updated successfully")
@@ -114,22 +126,31 @@ export const updateProduct = asyncHandler(async (req, res) => {
 });
 
 export const deleteProduct = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.productId);
     if (!product) {
         throw new ApiError(404, "Product not found");
     }
 
+    if (product.deletedAt) {
+        throw new ApiError(400, "Product has already been deleted");
+    }
+
+    // Soft delete: set deletedAt timestamp and deactivate
     product.deletedAt = new Date();
     product.isActive = false;
     await product.save();
 
     return res.status(200).json(
-        new ApiResponse(200, {}, "Product deleted successfully")
+        new ApiResponse(200, {
+            productId: product._id,
+            productName: product.productName,
+            deletedAt: product.deletedAt
+        }, "Product deleted successfully")
     );
 });
 
 export const approveProduct = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.productId);
     if (!product) throw new ApiError(404, "Product not found");
 
     product.isApproved = true;
@@ -141,7 +162,7 @@ export const approveProduct = asyncHandler(async (req, res) => {
 });
 
 export const toggleProductStatus = asyncHandler(async (req, res) => {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.productId);
     if (!product) throw new ApiError(404, "Product not found");
 
     product.isActive = !product.isActive;
