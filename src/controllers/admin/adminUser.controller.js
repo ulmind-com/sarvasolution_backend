@@ -67,7 +67,7 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
         'fullName', 'email', 'phone', 'username',
         'role', 'status', 'address', 'kyc', 'profilePicture',
         'currentRank', 'joiningPackage',
-        'panCardNumber', 'aadharCardNumber', 'bankDetails' // Added sensitive fields
+        'panCardNumber', 'bankDetails' // bankDetails updates BankAccount collection
     ];
 
     // Filter updates
@@ -113,16 +113,42 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
     if (updates.address) updatedFields.push('Address');
     if (updates.bankDetails) updatedFields.push('Bank Details');
 
+
     Object.assign(user, safeUpdates);
     await user.save();
+
+    // Handle Bank Account Updates (separate collection)
+    if (updates.bankDetails) {
+        let bankAccount = await BankAccount.findOne({ userId: user._id });
+
+        if (bankAccount) {
+            // Update existing bank account
+            Object.assign(bankAccount, updates.bankDetails);
+            await bankAccount.save();
+            console.log(`Updated bank account for ${user.memberId}`);
+        } else {
+            // Create new bank account if doesn't exist
+            bankAccount = new BankAccount({
+                userId: user._id,
+                ...updates.bankDetails
+            });
+            await bankAccount.save();
+            console.log(`Created bank account for ${user.memberId}`);
+        }
+    }
 
     if (updatedFields.length > 0) {
         mailer.sendUpdateNotification(user, updatedFields).catch(err => console.error('Admin update mail error:', err));
     }
 
     const updatedUser = await User.findOne({ memberId }).select('-password');
+    const bankAccount = await BankAccount.findOne({ userId: user._id });
+
     return res.status(200).json(
-        new ApiResponse(200, updatedUser, 'User updated successfully')
+        new ApiResponse(200, {
+            user: updatedUser,
+            bankAccount: bankAccount || null
+        }, 'User updated successfully')
     );
 });
 

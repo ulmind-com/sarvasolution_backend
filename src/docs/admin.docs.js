@@ -157,6 +157,25 @@
  *                   rejectionReason:
  *                     type: string
  *                     example: "Aadhaar image unclear"
+ *               bankDetails:
+ *                 type: object
+ *                 description: Bank account details (stored in separate BankAccount collection). Admin can create or update all fields.
+ *                 properties:
+ *                   accountName:
+ *                     type: string
+ *                     example: "John Doe"
+ *                   accountNumber:
+ *                     type: string
+ *                     example: "1234567890"
+ *                   bankName:
+ *                     type: string
+ *                     example: "HDFC Bank"
+ *                   ifscCode:
+ *                     type: string
+ *                     example: "HDFC0001234"
+ *                   branch:
+ *                     type: string
+ *                     example: "Mumbai Main Branch"
  *     responses:
  *       200:
  *         description: User updated successfully
