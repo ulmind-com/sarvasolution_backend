@@ -355,3 +355,58 @@ export const sellToUser = asyncHandler(async (req, res) => {
         session.endSession();
     }
 });
+
+/**
+ * Get Sales History for Franchise
+ * @route GET /api/v1/franchise/sale/history
+ */
+export const getSalesHistory = asyncHandler(async (req, res) => {
+    const {
+        page = 1,
+        limit = 20,
+        sortBy = 'saleDate',
+        sortOrder = 'desc'
+    } = req.query;
+
+    // Build query for franchise's sales only (no filters)
+    const query = {
+        franchise: req.franchise._id,
+        deletedAt: null
+    };
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortOptions = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+    // Execute query with population
+    const sales = await FranchiseSale.find(query)
+        .populate({
+            path: 'user',
+            select: 'memberId fullName email phone address status isFirstPurchaseDone personalPV totalPV personalBV totalBV'
+        })
+        .populate({
+            path: 'items.product',
+            select: 'productName productId hsnCode category'
+        })
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean();
+
+    // Get total count for pagination
+    const totalCount = await FranchiseSale.countDocuments(query);
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            sales,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(totalCount / parseInt(limit)),
+                totalCount,
+                limit: parseInt(limit),
+                hasNextPage: parseInt(page) < Math.ceil(totalCount / parseInt(limit)),
+                hasPrevPage: parseInt(page) > 1
+            }
+        }, 'Sales history fetched successfully')
+    );
+});
