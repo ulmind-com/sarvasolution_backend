@@ -80,11 +80,10 @@ export const cronJobs = {
                 const totalWeekly = (finance.fastTrack.weeklyEarnings || 0) + (finance.starMatchingBonus.weeklyEarnings || 0);
 
                 if (totalWeekly > 0) {
-                    finance.wallet.availableBalance += totalWeekly;
-                    finance.wallet.totalEarnings += totalWeekly; // Total earnings tracks lifetime? 
-                    // Actually, usually totalEarnings increases when earned.
-                    // If we delay credit to wallet, totalEarnings might increase then or now.
-                    // Let's assume totalEarnings increases on EARN (in matching service) but wallet balance increases on PAYOUT (here).
+                    // finance.wallet.availableBalance += totalWeekly; // Disabled: Moved to Instant Credit in Matching Service
+                    // finance.wallet.totalEarnings += totalWeekly; // Already tracked instantly
+
+                    // Stats Reset Only
 
                     // Reset Weekly Trackers
                     finance.fastTrack.weeklyEarnings = 0;

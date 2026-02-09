@@ -120,8 +120,8 @@ export const matchingService = {
 
         // Wallet Credit (To Weekly Earnings Buffer)
         if (netAmount > 0) {
-            // finance.wallet.availableBalance += netAmount; // MOVED TO WEEKLY CRON
-            finance.fastTrack.weeklyEarnings += netAmount; // Buffer
+            finance.wallet.availableBalance += netAmount; // Instant Credit
+            finance.fastTrack.weeklyEarnings += netAmount; // Buffer/Stats
             finance.wallet.totalEarnings += netAmount; // Lifetime Stats increase immediately
 
             await Payout.create({
@@ -225,8 +225,8 @@ export const matchingService = {
             amount: PAYOUT
         });
 
-        // Wallet Credit (To Weekly Earnings Buffer)
-        // finance.wallet.availableBalance += netAmount; // MOVED TO WEEKLY CRON
+        // Wallet Credit (Instant)
+        finance.wallet.availableBalance += netAmount;
         finance.starMatchingBonus.weeklyEarnings += netAmount;
         finance.wallet.totalEarnings += netAmount;
 

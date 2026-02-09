@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import Franchise from '../src/models/Franchise.model.js';
 import User from '../src/models/User.model.js';
 
-dotenv.config({ path: './.env' });
+dotenv.config();
 
 const verifyOne = async () => {
     try {
