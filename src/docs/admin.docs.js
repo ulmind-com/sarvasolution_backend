@@ -126,17 +126,6 @@
  *               panCardNumber:
  *                 type: string
  *                 example: "ABCDE1234F"
- *               aadharCardNumber:
- *                 type: string
- *                 example: "123456789012"
- *               bankDetails:
- *                 type: object
- *                 properties:
- *                   accountName: { type: string }
- *                   accountNumber: { type: string }
- *                   bankName: { type: string }
- *                   ifscCode: { type: string }
- *                   branch: { type: string }
  *               kyc:
  *                 type: object
  *                 description: Admin can update all KYC fields
