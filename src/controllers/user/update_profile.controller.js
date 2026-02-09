@@ -94,14 +94,12 @@ export const updateProfile = asyncHandler(async (req, res) => {
     // Bank Account logic
     if (bankDetails) {
         let bankAccount = await BankAccount.findOne({ userId });
+
         if (bankAccount) {
-            const hasBankDetailsChanged = Object.keys(bankDetails).some(key => bankDetails[key] !== bankAccount[key]);
-            if (hasBankDetailsChanged) {
-                Object.assign(bankAccount, bankDetails);
-                await bankAccount.save();
-                updatedFields.push('Bank Details');
-            }
+            // STRICT RULE: User cannot update bank details more than once.
+            throw new ApiError(400, "Bank details cannot be modified once added. Please contact admin for changes.");
         } else {
+            // First time adding bank details -> Allow
             bankAccount = new BankAccount({ ...bankDetails, userId });
             await bankAccount.save();
             updatedFields.push('Bank Details');
