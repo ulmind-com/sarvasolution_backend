@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+import { addressSchema } from './schemas/address.schema.js';
+import { kycSchema } from './schemas/kyc.schema.js';
+import { fundSchema } from './schemas/fund.schema.js';
+import { rankSchema } from './schemas/rank.schema.js';
+
 const userSchema = new mongoose.Schema({
     // Basic Information
     username: { type: String, trim: true, lowercase: true },
@@ -49,35 +54,41 @@ const userSchema = new mongoose.Schema({
     carryForwardRight: { type: Number, default: 0 },
     lastBVUpdate: { type: Date, default: Date.now },
 
-    // 4 Fund Systems (Image 1)
-    bikeCarFund: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 100000 }
-    },
-    houseFund: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 250000 },
-        paymentSchedule: { type: String, default: 'half-yearly' }
-    },
-    royaltyFund: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 750000 },
-        paymentSchedule: { type: String, default: 'annual' }
-    },
-    ssvplSuperBonus: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 2500000 }
-    },
+    // 4 Fund Systems (Modularized)
+    bikeCarFund: { type: fundSchema, default: () => ({ nextTargetBV: 100000 }) },
+    houseFund: { type: fundSchema, default: () => ({ nextTargetBV: 250000, paymentSchedule: 'half-yearly' }) },
+    royaltyFund: { type: fundSchema, default: () => ({ nextTargetBV: 750000, paymentSchedule: 'annual' }) },
+    ssvplSuperBonus: { type: fundSchema, default: () => ({ nextTargetBV: 2500000 }) },
 
-    // 13 Rank System (Image 8)
+    // 13 Rank System (Modularized context - embedding schema fields directly or using subdocument? 
+    // Mongoose allows nesting schemas. Let's use the spread if we want flat or nested if we want object.
+    // Original was flat 'currentRank', 'rankNumber' etc.
+    // BUT 'rankHistory' was array.
+    // To keep backward compatibility, we can't easily wrap them in a 'rankDetails' object unless we migrate data.
+    // DECISION: KEEP FLAT STRUCTURE for now to avoid data migration issues, but use schema definition parts or simpler:
+    // Actually, modularizing 'rankSchema' as a subdoc is good for new structure, but breaking for 'currentRank' at root.
+    // Let's keep the fields effectively but defined via our cohesive schema approach? 
+    // No, Mongoose doesn't support "spreading" a schema into root easily like that without plugins.
+    // Strategy: We will define the fields here matching the schema logic, OR we accept that we might need to wrap them in future.
+    // User requested "modular separate normalize".
+    // Best approach: Use the `rankSchema` as a subdocument `rank`? No, existing code queries `user.currentRank`.
+    // OK, we must preserve the field paths: `currentRank`, `rankNumber`, `starMatching` etc. 
+    // So we cannot strictly "use" the `rankSchema` object here unless we change code everywhere.
+    // EXCEPT: The user explicitly asked for "modular" and "normalization". 
+    // And "existing data should be there in proper format".
+    // If we change structure, we break existing data access unless we migrate.
+    // Let's keep definitions here but cleaner? Or just use the sub-parts that are objects.
+    // `rankHistory` IS an array of objects.
+    // `currentRank` is a specific field.
+    // Let's Refactor: We will use the explicit definitions here to match the `rankSchema` INTENTION, 
+    // but we can't replace root fields with a subdoc without migration.
+    // wait, `bikeCarFund` etc ARE objects. So `type: fundSchema` works perfectly there.
+    // For `currentRank`, it's a root field. 
+    // We will leave the Rank fields as is in User, but use `fundSchema` for funds.
+    // And `kyc` object can use `kycSchema`.
+    // And `address` object can use `addressSchema`.
+
+    // Rank Fields (Kept at root for compatibility, but structured)
     currentRank: {
         type: String,
         default: 'Associate',
@@ -87,7 +98,7 @@ const userSchema = new mongoose.Schema({
             'Crown Diamond', 'Ambassador', 'Crown Ambassador', 'SSVPL Legend'
         ]
     },
-    rankNumber: { type: Number, default: 14 }, // 13 is lowest (Bronze), 1 is highest (Legend)
+    rankNumber: { type: Number, default: 14 },
     starMatching: { type: Number, default: 0 },
     rankBonus: { type: Number, default: 0 },
     achievedDate: Date,
@@ -97,7 +108,7 @@ const userSchema = new mongoose.Schema({
         date: { type: Date, default: Date.now }
     }],
 
-    // Repurchase Bonus Tracking (Image 7)
+    // Repurchase Bonus Tracking
     selfPurchase: {
         totalPurchases: { type: Number, default: 0 },
         lastPurchaseDate: Date,
@@ -105,9 +116,8 @@ const userSchema = new mongoose.Schema({
         bonusEarned: { type: Number, default: 0 },
         eligibleForPrize: { type: Boolean, default: false }
     },
-    isFirstPurchaseDone: { type: Boolean, default: false }, // Explicit flag for first purchase status
+    isFirstPurchaseDone: { type: Boolean, default: false },
     beginnerBonus: {
-
         units: { type: Number, default: 0 },
         cappingReached: { type: Number, default: 0 },
         cappingLimit: { type: Number, default: 10 },
@@ -118,7 +128,7 @@ const userSchema = new mongoose.Schema({
     tourFund: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
     healthEducation: { units: { type: Number, default: 0 }, totalBV: { type: Number, default: 0 } },
 
-    // Bonus Income Tracking (Fast Track & Matching)
+    // Bonus Income Tracking
     fastTrack: {
         dailyEarnings: { type: Number, default: 0 },
         weeklyEarnings: { type: Number, default: 0 },
@@ -126,7 +136,7 @@ const userSchema = new mongoose.Schema({
         totalEarned: { type: Number, default: 0 },
         dailyClosings: { type: Number, default: 0 }
     },
-    starMatchingBonus: { // Refined field name
+    starMatchingBonus: {
         dailyEarnings: { type: Number, default: 0 },
         weeklyEarnings: { type: Number, default: 0 },
         monthlyEarnings: { type: Number, default: 0 },
@@ -134,7 +144,7 @@ const userSchema = new mongoose.Schema({
         dailyClosings: { type: Number, default: 0 }
     },
 
-    // Stock Points (Image 1)
+    // Stock Points
     lsp: {
         achieved: { type: Boolean, default: false },
         achievedDate: Date,
@@ -151,13 +161,13 @@ const userSchema = new mongoose.Schema({
     // Compliance & Wallet
     directSponsors: {
         count: { type: Number, default: 0 },
-        members: [{ type: String }], // Array of memberIds
+        members: [{ type: String }],
         eligibleForBonuses: { type: Boolean, default: false }
     },
     compliance: {
         minimumWithdrawal: { type: Number, default: 450 },
         adminChargePercent: { type: Number, default: 5 },
-        tdsPercent: { type: Number, default: 0 }, // Set per region/rule
+        tdsPercent: { type: Number, default: 0 },
         autoRankUpgrade: { type: Boolean, default: true }
     },
     wallet: {
@@ -167,20 +177,10 @@ const userSchema = new mongoose.Schema({
         pendingWithdrawal: { type: Number, default: 0 }
     },
 
-    // Profile & KYC (Preserved)
-    address: {
-        street: String, city: String, state: String, country: String, zipCode: String
-    },
-    kyc: {
-        status: { type: String, enum: ['none', 'pending', 'verified', 'rejected'], default: 'none' },
-        aadhaarNumber: { type: String, trim: true },
-        aadhaarFront: { url: String, publicId: String },
-        aadhaarBack: { url: String, publicId: String },
-        panImage: { url: String, publicId: String },
-        submittedAt: Date,
-        verifiedAt: Date,
-        rejectionReason: String
-    },
+    // Profile & KYC (Modularized)
+    address: { type: addressSchema, default: {} },
+    kyc: { type: kycSchema, default: {} },
+
     profilePicture: {
         url: { type: String, default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s' },
         publicId: { type: String, default: null }

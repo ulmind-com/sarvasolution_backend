@@ -11,6 +11,8 @@ import { generateInvoicePDFBuffer } from '../../services/integration/pdf.service
 import { sendInvoiceEmailWithAttachment } from '../../services/integration/email.service.js';
 import { uploadPDFToCloudinary } from '../../services/integration/cloudinary.service.js';
 
+import UserFinance from '../../models/UserFinance.model.js';
+
 /**
  * Get User by MemberId
  * @route GET /api/v1/franchise/sale/user/:memberId
@@ -162,12 +164,20 @@ export const sellToUser = asyncHandler(async (req, res) => {
         }], { session });
 
         // 8. Update user PV/BV based on purchase type
+        // Fix: Update both User and UserFinance models to keep them in sync
+        const financeUpdate = {};
+
         if (isFirstPurchase) {
             // FIRST PURCHASE: Only add PV, no BV
             user.personalPV += totalPV;
             user.totalPV += totalPV;
             user.thisMonthPV += totalPV;
             user.thisYearPV += totalPV;
+
+            financeUpdate.personalPV = totalPV;
+            financeUpdate.totalPV = totalPV;
+            financeUpdate.thisMonthPV = totalPV;
+            financeUpdate.thisYearPV = totalPV;
 
             // Mark first purchase as done
             user.isFirstPurchaseDone = true;
@@ -177,7 +187,22 @@ export const sellToUser = asyncHandler(async (req, res) => {
             user.totalBV += totalBV;
             user.thisMonthBV += totalBV;
             user.thisYearBV += totalBV;
+
+            financeUpdate.personalBV = totalBV;
+            financeUpdate.totalBV = totalBV;
+            financeUpdate.thisMonthBV = totalBV;
+            financeUpdate.thisYearBV = totalBV;
         }
+
+        // Update UserFinance document
+        await UserFinance.findOneAndUpdate(
+            { user: user._id },
+            {
+                $inc: financeUpdate,
+                $setOnInsert: { memberId: user.memberId } // Create if missing (safety)
+            },
+            { upsert: true, new: true, session }
+        );
 
         // 9. ACTIVATION LOGIC - First purchase with PV >= 1
         let activationMessage = '';

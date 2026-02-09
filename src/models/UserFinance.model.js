@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { fundSchema } from './schemas/fund.schema.js';
 
 const userFinanceSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true, required: true },
@@ -41,8 +42,7 @@ const userFinanceSchema = new mongoose.Schema({
             'Crown Diamond', 'Ambassador', 'Crown Ambassador', 'SSVPL Legend'
         ]
     },
-    rankNumber: { type: Number, default: 14 }, // 13 is lowest (Bronze), 14 is Associate, ... wait. Logic was 13=Bronze? No, typically 1=Highest.
-    // Keeping logic consistent with previous User model: 14 (Associate/None) -> 1 (Legend)
+    rankNumber: { type: Number, default: 14 },
     starMatching: { type: Number, default: 0 },
     rankBonus: { type: Number, default: 0 }, // Total rank bonus earned
     achievedDate: Date,
@@ -52,33 +52,11 @@ const userFinanceSchema = new mongoose.Schema({
         date: { type: Date, default: Date.now }
     }],
 
-    // 4 Fund Systems
-    bikeCarFund: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 100000 }
-    },
-    houseFund: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 250000 },
-        paymentSchedule: { type: String, default: 'half-yearly' }
-    },
-    royaltyFund: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 750000 },
-        paymentSchedule: { type: String, default: 'annual' }
-    },
-    ssvplSuperBonus: {
-        units: { type: Number, default: 0 },
-        totalBVContributed: { type: Number, default: 0 },
-        lastAchieved: Date,
-        nextTargetBV: { type: Number, default: 2500000 }
-    },
+    // 4 Fund Systems (Modularized)
+    bikeCarFund: { type: fundSchema, default: () => ({ nextTargetBV: 100000 }) },
+    houseFund: { type: fundSchema, default: () => ({ nextTargetBV: 250000, paymentSchedule: 'half-yearly' }) },
+    royaltyFund: { type: fundSchema, default: () => ({ nextTargetBV: 750000, paymentSchedule: 'annual' }) },
+    ssvplSuperBonus: { type: fundSchema, default: () => ({ nextTargetBV: 2500000 }) },
 
     // Repurchase & Other Bonuses
     selfPurchase: {

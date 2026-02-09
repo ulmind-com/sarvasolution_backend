@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { addressSchema } from './schemas/address.schema.js';
 
 const franchiseSchema = new mongoose.Schema({
     // Basic Information
@@ -49,25 +50,7 @@ const franchiseSchema = new mongoose.Schema({
         required: true,
         index: true
     },
-    shopAddress: {
-        street: { type: String, required: true },
-        landmark: { type: String },
-        pincode: {
-            type: String,
-            required: true,
-            validate: {
-                validator: function (v) {
-                    return /^\d{6}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid 6-digit pincode!`
-            }
-        },
-        state: { type: String, required: true },
-        coordinates: {
-            latitude: Number,
-            longitude: Number
-        }
-    },
+    shopAddress: { type: addressSchema, required: true },
 
     // Status
     status: {
