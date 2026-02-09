@@ -76,8 +76,17 @@
  * 
  *   patch:
  *     summary: Update any user's details (Admin only)
+ *     description: |
+ *       **Admin Access Only** - Update any field for a specific user including KYC, bank details, PAN, Aadhar, etc.
+ *       
+ *       **Admin can update everything:**
+ *       - Personal details (fullName, email, phone, username)
+ *       - KYC details (status, aadhaarNumber, images)
+ *       - Bank account (account name, number, IFSC, branch, bank name)
+ *       - PAN card number
+ *       - Address, profile picture, rank, status
  *     tags:
- *       - Admin
+ *       - Admin - Users
  *     security:
  *       - bearerAuth: []
  *     parameters:
