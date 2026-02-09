@@ -139,6 +139,11 @@
  *     summary: Update profile details (User only)
  *     description: |
  *       **User Access Only** - Update your profile information including profile picture, address, and bank details.
+ *       
+ *       **Restrictions:**
+ *       - `fullName` cannot be updated by users (admin-only)
+ *       - `bankDetails` can only be set ONCE. Subsequent update attempts will fail with error
+ *       - `aadharCardNumber` and `panCardNumber` can be updated
  *     tags:
  *       - User - Profile
  *     security:
