@@ -114,6 +114,20 @@
  *               joiningPackage:
  *                 type: number
  *                 example: 500
+ *               panCardNumber:
+ *                 type: string
+ *                 example: "ABCDE1234F"
+ *               aadharCardNumber:
+ *                 type: string
+ *                 example: "123456789012"
+ *               bankDetails:
+ *                 type: object
+ *                 properties:
+ *                   accountName: { type: string }
+ *                   accountNumber: { type: string }
+ *                   bankName: { type: string }
+ *                   ifscCode: { type: string }
+ *                   branch: { type: string }
  *     responses:
  *       200:
  *         description: User updated successfully
@@ -261,38 +275,38 @@
  * /api/v1 / admin / transactions:
  * get:
  * summary: Audit all BV transactions(Admin only)
-   * tags: [Admin]
-      * security:
+  * tags: [Admin]
+    * security:
  * - bearerAuth: []
-   * parameters:
+  * parameters:
  * - in: query
-   * name: page
-      * schema: { type: integer, default: 1 }
+  * name: page
+    * schema: { type: integer, default: 1 }
  * - in: query
-   * name: limit
-      * schema: { type: integer, default: 20 }
+  * name: limit
+    * schema: { type: integer, default: 20 }
  * - in: query
-   * name: memberId
-      * schema: { type: string }
+  * name: memberId
+    * schema: { type: string }
  * description: Filter by member ID(e.g., SVS000001)
-   * - in: query
-      * name: type
-         * schema: { type: string }
+  * - in: query
+    * name: type
+      * schema: { type: string }
  * description: Filter by transaction type
-   * responses:
+  * responses:
  * 200:
  * description: Transaction log retrieved
-   * content:
+  * content:
  * application / json:
  * schema:
  * type: object
-   * properties:
+  * properties:
  * success: { type: boolean }
  * data:
  * type: object
-   * properties:
+  * properties:
  * transactions:
  * type: array
-   * pagination:
+  * pagination:
  * type: object
-   */
+  */

@@ -149,13 +149,13 @@
  *           schema:
  *             type: object
  *             properties:
- *               fullName:
- *                 type: string
  *               email:
  *                 type: string
  *               phone:
  *                 type: string
  *               panCardNumber:
+ *                 type: string
+ *               aadharCardNumber:
  *                 type: string
  *               username:
  *                 type: string
@@ -167,7 +167,7 @@
  *                 description: JSON string if using multipart/form-data
  *               bankDetails:
  *                 type: object
- *                 description: JSON string if using multipart/form-data
+ *                 description: JSON string (Can only be set ONCE. Subsequent updates will fail)
  *     responses:
  *       200:
  *         description: Profile updated successfully
