@@ -41,7 +41,7 @@ export const generateInvoicePDFBuffer = async (data) => {
         leftY += 12;
         doc.text(`Tax is payable on Reverse Charge : ${data.details.reverseCharge}`, 40, leftY);
         leftY += 12;
-        doc.text(`GST Invoice No. : ${data.details.invoiceNo}`, 40, leftY);
+        doc.text(`Invoice No. : ${data.details.invoiceNo}`, 40, leftY);
         leftY += 12;
         doc.text(`Date : ${new Date(data.details.invoiceDate).toLocaleDateString()}`, 40, leftY);
 
@@ -68,11 +68,13 @@ export const generateInvoicePDFBuffer = async (data) => {
         let recY = partiesY + 15;
         doc.text(`Name : ${data.receiver.name}`, 40, recY);
         recY += 12;
-        doc.text(`Address : ${data.receiver.address}`, 40, recY);
+        doc.text(`Address : ${data.receiver.fullAddress}`, 40, recY);
+        recY += 12;
+        doc.text(`City : ${data.receiver.city}`, 40, recY);
         recY += 12;
         doc.text(`State : ${data.receiver.state}`, 40, recY);
         recY += 12;
-        doc.text(`State Code : ${data.receiver.stateCode || 'N/A'}`, 40, recY);
+        doc.text(`Pincode : ${data.receiver.pincode}`, 40, recY);
         recY += 12;
         doc.text(`Contact : ${data.receiver.phone}`, 40, recY);
 
@@ -90,8 +92,9 @@ export const generateInvoicePDFBuffer = async (data) => {
 
         // --- 4. Table Grid ---
         const tableTop = Math.max(recY, sendY) + 20;
-        const colWidths = [25, 120, 35, 30, 35, 30, 40, 40, 45, 35, 45, 45, 45, 45];
-        // Cols: Sl, Desc, HSN, Qty, Batch, UOM, Rate, MRP, Gross, Disc, Taxable, CGST, SGST, IGST
+        // Removed Batch and UOM columns as per requirement
+        const colWidths = [25, 150, 40, 35, 45, 45, 50, 40, 50, 50, 50, 50];
+        // Cols: Sl, Description, HSN, QTY, Rate, MRP, Gross, Disc, Taxable, CGST, SGST, IGST
         // X Positions Calculation
         let currentX = 30;
         const colX = colWidths.map(w => {
@@ -100,9 +103,9 @@ export const generateInvoicePDFBuffer = async (data) => {
             return x;
         });
 
-        // Headers
+        // Headers (removed Batch and UOM)
         const headers = [
-            'Sl', 'Description of Goods', 'HSN', 'QTY', 'Batch', 'UOM', 'Rate', 'MRP',
+            'Sl', 'Description of Goods', 'HSN', 'QTY', 'Rate', 'MRP',
             'Gross', 'Disc', 'Taxable', 'CGST', 'SGST', 'IGST'
         ];
 
@@ -131,14 +134,12 @@ export const generateInvoicePDFBuffer = async (data) => {
                 if (i > 0) drawLine(x, rowY, x, rowY + rowHeight);
             });
 
-            // Fill Data
+            // Fill Data (removed Batch and UOM)
             const values = [
                 index + 1,
                 item.productName,
                 item.hsnCode || '-',
                 item.quantity,
-                item.batchNo || '-',
-                'Nos', // UOM
                 item.rate.toFixed(2),
                 item.mrp.toFixed(2),
                 (item.rate * item.quantity).toFixed(2), // Gross

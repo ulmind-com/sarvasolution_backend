@@ -268,14 +268,14 @@ export const sellToUser = asyncHandler(async (req, res) => {
                     state: franchise.shopAddress?.state || '',
                     pincode: franchise.shopAddress?.pincode || '',
                     phone: franchise.phone,
-                    gstin: 'N/A' // Franchise model doesn't have GST field yet
+                    gstin: '19ABRCS5991B1ZQ' // Updated GST number
                 },
                 receiver: {
                     name: user.fullName,
-                    address: user.address?.street || '',
-                    city: user.address?.city || '',
-                    state: user.address?.state || '',
-                    pincode: user.address?.zipCode || '',
+                    fullAddress: user.address?.street || 'N/A',
+                    city: user.address?.city || 'N/A',
+                    state: user.address?.state || 'N/A',
+                    pincode: user.address?.zipCode || 'N/A',
                     phone: user.phone,
                     gstin: 'N/A' // User GST usually N/A for B2C
                 },
