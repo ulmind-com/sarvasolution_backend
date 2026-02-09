@@ -143,7 +143,8 @@
  *       **Restrictions:**
  *       - `fullName` cannot be updated by users (admin-only)
  *       - `bankDetails` can only be set ONCE. Subsequent update attempts will fail with error
- *       - `aadharCardNumber` and `panCardNumber` can be updated
+ *       - `aadharCardNumber` and `panCardNumber` can only be set ONCE. Subsequent update attempts will fail with error
+ *       - Contact admin if you need to modify KYC details (PAN, Aadhar, Bank Details)
  *     tags:
  *       - User - Profile
  *     security:

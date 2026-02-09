@@ -32,6 +32,19 @@
  * /api/v1/franchise/sale/sell:
  *   post:
  *     summary: Sell products to user
+ *     description: |
+ *       **Franchise Access Only** - Process a sale transaction to an MLM user.
+ *       
+ *       **Business Logic:**
+ *       - Validates user and product availability
+ *       - Deducts stock from franchise inventory
+ *       - Calculates PV, BV, and GST (18%)
+ *       - **Activation Rule**: First purchase with PV >= 1 activates the user account
+ *       - Generates PDF invoice with tax breakdown (IGST for inter-state, CGST+SGST for intra-state)
+ *       - Uploads invoice to Cloudinary and emails to user
+ *       - Updates user's PV/BV accumulation
+ *       
+ *       **Note:** First purchase flag is set regardless of PV, but activation only occurs if PV >= 1.
  *     tags: [Franchise - Sales]
  *     security:
  *       - bearerAuth: []
@@ -45,7 +58,7 @@
  *             properties:
  *               memberId:
  *                 type: string
- *                 example: "SS000001"
+ *                 example: "SVS000001"
  *               items:
  *                 type: array
  *                 items:
@@ -76,16 +89,28 @@
  *                   properties:
  *                     sale:
  *                       type: object
+ *                       description: Complete sale record with invoice details
  *                     userActivated:
  *                       type: boolean
+ *                       description: True if user was activated by this purchase
  *                     isFirstPurchase:
  *                       type: boolean
+ *                       description: True if this was user's first purchase
  *                     totalPV:
  *                       type: number
+ *                       description: Total Point Value for this transaction
  *                     totalBV:
  *                       type: number
+ *                       description: Total Business Volume for this transaction
+ *                     invoiceUrl:
+ *                       type: string
+ *                       description: Cloudinary URL of generated PDF invoice
+ *                     emailSent:
+ *                       type: boolean
+ *                       description: Whether invoice email was sent successfully
  *       400:
  *         description: Validation error or insufficient stock
  *       404:
  *         description: User or product not found
  */
+

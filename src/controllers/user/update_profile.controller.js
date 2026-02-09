@@ -52,8 +52,14 @@ export const updateProfile = asyncHandler(async (req, res) => {
         updatedFields.push('Phone Number');
     }
 
-    // PAN limit check
+    // PAN Card Update - STRICT RULE: User cannot update PAN once set
     if (panCardNumber && panCardNumber.toUpperCase() !== user.panCardNumber) {
+        // Check if user already has PAN set
+        if (user.panCardNumber) {
+            throw new ApiError(400, 'PAN card number cannot be modified once added. Please contact admin for changes.');
+        }
+
+        // First time adding PAN -> Allow with limit check
         const panCount = await User.countDocuments({ panCardNumber: panCardNumber.toUpperCase() });
         if (panCount >= 3) {
             throw new ApiError(400, 'Maximum 3 accounts allowed per PAN card');
@@ -62,8 +68,14 @@ export const updateProfile = asyncHandler(async (req, res) => {
         updatedFields.push('PAN Card Number');
     }
 
-    // Aadhar Card Update
+    // Aadhar Card Update - STRICT RULE: User cannot update Aadhar once set
     if (body.aadharCardNumber && body.aadharCardNumber !== user.aadharCardNumber) {
+        // Check if user already has Aadhar set
+        if (user.aadharCardNumber) {
+            throw new ApiError(400, 'Aadhar card number cannot be modified once added. Please contact admin for changes.');
+        }
+
+        // First time adding Aadhar -> Allow
         user.aadharCardNumber = body.aadharCardNumber;
         updatedFields.push('Aadhar Card Number');
     }
