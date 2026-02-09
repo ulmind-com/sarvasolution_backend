@@ -9,7 +9,7 @@ export const createProduct = asyncHandler(async (req, res) => {
     const {
         productName, description, price, mrp, category, stockQuantity,
         hsnCode, bv, pv, productDP, isFeatured, isActivationPackage,
-        gst, cgst, sgst // Tax fields
+        cgst, sgst // Tax fields (gst removed)
     } = req.body;
 
     if (!req.file) {
@@ -32,7 +32,6 @@ export const createProduct = asyncHandler(async (req, res) => {
         productDP: Number(productDP),
         isFeatured,
         isActivationPackage,
-        gst: Number(gst) || 0,
         cgst: Number(cgst) || 0,
         sgst: Number(sgst) || 0,
         productImage,
@@ -97,8 +96,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
         updateData.productImage = image;
     }
 
-    // Ensure numeric parsing for updates
-    if (updateData.gst) updateData.gst = Number(updateData.gst);
+    // Ensure numeric parsing for updates (gst removed, cgst and sgst kept)
     if (updateData.cgst) updateData.cgst = Number(updateData.cgst);
     if (updateData.sgst) updateData.sgst = Number(updateData.sgst);
 

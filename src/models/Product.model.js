@@ -29,7 +29,6 @@ const productSchema = new mongoose.Schema({
     },
 
     // Tax Components (Percentages)
-    gst: { type: Number, default: 0 },
     cgst: { type: Number, default: 0 },
     sgst: { type: Number, default: 0 },
 
@@ -122,8 +121,8 @@ productSchema.pre('save', async function (next) {
         this.productId = `PRD-${year}-${String(count + 1).padStart(5, '0')}`;
     }
 
-    // Calculate total tax percentage
-    const totalTaxPercent = (this.gst || 0) + (this.cgst || 0) + (this.sgst || 0);
+    // Calculate total tax percentage (cgst + sgst only, gst removed)
+    const totalTaxPercent = (this.cgst || 0) + (this.sgst || 0);
 
     // Calculate Tax Amount
     const taxAmount = this.price * (totalTaxPercent / 100);

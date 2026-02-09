@@ -111,8 +111,6 @@
  *               pv:
  *                 type: number
  *                 description: Point Value
- *               gst:
- *                 type: number
  *               cgst:
  *                 type: number
  *               sgst:

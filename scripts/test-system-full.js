@@ -173,7 +173,6 @@ async function testSystem() {
                 productDP: 900,
                 pv: 50,
                 bv: 40,
-                gst: 18,
                 category: 'health care',
                 hsnCode: '3004',
                 stockQuantity: 1000,
@@ -191,7 +190,6 @@ async function testSystem() {
                 productDP: 2200,
                 pv: 100,
                 bv: 80,
-                gst: 18,
                 category: 'health care',
                 hsnCode: '3004',
                 stockQuantity: 1000,
@@ -209,7 +207,6 @@ async function testSystem() {
                 productDP: 450,
                 pv: 10,
                 bv: 8,
-                gst: 12,
                 category: 'personal care',
                 hsnCode: '3304',
                 stockQuantity: 1000,
@@ -303,20 +300,14 @@ async function testSystem() {
             let totalAmount = 0;
             let totalPV = 0;
             let totalBV = 0;
-            let subTotal = 0;
-            let gstAmount = 0;
 
             const saleItems = items.map(item => {
                 const prod = products.find(p => p.productName === item.name);
                 const amount = prod.price * item.qty;
-                const taxable = amount / (1 + (prod.gst / 100));
-                const gst = amount - taxable;
 
                 totalAmount += amount;
                 totalPV += prod.pv * item.qty;
                 totalBV += prod.bv * item.qty;
-                subTotal += taxable;
-                gstAmount += gst;
 
                 return {
                     product: prod._id,
@@ -339,9 +330,9 @@ async function testSystem() {
                 user: buyer._id,
                 memberId: buyer.memberId,
                 items: saleItems,
-                subTotal,
+                subTotal: totalAmount,
                 gstRate: 18,
-                gstAmount,
+                gstAmount: 0,
                 grandTotal: totalAmount,
                 totalPV,
                 totalBV,
