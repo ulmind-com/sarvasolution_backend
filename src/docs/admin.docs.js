@@ -246,7 +246,7 @@
  *       200:
  *         description: BV allocated
  * 
- */
+ * */
 
 /**
  * @swagger
@@ -271,42 +271,50 @@
  *       200:
  *         description: Matching triggered successfully
  * */
- * 
- * /api/v1 / admin / transactions:
- * get:
- * summary: Audit all BV transactions(Admin only)
-  * tags: [Admin]
-    * security:
- * - bearerAuth: []
-  * parameters:
- * - in: query
-  * name: page
-    * schema: { type: integer, default: 1 }
- * - in: query
-  * name: limit
-    * schema: { type: integer, default: 20 }
- * - in: query
-  * name: memberId
-    * schema: { type: string }
- * description: Filter by member ID(e.g., SVS000001)
-  * - in: query
-    * name: type
-      * schema: { type: string }
- * description: Filter by transaction type
-  * responses:
- * 200:
- * description: Transaction log retrieved
-  * content:
- * application / json:
- * schema:
- * type: object
-  * properties:
- * success: { type: boolean }
- * data:
- * type: object
-  * properties:
- * transactions:
- * type: array
-  * pagination:
- * type: object
-  */
+
+/**
+ * @swagger
+ * /api/v1/admin/transactions:
+ *   get:
+ *     summary: Audit all BV transactions (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: memberId
+ *         schema:
+ *           type: string
+ *         description: Filter by member ID (e.g., SVS000001)
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Filter by transaction type
+ *     responses:
+ *       200:
+ *         description: Transaction log retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     transactions:
+ *                       type: array
+ *                     pagination:
+ *                       type: object
+ */
