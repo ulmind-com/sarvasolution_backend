@@ -138,13 +138,29 @@
  *   patch:
  *     summary: Update profile details (User only)
  *     description: |
- *       **User Access Only** - Update your profile information including profile picture, address, and bank details.
+ *       **User Access Only** - Update your profile information.
  *       
- *       **Restrictions:**
- *       - `fullName` cannot be updated by users (admin-only)
- *       - `bankDetails` can only be set ONCE. Subsequent update attempts will fail with error
- *       - `aadharCardNumber` and `panCardNumber` can only be set ONCE. Subsequent update attempts will fail with error
- *       - Contact admin if you need to modify KYC details (PAN, Aadhar, Bank Details)
+ *       **🔒 LOCKED FIELDS (Cannot be updated by users):**
+ *       - `fullName` - Admin-only field
+ *       - `kyc` - KYC documents submitted via `/api/v1/kyc/submit` (one-time only)
+ *       
+ *       **⚠️ ONE-TIME ONLY FIELDS (Can only be set once, then locked):**
+ *       - `panCardNumber` - Can be added once. After that, contact admin to modify
+ *       - `aadharCardNumber` - Can be added once. After that, contact admin to modify
+ *       - `bankDetails` - Can be set once. After that, contact admin to modify
+ *       
+ *       **✅ UPDATABLE FIELDS:**
+ *       - `email` - Email address (must be unique)
+ *       - `phone` - Phone number (must be unique)
+ *       - `username` - Username
+ *       - `profilePicture` - Profile picture upload
+ *       - `address` - Full address object (can be updated anytime)
+ *       
+ *       **Important Notes:**
+ *       - First-time users can add PAN, Aadhar, and Bank Details
+ *       - Once these fields are set, they become locked for security
+ *       - Contact admin if you need to modify locked fields
+ *       - Maximum 3 accounts allowed per PAN card
  *     tags:
  *       - User - Profile
  *     security:
@@ -157,23 +173,36 @@
  *             properties:
  *               email:
  *                 type: string
+ *                 example: user@example.com
+ *                 description: Email address (updatable)
  *               phone:
  *                 type: string
+ *                 example: "9876543210"
+ *                 description: Phone number (updatable, must be unique)
  *               panCardNumber:
  *                 type: string
+ *                 example: "ABCDE1234F"
+ *                 description: PAN card number (ONE-TIME ONLY - cannot modify after first set)
  *               aadharCardNumber:
  *                 type: string
+ *                 example: "123456789012"
+ *                 description: Aadhar card number (ONE-TIME ONLY - cannot modify after first set)
  *               username:
  *                 type: string
+ *                 example: john_doe
+ *                 description: Username (updatable)
  *               profilePicture:
  *                 type: string
  *                 format: binary
+ *                 description: Profile picture file (updatable)
  *               address:
  *                 type: object
- *                 description: JSON string if using multipart/form-data
+ *                 description: Address object as JSON string (updatable anytime)
+ *                 example: '{"street":"123 Main St","city":"Mumbai","state":"Maharashtra","zipCode":"400001"}'
  *               bankDetails:
  *                 type: object
- *                 description: JSON string (Can only be set ONCE. Subsequent updates will fail)
+ *                 description: Bank details as JSON string (ONE-TIME ONLY - cannot modify after first set)
+ *                 example: '{"accountName":"John Doe","accountNumber":"1234567890","bankName":"HDFC Bank","ifscCode":"HDFC0001234","branch":"Mumbai"}'
  *     responses:
  *       200:
  *         description: Profile updated successfully

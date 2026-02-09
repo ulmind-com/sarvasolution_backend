@@ -83,7 +83,13 @@
  *     description: |
  *       **Admin Access Only** - Retrieve all payout requests with optional status filtering.
  *       
- *       This endpoint allows administrators to view and manage all withdrawal requests from users.
+ *       Payout requests are **automatically generated every Friday at 12:00 AM IST** for all eligible users.
+ *       This endpoint allows administrators to view and manage these automatic withdrawal requests.
+ *       
+ *       **Eligibility Criteria (Automatic):**
+ *       - Available Balance >= ₹450
+ *       - KYC Status: Verified
+ *       
  *       Results include user details and bank information for processing.
  *     tags:
  *       - Admin - Payouts

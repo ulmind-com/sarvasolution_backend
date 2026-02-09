@@ -39,9 +39,9 @@ export const cronJobs = {
             await cronJobs.resetYearlyCounters();
         }, { timezone: "Asia/Kolkata" });
 
-        // 5. Automatic Payout Generation (Friday Night / Sat 00:00)
-        // Runs every Saturday at 00:00 IST (Friday Night)
-        cron.schedule('0 0 * * 6', async () => {
+        // 5. Automatic Payout Generation (Friday 00:00 IST)
+        // Runs every Friday at midnight (00:00 IST)
+        cron.schedule('0 0 * * 5', async () => {
             console.log(chalk.magenta('Running Automatic Payout Generation...'));
             await cronJobs.processAutomaticPayouts();
         }, { timezone: "Asia/Kolkata" });
@@ -151,79 +151,105 @@ export const cronJobs = {
     },
 
     /**
-     * Logic: Automatic Payout Generation (Friday Night / Sat 00:00)
-     * Iterates all users, checks balance > minWithdrawal, checks Compliance,
+     * Logic: Automatic Payout Generation (Friday 00:00 IST)
+     * Iterates all users, checks balance >= minWithdrawal, checks KYC verification,
      * Creates Payout Request.
      */
     async processAutomaticPayouts() {
         console.log(chalk.blue('Processing Automatic Payout Requests...'));
+
+        // Statistics tracking
+        const stats = {
+            totalScanned: 0,
+            skippedLowBalance: 0,
+            skippedNoKYC: 0,
+            successfulPayouts: 0,
+            totalAmountGenerated: 0,
+            errors: []
+        };
+
         try {
-            // Find users with balance > 0 (optimization)
-            // Ideally should filter by minimum, but min varies by user compliance.
-            // For now, get all with balance > 100 (safe lower bound)
+            // Find users with balance > 100 (optimization)
             const finances = await UserFinance.find({
                 "wallet.availableBalance": { $gt: 100 }
-            }).populate('user'); // Need user for compliance checks
+            }).populate('user');
 
-            let count = 0;
+            stats.totalScanned = finances.length;
+            console.log(chalk.cyan(`Found ${finances.length} users with balance > 100`));
+
             for (const finance of finances) {
                 if (!finance.user) continue;
 
                 const user = finance.user;
                 const balance = finance.wallet.availableBalance;
-                const minWithdrawal = user.compliance?.minimumWithdrawal || 450; // Default 450
+                const minWithdrawal = user.compliance?.minimumWithdrawal || 450;
 
-                // Check eligibility
-                if (balance >= minWithdrawal) {
-                    try {
-                        // Reuse payoutService logic locally or call it? 
-                        // Calling it is better but it does findById again inside.
-                        // For bulk, let's reuse logic carefully.
-                        // Actually, importing payoutService here caused circular dependency risk? 
-                        // No, cron.jobs.js imports UserFinance. 
-                        // Let's implement logic here to be safe and efficient.
+                // KYC Verification Check
+                if (!user.kyc || user.kyc.status !== 'verified') {
+                    stats.skippedNoKYC++;
+                    console.log(chalk.yellow(`Skipping ${user.memberId}: KYC not verified (status: ${user.kyc?.status || 'none'})`));
+                    continue;
+                }
 
-                        const requestedAmount = balance; // Withdraw EVERYTHING available
+                // Balance Check
+                if (balance < minWithdrawal) {
+                    stats.skippedLowBalance++;
+                    continue;
+                }
 
-                        // Deductions
-                        const adminChargePercent = user.compliance?.adminChargePercent || 5;
-                        const tdsPercent = user.compliance?.tdsPercent || 5; // Default ? 5% usually? previous code had 0.02 (2%). 
-                        // Let's stick to user compliance or rigid logic.
-                        // PayoutService used 0.02 hardcoded. I will stick to that to match existing logic.
+                // Process payout
+                try {
+                    const requestedAmount = balance; // Withdraw EVERYTHING available
 
-                        const adminCharge = requestedAmount * (adminChargePercent / 100);
-                        const tdsAmount = requestedAmount * 0.02; // 2% TDS
-                        const netAmount = requestedAmount - adminCharge - tdsAmount;
+                    // Deductions
+                    const adminChargePercent = user.compliance?.adminChargePercent || 5;
+                    const adminCharge = requestedAmount * (adminChargePercent / 100);
+                    const tdsAmount = requestedAmount * 0.02; // 2% TDS
+                    const netAmount = requestedAmount - adminCharge - tdsAmount;
 
-                        const payout = await import('../models/Payout.model.js').then(m => m.default.create({
-                            userId: user._id,
-                            memberId: user.memberId,
-                            payoutType: 'withdrawal',
-                            grossAmount: requestedAmount,
-                            adminCharge,
-                            tdsDeducted: tdsAmount,
-                            netAmount,
-                            status: 'pending',
-                            scheduledFor: new Date() // Scheduled NOW (or next batch)
-                        }));
+                    const payout = await import('../models/Payout.model.js').then(m => m.default.create({
+                        userId: user._id,
+                        memberId: user.memberId,
+                        payoutType: 'withdrawal',
+                        grossAmount: requestedAmount,
+                        adminCharge,
+                        tdsDeducted: tdsAmount,
+                        netAmount,
+                        status: 'pending',
+                        scheduledFor: new Date()
+                    }));
 
-                        // Update Wallet
-                        finance.wallet.availableBalance -= requestedAmount;
-                        finance.wallet.pendingWithdrawal += netAmount;
-                        finance.wallet.withdrawnAmount += requestedAmount; // Tracks gross withdrawn? Or should track net? Usually gross withdrawn from system.
+                    // Update Wallet
+                    finance.wallet.availableBalance -= requestedAmount;
+                    finance.wallet.pendingWithdrawal += netAmount;
+                    finance.wallet.withdrawnAmount += requestedAmount;
 
-                        await finance.save();
-                        count++;
-                        console.log(`Requested payout for ${user.memberId}: Rs.${requestedAmount}`);
-                    } catch (err) {
-                        console.error(`Failed payout for ${user.memberId}:`, err.message);
-                    }
+                    await finance.save();
+
+                    stats.successfulPayouts++;
+                    stats.totalAmountGenerated += requestedAmount;
+                    console.log(chalk.green(`✓ Payout created for ${user.memberId}: ₹${requestedAmount.toFixed(2)} (Net: ₹${netAmount.toFixed(2)})`));
+                } catch (err) {
+                    stats.errors.push({ memberId: user.memberId, error: err.message });
+                    console.error(chalk.red(`✗ Failed payout for ${user.memberId}:`), err.message);
                 }
             }
-            console.log(chalk.green(`Automatic Payouts Generated: ${count} requests.`));
+
+            // Final Summary
+            console.log(chalk.magenta('\n========== PAYOUT GENERATION SUMMARY =========='));
+            console.log(chalk.cyan(`Total Users Scanned: ${stats.totalScanned}`));
+            console.log(chalk.yellow(`Skipped (Low Balance): ${stats.skippedLowBalance}`));
+            console.log(chalk.yellow(`Skipped (No KYC): ${stats.skippedNoKYC}`));
+            console.log(chalk.green(`Successful Payouts: ${stats.successfulPayouts}`));
+            console.log(chalk.green(`Total Amount Generated: ₹${stats.totalAmountGenerated.toFixed(2)}`));
+            if (stats.errors.length > 0) {
+                console.log(chalk.red(`Errors: ${stats.errors.length}`));
+                stats.errors.forEach(e => console.log(chalk.red(`  - ${e.memberId}: ${e.error}`)));
+            }
+            console.log(chalk.magenta('===============================================\n'));
 
         } catch (e) {
-            console.error('Automatic Payout Error:', e);
+            console.error(chalk.red('Automatic Payout Error:'), e);
         }
     }
 };

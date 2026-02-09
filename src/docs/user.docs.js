@@ -140,15 +140,24 @@
  *       **DEPRECATED - Manual Payouts Disabled**
  *       
  *       Manual withdrawal requests are no longer accepted. 
- *       Payouts are automatically generated every **Friday Night** for all users with eligible wallet balance.
+ *       Payouts are automatically generated every **Friday at 12:00 AM (midnight) IST** for all eligible users.
  *       
- *       **Automatic Payout Criteria:**
+ *       **Automatic Payout Eligibility:**
  *       - Wallet Available Balance >= Minimum Withdrawal (₹450)
- *       - KYC Verified
+ *       - KYC Status: **Verified** (mandatory)
+ *       - User account must be active
  *       
- *       **Deductions:**
+ *       **Automatic Deductions:**
  *       - Admin Charge: 5%
  *       - TDS: 2%
+ *       
+ *       **Process:**
+ *       - Every Friday 12 AM: System scans all users
+ *       - Eligible users: Entire available balance is withdrawn automatically
+ *       - Payout request created with status: 'pending'
+ *       - Admin processes pending payouts manually
+ *       
+ *       **Note:** If you need to withdraw funds, ensure your KYC is verified and wait until Friday midnight.
  *     tags: [User - Financial]
  *     security:
  *       - bearerAuth: []

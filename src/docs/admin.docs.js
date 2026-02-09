@@ -128,6 +128,35 @@
  *                   bankName: { type: string }
  *                   ifscCode: { type: string }
  *                   branch: { type: string }
+ *               kyc:
+ *                 type: object
+ *                 description: Admin can update all KYC fields
+ *                 properties:
+ *                   status:
+ *                     type: string
+ *                     enum: [none, pending, verified, rejected]
+ *                     example: verified
+ *                   aadhaarNumber:
+ *                     type: string
+ *                     example: "123456789012"
+ *                   aadhaarFront:
+ *                     type: object
+ *                     properties:
+ *                       url: { type: string }
+ *                       publicId: { type: string }
+ *                   aadhaarBack:
+ *                     type: object
+ *                     properties:
+ *                       url: { type: string }
+ *                       publicId: { type: string }
+ *                   panImage:
+ *                     type: object
+ *                     properties:
+ *                       url: { type: string }
+ *                       publicId: { type: string }
+ *                   rejectionReason:
+ *                     type: string
+ *                     example: "Aadhaar image unclear"
  *     responses:
  *       200:
  *         description: User updated successfully

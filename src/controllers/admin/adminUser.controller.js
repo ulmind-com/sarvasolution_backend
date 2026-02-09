@@ -83,6 +83,23 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
         safeUpdates.currentRank = updates.rank;
     }
 
+    // Special handling for nested objects (KYC, address, bankDetails)
+    // These need to be merged, not replaced entirely
+    if (safeUpdates.kyc) {
+        user.kyc = { ...user.kyc.toObject(), ...safeUpdates.kyc };
+        delete safeUpdates.kyc; // Remove from safeUpdates to avoid Object.assign overwrite
+    }
+
+    if (safeUpdates.address) {
+        user.address = { ...user.address, ...safeUpdates.address };
+        delete safeUpdates.address;
+    }
+
+    if (safeUpdates.bankDetails) {
+        user.bankDetails = { ...user.bankDetails, ...safeUpdates.bankDetails };
+        delete safeUpdates.bankDetails;
+    }
+
     // Track updates for notification
     const updatedFields = [];
     Object.keys(safeUpdates).forEach(key => {
@@ -90,6 +107,11 @@ export const updateUserByAdmin = asyncHandler(async (req, res) => {
             updatedFields.push(key.charAt(0).toUpperCase() + key.slice(1));
         }
     });
+
+    // Track nested object updates
+    if (updates.kyc) updatedFields.push('KYC');
+    if (updates.address) updatedFields.push('Address');
+    if (updates.bankDetails) updatedFields.push('Bank Details');
 
     Object.assign(user, safeUpdates);
     await user.save();
