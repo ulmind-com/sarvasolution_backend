@@ -108,12 +108,19 @@
  *                         carryForwardLeft: { type: number }
  *                         carryForwardRight: { type: number }
  *                         nextClosingWindow: { type: string, format: date-time }
+ *                         history:
+ *                           type: array
+ *                           items: { $ref: '#/components/schemas/Payout' }
  *                     starMatching:
  *                       type: object
  *                       properties:
  *                         dailyClosings: { type: number }
  *                         pendingStarsLeft: { type: number }
  *                         pendingStarsRight: { type: number }
+ *                         accumulatedStars: { type: number, description: "Total lifetime stars matched" }
+ *                         history:
+ *                           type: array
+ *                           items: { $ref: '#/components/schemas/Payout' }
  * */
 
 /**
