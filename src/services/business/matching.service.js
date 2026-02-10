@@ -205,12 +205,25 @@ export const matchingService = {
         let matchedRight = 0;
         let matchFound = false;
 
-        if (leftStars >= 20 && rightStars >= 10) {
-            matchedLeft = 20; matchedRight = 10; matchFound = true;
-        } else if (leftStars >= 10 && rightStars >= 20) {
-            matchedLeft = 10; matchedRight = 20; matchFound = true;
-        } else if (leftStars >= 10 && rightStars >= 10) {
-            matchedLeft = 10; matchedRight = 10; matchFound = true;
+        // CHECK HISTORY for First Star Match Rule
+        const existingStarPayout = await Payout.findOne({
+            userId: userId,
+            payoutType: 'star-matching-bonus'
+        });
+        const isFirstStarMatch = !existingStarPayout;
+
+        if (isFirstStarMatch) {
+            // First Match: 2:1 or 1:2 REQUIRED
+            if (leftStars >= 2 && rightStars >= 1) {
+                matchedLeft = 2; matchedRight = 1; matchFound = true;
+            } else if (leftStars >= 1 && rightStars >= 2) {
+                matchedLeft = 1; matchedRight = 2; matchFound = true;
+            }
+        } else {
+            // Subsequent Matches: 1:1 Standard
+            if (leftStars >= 1 && rightStars >= 1) {
+                matchedLeft = 1; matchedRight = 1; matchFound = true;
+            }
         }
 
         if (!matchFound) return;
