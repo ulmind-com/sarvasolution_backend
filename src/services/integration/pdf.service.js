@@ -37,24 +37,24 @@ export const generateInvoicePDFBuffer = async (data) => {
 
         // Left Column (Sender/GST Info)
         let leftY = startY + 10;
-        doc.text(`GST No. : ${data.sender.gstin}`, 40, leftY);
+        doc.text(`GST No. : ${data.sender?.gstin || 'N/A'}`, 40, leftY);
         leftY += 12;
-        doc.text(`Tax is payable on Reverse Charge : ${data.details.reverseCharge}`, 40, leftY);
+        doc.text(`Tax is payable on Reverse Charge : ${data.details?.reverseCharge || 'No'}`, 40, leftY);
         leftY += 12;
-        doc.text(`Invoice No. : ${data.details.invoiceNo}`, 40, leftY);
+        doc.text(`Invoice No. : ${data.details?.invoiceNo || '-'}`, 40, leftY);
         leftY += 12;
-        doc.text(`Date : ${new Date(data.details.invoiceDate).toLocaleDateString()}`, 40, leftY);
+        doc.text(`Date : ${data.details?.invoiceDate ? new Date(data.details.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 40, leftY);
 
         // Right Column (Transport Info)
         let rightY = startY + 10;
         const rightX = 300;
-        doc.text(`Transportation Mode: ${data.details.transportMode}`, rightX, rightY);
+        doc.text(`Transportation Mode: ${data.details?.transportMode || 'By Road'}`, rightX, rightY);
         rightY += 12;
-        doc.text(`Transport No : N`, rightX, rightY); // Placeholder
+        doc.text(`Transport No : ${data.details?.transportNo || '-'}`, rightX, rightY);
         rightY += 12;
-        doc.text(`E-Way Bill No. : N`, rightX, rightY);
+        doc.text(`E-Way Bill No. : ${data.details?.ewayBillNo || '-'}`, rightX, rightY);
         rightY += 12;
-        doc.text(`L.R No : N`, rightX, rightY);
+        doc.text(`L.R No : ${data.details?.lrNo || '-'}`, rightX, rightY);
 
         // Separator Line
         drawLine(30, leftY + 20, 565, leftY + 20);
@@ -66,29 +66,31 @@ export const generateInvoicePDFBuffer = async (data) => {
         doc.font('Helvetica-Bold').text('Details Of Receiver(Billed To)', 40, partiesY);
         doc.font('Helvetica');
         let recY = partiesY + 15;
-        doc.text(`Name : ${data.receiver.name}`, 40, recY);
+        doc.text(`Name : ${data.receiver?.name || 'Grand User'}`, 40, recY);
         recY += 12;
-        doc.text(`Address : ${data.receiver.fullAddress}`, 40, recY);
+        doc.text(`Address : ${data.receiver?.fullAddress || ''}`, 40, recY);
         recY += 12;
-        doc.text(`City : ${data.receiver.city}`, 40, recY);
+        doc.text(`City : ${data.receiver?.city || ''}`, 40, recY);
         recY += 12;
-        doc.text(`State : ${data.receiver.state}`, 40, recY);
+        doc.text(`State : ${data.receiver?.state || ''}`, 40, recY);
         recY += 12;
-        doc.text(`Pincode : ${data.receiver.pincode}`, 40, recY);
+        doc.text(`Pincode : ${data.receiver?.pincode || ''}`, 40, recY);
         recY += 12;
-        doc.text(`Contact : ${data.receiver.phone}`, 40, recY);
+        doc.text(`Contact : ${data.receiver?.phone || ''}`, 40, recY);
 
         // Ship To (Sender/Franchise - Right)
         doc.font('Helvetica-Bold').text('Details Of Sender(Ship To)', rightX, partiesY);
         doc.font('Helvetica');
         let sendY = partiesY + 15;
-        doc.text(`Name : ${data.sender.name}`, rightX, sendY);
+        doc.text(`Name : ${data.sender?.name || 'Sarva Solution'}`, rightX, sendY);
         sendY += 12;
-        doc.text(`Address : ${data.sender.address}, ${data.sender.city}`, rightX, sendY);
+        const senderAddr = data.sender?.address || '';
+        const senderCity = data.sender?.city || '';
+        doc.text(`Address : ${senderAddr}, ${senderCity}`, rightX, sendY);
         sendY += 12;
-        doc.text(`State : ${data.sender.state}`, rightX, sendY);
+        doc.text(`State : ${data.sender?.state || ''}`, rightX, sendY);
         sendY += 12;
-        doc.text(`Contact No : ${data.sender.phone}`, rightX, sendY);
+        doc.text(`Contact No : ${data.sender?.phone || ''}`, rightX, sendY);
 
         // --- 4. Table Grid ---
         const tableTop = Math.max(recY, sendY) + 20;
@@ -199,7 +201,7 @@ export const generateInvoicePDFBuffer = async (data) => {
         // --- 6. Signature ---
         const sigY = currentFooterY + 50;
         doc.fontSize(8).text('Authorised Signature', 450, sigY);
-        doc.text(`For ${data.sender.shopName}`, 400, sigY + 15, { align: 'right', width: 150 });
+        doc.text(`For ${data.sender?.shopName || 'Authorised Signatory'}`, 400, sigY + 15, { align: 'right', width: 150 });
 
         doc.end();
     });
