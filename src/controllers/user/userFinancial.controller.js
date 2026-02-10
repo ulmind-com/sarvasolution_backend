@@ -118,6 +118,17 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
 
     if (!finance) throw new ApiError(404, 'Financial record not found');
 
+    // Fetch recent 5 payouts for history
+    const fastTrackHistory = await Payout.find({
+        userId: req.user._id,
+        payoutType: 'fast-track-bonus'
+    }).sort({ createdAt: -1 }).limit(5);
+
+    const starMatchingHistory = await Payout.find({
+        userId: req.user._id,
+        payoutType: 'star-matching-bonus'
+    }).sort({ createdAt: -1 }).limit(5);
+
     return res.status(200).json(
         new ApiResponse(200, {
             fastTrack: {
@@ -127,7 +138,7 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
                 pendingRight: finance.fastTrack.pendingPairRight,
                 carryForwardLeft: finance.fastTrack.carryForwardLeft,
                 carryForwardRight: finance.fastTrack.carryForwardRight,
-                history: finance.fastTrack.closingHistory
+                history: fastTrackHistory
             },
             starMatching: {
                 dailyClosings: finance.starMatchingBonus.dailyClosings,
@@ -137,7 +148,7 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
                 carryForwardLeft: finance.starMatchingBonus.carryForwardStarsLeft,
                 carryForwardRight: finance.starMatchingBonus.carryForwardStarsRight,
                 accumulatedStars: finance.starMatching,
-                history: finance.starMatchingBonus.closingHistory
+                history: starMatchingHistory
             }
         }, 'Bonus status fetched')
     );
