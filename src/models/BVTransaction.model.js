@@ -5,7 +5,7 @@ const bvTransactionSchema = new mongoose.Schema({
     transactionType: {
         type: String,
         required: true,
-        enum: ['joining', 'repurchase', 'downline', 'admin-adjustment']
+        enum: ['joining', 'repurchase', 'downline', 'admin-adjustment', 'first-purchase']
     },
     bvAmount: { type: Number, required: true },
     legAffected: {
