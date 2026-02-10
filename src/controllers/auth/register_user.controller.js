@@ -65,7 +65,7 @@ export const register = asyncHandler(async (req, res) => {
     // 4. Update Sponsor's Direct Sponsors count
     if (sponsor) {
         sponsor.directSponsors.count += 1;
-        sponsor.directSponsors.members.push(newUser.memberId);
+        // sponsor.directSponsors.members.push(newUser.memberId); // REMOVED for Scalability
         // Bonus eligibility check should probably depend on ACTIVE sponsors?
         // Checking rule: "Must have 2 direct sponsors" - typically means active. 
         // We will keep this count as raw count, but eligibility check in calculates matching usually checks active status.

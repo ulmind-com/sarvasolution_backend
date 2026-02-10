@@ -43,7 +43,9 @@ const userFinanceSchema = new mongoose.Schema({
         ]
     },
     rankNumber: { type: Number, default: 14 },
-    starMatching: { type: Number, default: 0 },
+    starMatching: { type: Number, default: 0 }, // Cumulative (Legacy/Total)
+    currentRankMatchCount: { type: Number, default: 0 }, // For "Next Basis" Rank Calculation
+    isStar: { type: Boolean, default: false }, // User becomes Star after 12th pair deduction
     rankBonus: { type: Number, default: 0 }, // Total rank bonus earned
     achievedDate: Date,
     nextRankRequirement: { type: String },
@@ -89,13 +91,7 @@ const userFinanceSchema = new mongoose.Schema({
         // Logic check: "Power side PV carry forward". Root level `leftLegPV` accumulates TOTAL.
         // Carry forward usually tracks UNMATCHED volume. 
         // Let's use specific fields here for clarity and avoid conflict with standard MLM service.
-        closingHistory: [{
-            timestamp: { type: Date, default: Date.now },
-            leftPV: Number,
-            rightPV: Number,
-            amount: Number,
-            deductedForRank: { type: Boolean, default: false }
-        }],
+        // closingHistory: REMOVED for Scalability (Use Payouts for history)
         weeklyEarnings: { type: Number, default: 0 }
     },
     // Star Matching Bonus (Rank Based)
@@ -106,12 +102,7 @@ const userFinanceSchema = new mongoose.Schema({
         pendingStarsRight: { type: Number, default: 0 },
         carryForwardStarsLeft: { type: Number, default: 0 },
         carryForwardStarsRight: { type: Number, default: 0 },
-        closingHistory: [{
-            timestamp: { type: Date, default: Date.now },
-            leftStars: Number,
-            rightStars: Number,
-            amount: Number
-        }],
+        // closingHistory: REMOVED for Scalability
         weeklyEarnings: { type: Number, default: 0 }
     },
 

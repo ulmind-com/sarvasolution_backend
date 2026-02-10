@@ -46,8 +46,53 @@ export const cronJobs = {
             await cronJobs.processAutomaticPayouts();
         }, { timezone: "Asia/Kolkata" });
 
+        // 6. Binary Closing Cron (Every 4 Hours)
+        // Runs at 00:00, 04:00, 08:00, 12:00, 16:00, 20:00
+        cron.schedule('0 */4 * * *', async () => {
+            console.log(chalk.blue('Running 4-Hour Binary Closing...'));
+            await cronJobs.processBinaryClosings();
+        }, { timezone: "Asia/Kolkata" });
 
         console.log(chalk.green('Cron Jobs Scheduled.'));
+    },
+
+    /**
+     * Logic: 4-Hour Binary Closing Sweep
+     */
+    processBinaryClosings: async () => {
+        try {
+            // Find ALL active users? Or those with pending volume?
+            // To ensure 6 closings, we should check everyone who might have volume.
+            // Optimized: Find users with pendingPair > 0 OR pendingStars > 0.
+
+            const users = await UserFinance.find({
+                $or: [
+                    { "fastTrack.pendingPairLeft": { $gt: 0 } },
+                    { "fastTrack.pendingPairRight": { $gt: 0 } },
+                    { "starMatchingBonus.pendingStarsLeft": { $gt: 0 } },
+                    { "starMatchingBonus.pendingStarsRight": { $gt: 0 } }
+                ]
+            });
+
+            console.log(`Processing Binary Closing for ${users.length} users.`);
+
+            const { matchingService } = await import('../services/business/matching.service.js');
+
+            for (const finance of users) {
+                // Trigger Matching Service
+                // It has internal safeguards for Time Gap, but since this IS the cron, 
+                // the Time Gap check in service might block it if 4h exact?
+                // I modified service to use `fourHoursMs - 60000` (buffer), so it should pass.
+
+                await matchingService.processFastTrackMatching(finance.user);
+
+                if (finance.isStar) {
+                    await matchingService.processStarMatching(finance.user);
+                }
+            }
+        } catch (e) {
+            console.error('Binary Closing Error:', e);
+        }
     },
 
     /**

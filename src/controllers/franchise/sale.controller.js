@@ -210,8 +210,11 @@ export const sellToUser = asyncHandler(async (req, res) => {
             user.status = 'active';
             activationMessage = ' - User account activated!';
 
-            // TODO: Trigger upline PV/BV updates
-            // TODO: Trigger commission calculations
+            // TODO: Trigger upline PV/BV updates (Handled by general propagation if implemented)
+            // TODO: Trigger commission calculations (Handled by Cron)
+
+            // Update Sponsor Counts (Inactive -> Active)
+            await import('../../services/business/mlm.service.js').then(m => m.mlmService.handleUserActivation(user));
         }
 
         // Save User Updates (Activation, PV/BV, FirstPurchaseFlag)

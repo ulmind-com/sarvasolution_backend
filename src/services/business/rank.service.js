@@ -7,168 +7,176 @@ export const rankService = {
     /**
      * Check if user qualifies for rank upgrade based on Stars
      */
+    /**
+     * Check if user qualifies for rank upgrade based on Stars (Next Basis)
+     */
     checkRankUpgrade: async (userId) => {
         const finance = await UserFinance.findOne({ user: userId });
         if (!finance) return;
 
-        const ranks = [
-            { name: 'Associate', stars: 0, bonus: 0 },
-            { name: 'Star', stars: 1, bonus: 0 }, // First match (min 10) triggers this
-            { name: 'Bronze', stars: 25, bonus: 500 }, // ~3 matches triggers this
-            { name: 'Silver', stars: 50, bonus: 2500 }, // Adjusted
-            { name: 'Gold', stars: 100, bonus: 10000 },
-            { name: 'Platinum', stars: 200, bonus: 25000 },
-            { name: 'Diamond', stars: 500, bonus: 75000 },
-            { name: 'Ruby', stars: 1000, bonus: 150000 },
-            { name: 'Sapphire', stars: 2000, bonus: 300000 },
-            { name: 'Emerald', stars: 5000, bonus: 800000 },
-            { name: 'Blue Sapphire', stars: 10000, bonus: 2000000 },
-            { name: 'Black Pearl', stars: 25000, bonus: 5000000 },
-            { name: 'Royal', stars: 50000, bonus: 10000000 },
-            { name: 'Legend', stars: 100000, bonus: 25000000 },
-            { name: 'SSVPL Legend', stars: 200000, bonus: 50000000 }
+        // "Next Basis" Logic:
+        // Requirement is based on CURRENT count.
+        // Once achieved, count resets to 0.
+
+        // Mapping Ranks and Required *Matches* (not stars, since 1 match = 1 star pair)
+        const rankRequirements = {
+            'Associate': 0,
+            'Star': 0, // Achieved via Fast Track, not matches
+            'Bronze': 10,
+            'Silver': 30,
+            'Gold': 100,
+            'Platinum': 200,
+            'Diamond': 500,
+            'Ruby': 1000,
+            'Sapphire': 2000,
+            'Emerald': 5000,
+            'Crown': 12000, // Spec says Crown, existing was Blue Sapphire etc. Updating to Spec.
+            // Spec: "Emerald -> Crown -> Elite -> Royal -> Legend -> SSVPL Legend"
+            // Re-aligning with Spec provided in prompt.
+            'Elite': 25000,
+            'Royal': 50000,
+            'Legend': 100000,
+            'SSVPL Legend': 200000
+        };
+
+        const rankBonuses = {
+            'Bronze': 1000,
+            'Silver': 2500,
+            'Gold': 6000,
+            'Platinum': 10000,
+            'Diamond': 20000,
+            'Ruby': 30000,
+            'Sapphire': 60000,
+            'Emerald': 130000,
+            'Crown': 300000,
+            'Elite': 600000,
+            'Royal': 1250000,
+            'Legend': 2550000,
+            'SSVPL Legend': 5050000
+        };
+
+        const rankOrder = [
+            'Associate', 'Star', 'Bronze', 'Silver', 'Gold', 'Platinum',
+            'Diamond', 'Ruby', 'Sapphire', 'Emerald', 'Crown',
+            'Elite', 'Royal', 'Legend', 'SSVPL Legend'
         ];
 
-        let currentStars = finance.starMatching;
-        let newRank = finance.currentRank;
-        let rankBonus = 0;
-        let rankStarsValue = 0; // The defined star value of the new rank
+        let currentRank = finance.currentRank;
+        let currentCount = finance.currentRankMatchCount;
 
-        // Find highest eligible rank
-        for (const r of ranks) {
-            if (currentStars >= r.stars) {
-                // Check if this rank is higher than current
-                const currentRankIndex = ranks.findIndex(rk => rk.name === finance.currentRank);
-                const thisRankIndex = ranks.indexOf(r);
+        // Determine Next Rank
+        const currentIndex = rankOrder.indexOf(currentRank);
+        if (currentIndex === -1 || currentIndex >= rankOrder.length - 1) return; // Max rank
 
-                if (thisRankIndex > currentRankIndex) {
-                    newRank = r.name;
-                    rankBonus = r.bonus;
-                    rankStarsValue = r.stars;
-                }
-            }
-        }
+        const nextRank = rankOrder[currentIndex + 1];
+        const requiredMatches = rankRequirements[nextRank];
 
-        if (newRank !== finance.currentRank) {
-            // Processing Upgrade
+        if (!requiredMatches) return; // Should not happen for valid next rank
+
+        // Check if Qualified
+        if (currentCount >= requiredMatches) {
+            console.log(`User ${finance.memberId} upgrading to ${nextRank}`);
+
+            // 1. Process Upgrade
             const oldRank = finance.currentRank;
-            finance.currentRank = newRank;
-            finance.rankNumber = ranks.findIndex(r => r.name === newRank) + 1;
+            finance.currentRank = nextRank;
+            finance.rankNumber = currentIndex + 2; // 1-based index
             finance.achievedDate = new Date();
-            finance.rankHistory.push({ rank: newRank, date: new Date() });
+            finance.rankHistory.push({ rank: nextRank, date: new Date() });
 
-            // Credit Rank Bonus (One time)
-            if (rankBonus > 0) {
-                const adminCharge = rankBonus * 0.05;
-                const tdsAmount = rankBonus * 0.02;
-                const netAmount = rankBonus - adminCharge - tdsAmount;
+            // 2. Reset Counter ("Next Basis")
+            finance.currentRankMatchCount = 0;
+            // Optional: Carry forward excess? Spec doesn't specify, but usually "Resets" means 0.
+            // "The counter effectively 'resets' or looks for fresh business".
+            // Implementation: Set to 0.
+
+            // 3. Process Bonus
+            const bonus = rankBonuses[nextRank] || 0;
+            if (bonus > 0) {
+                const adminCharge = bonus * 0.05;
+                const tdsAmount = bonus * 0.02;
+                const netAmount = bonus - adminCharge - tdsAmount;
 
                 await Payout.create({
                     userId: userId,
                     memberId: finance.memberId,
                     payoutType: 'rank-bonus',
-                    grossAmount: rankBonus,
+                    grossAmount: bonus,
                     adminCharge,
                     tdsDeducted: tdsAmount,
                     netAmount,
                     status: 'completed',
-                    metadata: { rank: newRank }
+                    metadata: { rank: nextRank }
                 });
+
                 finance.wallet.availableBalance += netAmount;
                 finance.wallet.totalEarnings += netAmount;
+                finance.rankBonus += bonus; // Total rank bonus tracking
             }
 
             await finance.save();
-
-            // Propagate Stars to Upline
-            // What star value to propagate?
-            // "Stars are earned when downline members achieve ranks".
-            // Bronze = 10 stars.
-            // When I become Bronze, do I give 10 stars to my upline?
-            // User Prompt Image: "Bronze: 10 stars".
-            // Assumption: Yes, achievement triggers star flow.
-            // BUT, if I upgrade from Silver (30) to Gold (100).
-            // Do I generate 100 new stars? Or 70 diff?
-            // Conservative: Diff.
-            // Aggressive: Full value (likely not, inflation).
-            // Let's assume implied value of a person at that rank is X.
-            // When they upgrade, they ADD value to the tree.
-            // Propagate the *difference* in star value?
-            // Or maybe "1 Bronze match = 10 stars".
-            // Let's propagate the *Star Value of the Rank*.
-            // Wait, if I am Bronze, I count as 10 stars to my upline matching.
-            // If I become Silver, I count as 30 stars.
-            // So I effectively add +20 stars to the upline's leg.
-
-            const oldRankObj = ranks.find(r => r.name === oldRank);
-            const newRankObj = ranks.find(r => r.name === newRank);
-
-            const starDiff = (newRankObj?.stars || 0) - (oldRankObj?.stars || 0);
-
-            if (starDiff > 0) {
-                await rankService.addStarsToUpline(userId, starDiff);
-            }
         }
     },
 
     /**
-     * Propagate Stars up the tree
+     * Propagate Stars to Upline
+     * Triggered when a user becomes a STAR (12th deduction).
+     * Adds +1 Star to the Immediate Upline's Left or Right STAR buffer.
      */
-    addStarsToUpline: async (sourceUserId, stars) => {
-        let current = await User.findById(sourceUserId);
-        if (!current) return;
+    addStarsToUpline: async (userId) => {
+        // Find user to know their placement
+        const user = await User.findById(userId);
+        if (!user || user.position === 'root') return;
 
-        let parentMemberId = current.parentId;
-        let currentPosition = current.position;
+        // Traverse up to find upline to credit
+        // Logic: Who gets the "One Star"?
+        // "This logic looks for 'Star Users' in the downline".
+        // It should propagate up the tree.
+        // Immediate Sponsor? Or Placement Parent?
+        // Binary matching usually works on Placement Tree (ParentId).
 
-        while (parentMemberId) {
-            const parent = await User.findOne({ memberId: parentMemberId });
-            if (!parent || parent.status !== 'active') break;
+        let current = user;
+        let parentId = user.parentId;
+        let position = user.position;
 
-            const finance = await UserFinance.findOne({ user: parent._id });
-            if (finance) {
-                if (currentPosition === 'left') {
-                    finance.starMatchingBonus.pendingStarsLeft += stars;
+        while (parentId) {
+            const parent = await User.findOne({ memberId: parentId });
+            if (!parent) break;
+
+            // Only crediting "Active" parents? Or All?
+            // Usually valid placement parents.
+
+            const parentFinance = await UserFinance.findOne({ user: parent._id });
+            if (parentFinance) {
+                // Does Parent need to be a Star to receive points?
+                // "Now, they earn this additional bonus".
+                // Implies only Stars earn Star Matching.
+                // BUT, do they *accumulate* points before becoming Star?
+                // Spec: "Once a user ... become a 'STAR'. Now, they earn...".
+                // Usually points accumulate, but matching only happens if qualified.
+                // Let's accumulate for everyone, but `processStarMatching` checks `isStar`.
+
+                if (position === 'left') {
+                    parentFinance.starMatchingBonus.pendingStarsLeft += 1;
                 } else {
-                    finance.starMatchingBonus.pendingStarsRight += stars;
+                    parentFinance.starMatchingBonus.pendingStarsRight += 1;
                 }
+                await parentFinance.save();
 
-                await finance.save();
-
-                // Trigger Matching for Parent
-                await matchingService.processStarMatching(parent._id);
+                // Trigger processing for parent?
+                // Yes, real-time trigger or wait for cron.
+                // Let's trigger verification.
+                // No await to avoid blocking? Or await for safety?
+                // await matchingService.processStarMatching(parent._id);
+                // Better to let Cron handle it or minimal trigger.
+                // Given the loop, recursive triggers might be heavy. 
+                // But let's trigger it.
+                matchingService.processStarMatching(parent._id).catch(e => console.error(e));
             }
 
             // Move Up
-            currentPosition = parent.position;
-            parentMemberId = parent.parentId;
-        }
-    },
-
-    /**
-     * Force Upgrade (e.g. from Fast Track Deduction)
-     */
-    forceUpgrade: async (userId, targetRank) => {
-        const finance = await UserFinance.findOne({ user: userId });
-        if (!finance) return;
-
-        // Only if lower
-        // Logic to check rank index...
-        // Simplified:
-        if (finance.currentRank === 'Associate' && targetRank === 'Bronze') {
-            // Grant Bronze
-            finance.currentRank = 'Bronze';
-            finance.rankNumber = 2; // Assuming 2 is Bronze index + 1
-            finance.achievedDate = new Date();
-            finance.rankHistory.push({ rank: 'Bronze', date: new Date() });
-
-            // Give 10 Stars to self? 
-            finance.starMatching = 10;
-
-            await finance.save();
-
-            // Propagate 10 stars
-            await rankService.addStarsToUpline(userId, 10);
+            position = parent.position;
+            parentId = parent.parentId;
         }
     }
 };

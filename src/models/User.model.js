@@ -161,7 +161,7 @@ const userSchema = new mongoose.Schema({
     // Compliance & Wallet
     directSponsors: {
         count: { type: Number, default: 0 },
-        members: [{ type: String }],
+        // members: [{ type: String }], // REMOVED for Scalability
         eligibleForBonuses: { type: Boolean, default: false }
     },
     compliance: {

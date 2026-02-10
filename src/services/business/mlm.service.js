@@ -240,7 +240,104 @@ export const mlmService = {
         }
     },
 
-    updateSponsorDirectCount: async (newUser) => { },
+    updateSponsorDirectCount: async (newUser) => {
+        const sponsor = await User.findOne({ memberId: newUser.sponsorId });
+        if (!sponsor) return;
+
+        // Determine if new user is on sponsor's Left or Right leg
+        // We need to trace down from sponsor to finding newUser? 
+        // OR rely on `newUser.sponsorLeg` if we stored it?
+        // In User model we added `sponsorLeg`. If available use it.
+        // If not, we have to find out.
+        // Fast way: check `sponsor.leftChild` or `sponsor.rightChild`?
+        // No, direct can be deep down (spillover).
+
+        // Efficient way: We just need to know if `newUser` is in `sponsor.leftChild` hierarchy or `rightChild`.
+        // But `mlmService.findAvailablePosition` placed them.
+        // If `newUser.position` relative to parent is known...
+        // Wait, `sponsorLeg` was added to schema but might not be populated in old logic.
+        // Let's rely on `newUser.sponsorLeg`. If not set, we might need traversal (expensive).
+        // Let's assume we set it or will set it.
+
+        let position = newUser.sponsorLeg;
+
+        if (!position || position === 'none') {
+            // Fallback: Check if newUser is descendant of left or right child of sponsor
+            // This is heavy.
+            // Better: update `register_user` to set `sponsorLeg`.
+            // FOR NOW: We will fetch it if possible.
+            // Actually, in `register_user`, we didn't set `sponsorLeg`. We should.
+            // But let's assume we can fix it.
+
+            // Alternative: traverse UP from newUser until we find Sponsor. 
+            // The child of Sponsor we came from tells us the leg.
+            let current = newUser;
+            let parentId = newUser.parentId;
+            while (parentId) {
+                if (parentId === sponsor.memberId) {
+                    // Found sponsor. `current` is the direct child of sponsor. (Or is it?)
+                    // No, `current.parentId` is sponsor.
+                    // So `current` is the child.
+                    // Check `current.position` relative to sponsor.
+                    // Sponsor's leftChild ID == current._id?
+                    if (sponsor.leftChild && sponsor.leftChild.equals(current._id)) position = 'left';
+                    else if (sponsor.rightChild && sponsor.rightChild.equals(current._id)) position = 'right';
+                    break;
+                }
+                const parent = await User.findOne({ memberId: parentId });
+                if (!parent) break;
+                current = parent;
+                parentId = parent.parentId;
+            }
+        }
+
+        if (position === 'left') {
+            if (newUser.status === 'active') sponsor.leftDirectActive += 1;
+            else sponsor.leftDirectInactive += 1;
+        } else if (position === 'right') {
+            if (newUser.status === 'active') sponsor.rightDirectActive += 1;
+            else sponsor.rightDirectInactive += 1;
+        }
+
+        await sponsor.save();
+    },
+
+    /**
+     * Handle User Activation Event (Updates Sponsor Counts)
+     */
+    handleUserActivation: async (user) => {
+        const sponsor = await User.findOne({ memberId: user.sponsorId });
+        if (!sponsor) return;
+
+        // Determine position (same logic as updateSponsorDirectCount or helper)
+        let position = user.sponsorLeg;
+        if (!position || position === 'none') {
+            // Fallback traversal
+            let current = user;
+            let parentId = user.parentId;
+            while (parentId) {
+                if (parentId === sponsor.memberId) {
+                    if (sponsor.leftChild && sponsor.leftChild.equals(current._id)) position = 'left';
+                    else if (sponsor.rightChild && sponsor.rightChild.equals(current._id)) position = 'right';
+                    break;
+                }
+                const parent = await User.findOne({ memberId: parentId });
+                if (!parent) break;
+                current = parent;
+                parentId = parent.parentId;
+            }
+        }
+
+        if (position === 'left') {
+            sponsor.leftDirectInactive = Math.max(0, sponsor.leftDirectInactive - 1);
+            sponsor.leftDirectActive += 1;
+        } else if (position === 'right') {
+            sponsor.rightDirectInactive = Math.max(0, sponsor.rightDirectInactive - 1);
+            sponsor.rightDirectActive += 1;
+        }
+
+        await sponsor.save();
+    },
 
     /**
      * Build Genealogy Tree with Complete Team Counts (Recursive)

@@ -13,19 +13,29 @@ export const matchingService = {
         const finance = await UserFinance.findOne({ user: userId });
         if (!finance) return;
 
-        // 1. Check Daily Closing Limit
-        if (finance.fastTrack.dailyClosings >= 6) {
-            console.log(`Daily Limit Reached for ${finance.memberId}`);
-            return; // Strict Cap: Volume stays in pending/carryForward for next day
+        // 1. Qualification Check (1 Direct Left, 1 Direct Right)
+        // Need to fetch User to check sponsor counts
+        const user = await import('../../models/User.model.js').then(m => m.default.findById(userId));
+        if (!user || user.leftDirectActive < 1 || user.rightDirectActive < 1) {
+            // Not Qualified yet. Volume stays in pending.
+            return;
         }
 
-        // 2. Check 4-Hour Gap
+        // 2. Check Daily Closing Limit
+        if (finance.fastTrack.dailyClosings >= 6) {
+            return; // Strict Cap
+        }
+
+        // 3. Time Check (4 Hour Intervals)
+        // If this is triggered by Real-Time Event, we allow it ONLY if 4 hours passed since last closing.
+        // If triggered by Cron, it runs every 4 hours anyway.
+        // We stick to the logic: If 4 hours haven't passed, we accumulate in Pending and RETURN.
         const now = new Date();
         if (finance.fastTrack.lastClosingTime) {
             const diffMs = now - new Date(finance.fastTrack.lastClosingTime);
-            const fourHoursMs = 4 * 60 * 60 * 1000;
+            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; // 1 min buffer tolerance
             if (diffMs < fourHoursMs) {
-                return; // Gap not met
+                return; // Wait for next window
             }
         }
 
@@ -40,7 +50,13 @@ export const matchingService = {
         // 4. Matching Logic (1:1 and 2:1/1:2)
         // Ratio: 500 PV match = 500 INR.
 
-        const isFirstMatch = finance.fastTrack.closingHistory.length === 0;
+        // NEW: Check if any previous payout exists for Fast Track
+        const existingPayout = await Payout.findOne({
+            userId: userId,
+            payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction'] }
+        });
+        const isFirstMatch = !existingPayout;
+
         let matchAmount = 0;
         let matchedLeft = 0;
         let matchedRight = 0;
@@ -85,7 +101,13 @@ export const matchingService = {
         let isRankDeduction = false;
 
         // Rule: 3rd, 6th, 9th, 12th deduction
-        const closingCount = finance.fastTrack.closingHistory.length + 1;
+        // Rule: 3rd, 6th, 9th, 12th deduction
+        // NEW: Check Payouts count for history instead of array
+        const previousPayoutsCount = await Payout.countDocuments({
+            userId: userId,
+            payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction'] }
+        });
+        const closingCount = previousPayoutsCount + 1;
         const deductionPoints = [3, 6, 9, 12];
 
         if (deductionPoints.includes(closingCount)) {
@@ -110,13 +132,7 @@ export const matchingService = {
         finance.fastTrack.carryForwardRight = rightAvailable - matchedRight;
 
         // History
-        finance.fastTrack.closingHistory.push({
-            timestamp: now,
-            leftPV: matchedLeft,
-            rightPV: matchedRight,
-            amount: matchAmount,
-            deductedForRank: isRankDeduction
-        });
+        // finance.fastTrack.closingHistory.push({...}); // REMOVED for Scalability
 
         // Wallet Credit (To Weekly Earnings Buffer)
         if (netAmount > 0) {
@@ -218,12 +234,10 @@ export const matchingService = {
         finance.starMatchingBonus.carryForwardStarsLeft = leftStars - matchedLeft;
         finance.starMatchingBonus.carryForwardStarsRight = rightStars - matchedRight;
 
-        finance.starMatchingBonus.closingHistory.push({
-            timestamp: now,
-            leftStars: matchedLeft,
-            rightStars: matchedRight,
-            amount: PAYOUT
-        });
+        finance.starMatchingBonus.carryForwardStarsLeft = leftStars - matchedLeft;
+        finance.starMatchingBonus.carryForwardStarsRight = rightStars - matchedRight;
+
+        // finance.starMatchingBonus.closingHistory.push({...}); // REMOVED for Scalability
 
         // Wallet Credit (Instant)
         finance.wallet.availableBalance += netAmount;
