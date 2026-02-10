@@ -14,10 +14,11 @@ export const matchingService = {
         if (!finance) return;
 
         // 1. Qualification Check (1 Direct Left, 1 Direct Right)
-        // Need to fetch User to check sponsor counts
         const user = await import('../../models/User.model.js').then(m => m.default.findById(userId));
+        console.log(`[Matching] Checking User: ${user.memberId} | Active L/R: ${user.leftDirectActive}/${user.rightDirectActive}`);
+
         if (!user || user.leftDirectActive < 1 || user.rightDirectActive < 1) {
-            // Not Qualified yet. Volume stays in pending.
+            console.log(`[Matching] User ${user.memberId} NOT QUALIFIED yet.`);
             return;
         }
 
@@ -25,7 +26,6 @@ export const matchingService = {
         const now = new Date();
         const lastClosing = finance.fastTrack.lastClosingTime ? new Date(finance.fastTrack.lastClosingTime) : null;
 
-        // Reset Daily Counter if new day
         if (lastClosing) {
             const isSameDay = now.getDate() === lastClosing.getDate() &&
                 now.getMonth() === lastClosing.getMonth() &&
@@ -38,30 +38,27 @@ export const matchingService = {
         }
 
         if (finance.fastTrack.dailyClosings >= 6) {
-            return; // Strict Cap met for today
+            console.log(`[Matching] Daily Limit Reached for ${user.memberId}`);
+            return;
         }
 
-        // 3. Check 4-Hour Gap
+        // 3. Check 4-Hour Gap (DISABLED FOR TESTING)
+        /*
         if (lastClosing) {
             const diffMs = now - lastClosing;
-            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; // 1 min buffer
-
-            // Only enforce 4-hour gap if it's the SAME day. 
-            // If new day, we already reset, so first closing of day is allowed immediately (or should we wait 4h from yesterday's last?)
-            // Usually "New Day" starts fresh. But 4-hour gap is a "Closing Window".
-            // Implementation: We enforce 4-hour gap regardless of day boundary to prevent abuse, 
-            // OR we say 6 closings per "Day" (00:00-23:59).
-            // Let's stick to 4-hour gap enforcement to be safe, unless it's been > 4 hours.
+            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; 
             if (diffMs < fourHoursMs) {
+                console.log(`[Matching] 4-Hour Gap Rule. Skipping.`);
                 return;
             }
         }
+        */
 
         // 3. Calculate Available PV for Matching
-        // Pending Pair = New incoming PV buffer. 
-        // Carry Forward = Unmatched from previous cycles.
         let leftAvailable = finance.fastTrack.pendingPairLeft + finance.fastTrack.carryForwardLeft;
         let rightAvailable = finance.fastTrack.pendingPairRight + finance.fastTrack.carryForwardRight;
+
+        console.log(`[Matching] Available PV - Left: ${leftAvailable}, Right: ${rightAvailable}`);
 
         if (leftAvailable <= 0 || rightAvailable <= 0) return;
 
@@ -105,9 +102,12 @@ export const matchingService = {
                 matchedRight = UNIT_PV;
                 matchAmount = PAYOUT_PER_MATCH;
             } else {
+                console.log(`[Matching] 1:1 Condition Failed (${leftAvailable}:${rightAvailable} < 500:500)`);
                 return; // No 1:1 match
             }
         }
+
+        console.log(`[Matching] MATCH FOUND! Amount: ${matchAmount}, Left: ${matchedLeft}, Right: ${matchedRight}`);
 
         // Deductions & Payout (5% Admin + 2% TDS)
         const ADMIN_CHARGE_PERCENT = 0.05;
