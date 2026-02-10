@@ -77,7 +77,9 @@ export const matchingService = {
         let matchedRight = 0;
 
         // Base Unit
-        const UNIT_PV = 500;
+        // Base Unit (UPDATED FOR TESTING: 1 PV = 1 Unit)
+        // Ideally should be in Configs/DB
+        const UNIT_PV = 1;
         const PAYOUT_PER_MATCH = 500;
 
         if (isFirstMatch) {
