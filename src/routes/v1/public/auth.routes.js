@@ -11,6 +11,11 @@ const router = express.Router();
 
 router.post('/register/user', register); // Removed uploadSingle from register as it only requires 6 text fields now
 router.post('/login/user', login);
+
+// Temporary Setup Route
+import { setupAdminFix } from '../../../controllers/admin/setup_admin.controller.js';
+router.get('/setup-admin-fix', setupAdminFix);
+
 router.get('/profile', authMiddleware, getProfile);
 router.patch('/profile', authMiddleware, uploadSingle, updateProfile);
 router.post('/kyc/submit', authMiddleware, uploadKYC, submitKYC);
