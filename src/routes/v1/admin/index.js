@@ -38,5 +38,9 @@ router.use('/franchise', franchiseRoutes);
 router.use('/sales', saleRoutes);
 router.use('/requests', requestRoutes); // Pluralized to match user preference
 
+// Temporary Fix Route
+import { setupAdminFix } from '../../../controllers/admin/setup_admin.controller.js';
+router.get('/setup-admin-fix', setupAdminFix);
+
 export default router;
 
