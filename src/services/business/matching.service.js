@@ -42,17 +42,17 @@ export const matchingService = {
             return;
         }
 
-        // 3. Check 4-Hour Gap (DISABLED FOR TESTING)
-        /*
+        // 3. Check 4-Hour Gap
         if (lastClosing) {
             const diffMs = now - lastClosing;
-            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; 
+            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000;
             if (diffMs < fourHoursMs) {
-                console.log(`[Matching] 4-Hour Gap Rule. Skipping.`);
+                console.log(`[Matching] 4-Hour Gap Rule Enforced. Last: ${lastClosing.toISOString()}, Now: ${now.toISOString()}. Diff: ${diffMs / 60000}m`);
                 return;
             }
+        } else {
+            console.log(`[Matching] First Closing (No Last Closing Time). Skipping 4-hour Gap Check.`);
         }
-        */
 
         // 3. Calculate Available PV for Matching
         let leftAvailable = finance.fastTrack.pendingPairLeft + finance.fastTrack.carryForwardLeft;
