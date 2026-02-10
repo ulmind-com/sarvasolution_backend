@@ -118,10 +118,18 @@ export const mlmService = {
                     userFinance.leftLegBV += bvAmount;
                     userFinance.leftLegPV += pvAmount;
                     userFinance.fastTrack.pendingPairLeft += pvAmount;
+
+                    // Sync User Model
+                    parent.leftLegBV += bvAmount;
+                    parent.leftLegPV += pvAmount;
                 } else {
                     userFinance.rightLegBV += bvAmount;
                     userFinance.rightLegPV += pvAmount;
                     userFinance.fastTrack.pendingPairRight += pvAmount;
+
+                    // Sync User Model
+                    parent.rightLegBV += bvAmount;
+                    parent.rightLegPV += pvAmount;
                 }
                 userFinance.totalBV += bvAmount;
                 userFinance.totalPV += pvAmount;
@@ -132,7 +140,16 @@ export const mlmService = {
                 userFinance.thisYearBV += bvAmount;
                 userFinance.thisYearPV += pvAmount;
 
+                // Sync User Model Totals
+                parent.totalBV += bvAmount;
+                parent.totalPV += pvAmount;
+                parent.thisMonthPV += pvAmount;
+                parent.thisYearPV += pvAmount;
+                parent.thisMonthBV += bvAmount;
+                parent.thisYearBV += bvAmount;
+
                 await userFinance.save();
+                await parent.save();
 
                 // Trigger Fast Track Bonus (PV Based)
                 if (pvAmount > 0) {

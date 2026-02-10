@@ -50,6 +50,17 @@ export const activateUser = asyncHandler(async (req, res) => {
 
     await userFinance.save();
 
+    // Sync User Model
+    user.personalBV = packageBV;
+    user.personalPV = packagePV;
+    user.totalPV = packagePV;
+    user.totalBV = packageBV;
+    user.thisMonthPV = packagePV;
+    user.thisYearPV = packagePV;
+    user.thisMonthBV = packageBV;
+    user.thisYearBV = packageBV;
+    await user.save();
+
     // 3. Propagate BV & PV Upstream
     await mlmService.propagateBVUpTree(
         user._id,

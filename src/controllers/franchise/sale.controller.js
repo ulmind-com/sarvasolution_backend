@@ -210,11 +210,19 @@ export const sellToUser = asyncHandler(async (req, res) => {
             user.status = 'active';
             activationMessage = ' - User account activated!';
 
-            // TODO: Trigger upline PV/BV updates (Handled by general propagation if implemented)
-            // TODO: Trigger commission calculations (Handled by Cron)
-
             // Update Sponsor Counts (Inactive -> Active)
             await import('../../services/business/mlm.service.js').then(m => m.mlmService.handleUserActivation(user));
+
+            // CRITICAL: Propagate PV up the tree to trigger matching bonuses
+            const mlmModule = await import('../../services/business/mlm.service.js');
+            await mlmModule.mlmService.propagateBVUpTree(
+                user._id,
+                user.position,
+                totalBV || 0, // BV amount (0 for first purchase)
+                'first-purchase',
+                `SALE-${sale[0].saleNo}`,
+                totalPV || 0  // PV amount (actual value for first purchase)
+            );
         }
 
         // Save User Updates (Activation, PV/BV, FirstPurchaseFlag)

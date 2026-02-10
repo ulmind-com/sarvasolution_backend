@@ -21,21 +21,39 @@ export const matchingService = {
             return;
         }
 
-        // 2. Check Daily Closing Limit
-        if (finance.fastTrack.dailyClosings >= 6) {
-            return; // Strict Cap
+        // 2. Check Daily Closing Limit & Time
+        const now = new Date();
+        const lastClosing = finance.fastTrack.lastClosingTime ? new Date(finance.fastTrack.lastClosingTime) : null;
+
+        // Reset Daily Counter if new day
+        if (lastClosing) {
+            const isSameDay = now.getDate() === lastClosing.getDate() &&
+                now.getMonth() === lastClosing.getMonth() &&
+                now.getFullYear() === lastClosing.getFullYear();
+
+            if (!isSameDay) {
+                finance.fastTrack.dailyClosings = 0;
+                await finance.save();
+            }
         }
 
-        // 3. Time Check (4 Hour Intervals)
-        // If this is triggered by Real-Time Event, we allow it ONLY if 4 hours passed since last closing.
-        // If triggered by Cron, it runs every 4 hours anyway.
-        // We stick to the logic: If 4 hours haven't passed, we accumulate in Pending and RETURN.
-        const now = new Date();
-        if (finance.fastTrack.lastClosingTime) {
-            const diffMs = now - new Date(finance.fastTrack.lastClosingTime);
-            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; // 1 min buffer tolerance
+        if (finance.fastTrack.dailyClosings >= 6) {
+            return; // Strict Cap met for today
+        }
+
+        // 3. Check 4-Hour Gap
+        if (lastClosing) {
+            const diffMs = now - lastClosing;
+            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; // 1 min buffer
+
+            // Only enforce 4-hour gap if it's the SAME day. 
+            // If new day, we already reset, so first closing of day is allowed immediately (or should we wait 4h from yesterday's last?)
+            // Usually "New Day" starts fresh. But 4-hour gap is a "Closing Window".
+            // Implementation: We enforce 4-hour gap regardless of day boundary to prevent abuse, 
+            // OR we say 6 closings per "Day" (00:00-23:59).
+            // Let's stick to 4-hour gap enforcement to be safe, unless it's been > 4 hours.
             if (diffMs < fourHoursMs) {
-                return; // Wait for next window
+                return;
             }
         }
 
