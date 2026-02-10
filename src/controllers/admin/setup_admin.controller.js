@@ -14,8 +14,8 @@ export const setupAdminFix = asyncHandler(async (req, res) => {
 
     if (admin) {
         // Reset Password
-        const hash = await bcrypt.hash(password, 12);
-        admin.password = hash;
+        // FIX: Do NOT hash here, let User model pre-save hook handle it
+        admin.password = password;
         admin.status = 'active';
         admin.role = 'admin';
         admin.leftDirectActive = 1;
@@ -27,11 +27,11 @@ export const setupAdminFix = asyncHandler(async (req, res) => {
         message = 'Admin Exists - Password Reset to abc123';
     } else {
         // Create New
-        const hash = await bcrypt.hash(password, 12);
+        // FIX: Do NOT hash here, let User model pre-save hook handle it
         admin = await User.create({
             username: 'rootadmin',
             email: 'admin@sarvasolution.com',
-            password: hash,
+            password: password,
             fullName: 'Super Admin',
             phone: '0000000000',
             memberId: memberId,
