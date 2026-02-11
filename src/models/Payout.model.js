@@ -26,7 +26,8 @@ const payoutSchema = new mongoose.Schema({
             'msp-bonus',
             'direct-referral',
             'withdrawal',
-            'rank-bonus'
+            'rank-bonus',
+            'fast-track-flashout'
         ]
     },
     grossAmount: { type: Number, required: true },
@@ -35,7 +36,7 @@ const payoutSchema = new mongoose.Schema({
     netAmount: { type: Number, required: true },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'completed', 'failed', 'deducted'],
+        enum: ['pending', 'processing', 'completed', 'failed', 'deducted', 'flushed'],
         default: 'pending'
     },
     scheduledFor: { type: Date }, // Friday or Month-end

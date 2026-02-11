@@ -21,41 +21,46 @@ export const matchingService = {
             return;
         }
 
-        // 2. Time Check & Context Setup
+        // 2. Determine Current Time Slot (Fixed 4-Hour Windows)
+        // Slots: 00-04, 04-08, 08-12, 12-16, 16-20, 20-00
         const now = new Date();
-        const lastClosing = finance.fastTrack.lastClosingTime ? new Date(finance.fastTrack.lastClosingTime) : null;
-        let isFlashOut = false;
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
 
-        // Daily Limit Reset Logic
-        if (lastClosing) {
-            const isSameDay = now.getDate() === lastClosing.getDate() &&
-                now.getMonth() === lastClosing.getMonth() &&
-                now.getFullYear() === lastClosing.getFullYear();
+        const currentHour = now.getHours(); // 0-23
+        const slotIndex = Math.floor(currentHour / 4); // 0 to 5
 
-            if (!isSameDay) {
-                finance.fastTrack.dailyClosings = 0;
-                await finance.save();
-            }
+        const slotStartTime = new Date(startOfToday);
+        slotStartTime.setHours(slotIndex * 4);
+
+        const slotEndTime = new Date(startOfToday);
+        slotEndTime.setHours((slotIndex + 1) * 4);
+
+        // 3. Check for Existing Payout in THIS Slot
+        // WE CHECK FOR *ANY* PAYOUT (Bonus, Deduction, OR Flashout) to determine if we act?
+        // User said: "12 4 8 ... is time ke anr kaam hoga ... 1 ko chor ke baki sab flashout"
+        // So: If 0 payouts in slot -> Valid Payout.
+        // If >= 1 payout in slot -> Flash Out (still consumes points).
+
+        const payoutsInSlot = await Payout.find({
+            userId: userId,
+            payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction', 'fast-track-flashout'] },
+            createdAt: { $gte: slotStartTime, $lt: slotEndTime }
+        });
+
+        // Loop through payouts to see if any was a "Real" payout vs Flashout.
+        // Actually simplest rule: If ANY record exists in this slot, the NEW one is Flash Out.
+        // Because even a Flashout consumes the slot? 
+        // User: "ek din pe user 6 bar hi kar payega" (6 slots).
+        // User: "agar e 4->8 ke bich 1:1 3-4 payment aya 1 ko chor ke baki sab flashout ho jayega"
+        // So yes, >0 existing means current is FlashOut.
+
+        let isFlashOut = payoutsInSlot.length > 0;
+        if (isFlashOut) {
+            console.log(`[Matching] Slot ${slotIndex} (${slotStartTime.getHours()}-${slotEndTime.getHours()}) already has ${payoutsInSlot.length} payouts. Triggering FLASHOUT.`);
         }
 
-        if (finance.fastTrack.dailyClosings >= 6) {
-            console.log(`[Matching] Daily Limit Reached for ${user.memberId}`);
-            return;
-        }
-
-        // 4-Hour Gap Logic (Flash-Out vs Wait)
-        if (lastClosing) {
-            const diffMs = now - lastClosing;
-            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; // 1 min buffer
-
-            if (diffMs < fourHoursMs) {
-                // "Flash Out" Condition: If match happens inside 4 hours, it counts but pays 0.
-                isFlashOut = true;
-                console.log(`[Matching] ${user.memberId} inside 4-hour window. Match will FLASH OUT (Pay 0).`);
-            }
-        }
-
-        // 3. Calculate Available PV for Matching
+        // 4. Calculate Available PV
         let leftAvailable = finance.fastTrack.pendingPairLeft + finance.fastTrack.carryForwardLeft;
         let rightAvailable = finance.fastTrack.pendingPairRight + finance.fastTrack.carryForwardRight;
 
@@ -65,16 +70,15 @@ export const matchingService = {
 
         if (leftAvailable <= 0 || rightAvailable <= 0) return;
 
-        // 4. Checking Match History
-        // Check if any previous payout exists (excluding flashouts? No, flashout counts as a match event usually)
-        // User said: "1:2 or 2:1 must have to done otherwise 1:1 main paisa nhi milega"
-        // If first match was Flash Out, does it count as "done"? 
-        // Let's assume YES, because volume was consumed.
-        const existingPayout = await Payout.findOne({
+        // 5. Check Match History (First Match 2:1 Rule)
+        // We count ALL history (including flashouts) for "Is First Match"?
+        // User: "1:2 or 2:1 must have to done otherwise 1:1 main paisa nhi milega"
+        // If first match attempt was Flushed, did they "do" it? Yes, volume consumed.
+        const allHistoryCount = await Payout.countDocuments({
             userId: userId,
             payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction', 'fast-track-flashout'] }
         });
-        const isFirstMatch = !existingPayout;
+        const isFirstMatch = allHistoryCount === 0;
 
         let matchAmount = 0;
         let matchedLeft = 0;
@@ -82,7 +86,7 @@ export const matchingService = {
         let matchTriggered = false;
 
         if (isFirstMatch) {
-            // first match Logic: 2:1 or 1:2
+            // First Match Logic: 2:1 or 1:2
             if (leftAvailable >= 2 * UNIT_PV && rightAvailable >= 1 * UNIT_PV) {
                 matchedLeft = 2 * UNIT_PV;
                 matchedRight = 1 * UNIT_PV;
@@ -106,24 +110,20 @@ export const matchingService = {
 
         if (!matchTriggered) return;
 
-        // --- Apply Flash Out Logic ---
-        if (isFlashOut) {
-            matchAmount = 0; // Flash out
-        }
-
-        // Deductions & Payout (If not flushed)
+        // 6. Deduction & Status Logic
         let adminCharge = 0;
         let tdsAmount = 0;
-        let netAmount = 0;
-        let isRankDeduction = false;
+        let netAmount = 0; // Default 0
         let status = 'completed';
         let payoutType = 'fast-track-bonus';
+        let closingCount = 0;
 
         if (isFlashOut) {
             payoutType = 'fast-track-flashout';
             status = 'flushed';
+            matchAmount = 0; // Force 0
         } else {
-            // Normal Payout Logic
+            // Valid Payout Logic
             const ADMIN_CHARGE_PERCENT = 0.05;
             const TDS_PERCENT = 0.02;
 
@@ -131,38 +131,40 @@ export const matchingService = {
             tdsAmount = matchAmount * TDS_PERCENT;
             netAmount = matchAmount - adminCharge - tdsAmount;
 
-            const previousPayoutsCount = await Payout.countDocuments({
+            // DEDUCTION LOGIC (3, 6, 9, 12)
+            // Count ONLY valid payouts (bonus + deduction), EXCLUDING flashouts.
+            const validPayoutsCount = await Payout.countDocuments({
                 userId: userId,
                 payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction'] }
             });
-            const closingCount = previousPayoutsCount + 1;
+
+            closingCount = validPayoutsCount + 1; // This is the Nth valid payout
             const deductionPoints = [3, 6, 9, 12];
 
             if (deductionPoints.includes(closingCount)) {
-                isRankDeduction = true;
                 netAmount = 0;
                 payoutType = 'fast-track-deduction';
                 status = 'deducted';
-                // Trigger Rank logic if needed
+                // Trigger Rank logic (e.g. Bronze at 12th)
                 if (closingCount === 12) {
                     await rankService.forceUpgrade(userId, 'Bronze');
                 }
             }
         }
 
-        // 6. Update State
+        // 7. Update State
         finance.fastTrack.lastClosingTime = now;
-        finance.fastTrack.dailyClosings += 1;
+        finance.fastTrack.dailyClosings += 1; // Just a stat now
 
-        // Deduct Matched Points (Flush removes them too)
-        finance.fastTrack.pendingPairLeft = 0; // Reset pending
+        // Reset Pending (consumed or moved to CF)
+        finance.fastTrack.pendingPairLeft = 0;
         finance.fastTrack.pendingPairRight = 0;
 
-        // Calculate Remainder for CF
+        // Update CF with remaining
         finance.fastTrack.carryForwardLeft = leftAvailable - matchedLeft;
         finance.fastTrack.carryForwardRight = rightAvailable - matchedRight;
 
-        // Wallet Credit (Only if +ve and Completed)
+        // Wallet Credit (Only if +ve and Status Completed)
         if (netAmount > 0 && status === 'completed') {
             finance.wallet.availableBalance += netAmount;
             finance.fastTrack.weeklyEarnings += netAmount;
@@ -174,14 +176,15 @@ export const matchingService = {
             userId: userId,
             memberId: finance.memberId,
             payoutType,
-            grossAmount: matchAmount,
-            adminCharge,
-            tdsDeducted: tdsAmount,
+            grossAmount: (status === 'flushed') ? 0 : matchAmount, // 0 if flushed
+            adminCharge: (status === 'flushed') ? 0 : adminCharge,
+            tdsDeducted: (status === 'flushed') ? 0 : tdsAmount,
             netAmount,
             status,
             metadata: {
-                isFlashOut: isFlashOut ? true : false,
-                reason: isFlashOut ? '4-Hour Window Flush' : 'Matching Bonus'
+                isFlashOut: isFlashOut,
+                reason: isFlashOut ? `Slot ${slotIndex} Limit Exceeded` : 'Matching Bonus',
+                closingCount: (status !== 'flushed') ? closingCount : undefined
             }
         });
 
