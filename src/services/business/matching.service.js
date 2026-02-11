@@ -154,7 +154,11 @@ export const matchingService = {
 
         // 7. Update State
         finance.fastTrack.lastClosingTime = now;
-        finance.fastTrack.dailyClosings += 1; // Just a stat now
+
+        // Only increment Daily Closings if it was a VALID payout (not flushed)
+        if (status !== 'flushed') {
+            finance.fastTrack.dailyClosings += 1;
+        }
 
         // Reset Pending (consumed or moved to CF)
         finance.fastTrack.pendingPairLeft = 0;
