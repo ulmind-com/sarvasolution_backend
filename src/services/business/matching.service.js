@@ -6,6 +6,30 @@ import { rankService } from './rank.service.js';
 export const matchingService = {
 
     /**
+     * Helper: Check Day Change and Reset Daily Limits
+     * Ensures dailyClosings count resets at midnight (00:00).
+     */
+    checkDayChange: async (finance) => {
+        const now = new Date();
+        const lastClosing = finance.fastTrack.lastClosingTime ? new Date(finance.fastTrack.lastClosingTime) : null;
+
+        if (lastClosing) {
+            const isSameDay =
+                now.getDate() === lastClosing.getDate() &&
+                now.getMonth() === lastClosing.getMonth() &&
+                now.getFullYear() === lastClosing.getFullYear();
+
+            if (!isSameDay) {
+                // New Day! Reset Counters
+                finance.fastTrack.dailyClosings = 0;
+                finance.starMatchingBonus.dailyClosings = 0;
+                // Note: We do NOT reset Carry Forward. Only Daily Limits.
+                console.log(`[Matching] New Day Detected for ${finance.memberId}. Resetting Daily Counters.`);
+            }
+        }
+    },
+
+    /**
      * Process Fast Track Bonus (PV Based)
      * Triggered when new PV is added to a leg.
      */
@@ -13,11 +37,14 @@ export const matchingService = {
         const finance = await UserFinance.findOne({ user: userId });
         if (!finance) return;
 
+        // 0. Check Day Change
+        await matchingService.checkDayChange(finance);
+
         // 1. Qualification Check (1 Direct Left, 1 Direct Right) REQUIRED FOR ALL
         const user = await import('../../models/User.model.js').then(m => m.default.findById(userId));
 
         if (!user || user.leftDirectActive < 1 || user.rightDirectActive < 1) {
-            console.log(`[Matching] User ${user.memberId} NOT QUALIFIED yet (Needs 1L + 1R Active Directs).`);
+            // console.log(`[Matching] User ${user.memberId} NOT QUALIFIED yet (Needs 1L + 1R Active Directs).`);
             return;
         }
 
@@ -38,7 +65,7 @@ export const matchingService = {
 
         // 3. Check for Existing Payout in THIS Slot
         // WE CHECK FOR *ANY* PAYOUT (Bonus, Deduction, OR Flashout) to determine if we act?
-        // User said: "12 4 8 ... is time ke anr kaam hoga ... 1 ko chor ke baki sab flashout"
+        // User: "12 4 8 ... is time ke anr kaam hoga ... 1 ko chor ke baki sab flashout"
         // So: If 0 payouts in slot -> Valid Payout.
         // If >= 1 payout in slot -> Flash Out (still consumes points).
 
@@ -47,13 +74,6 @@ export const matchingService = {
             payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction', 'fast-track-flashout'] },
             createdAt: { $gte: slotStartTime, $lt: slotEndTime }
         });
-
-        // Loop through payouts to see if any was a "Real" payout vs Flashout.
-        // Actually simplest rule: If ANY record exists in this slot, the NEW one is Flash Out.
-        // Because even a Flashout consumes the slot? 
-        // User: "ek din pe user 6 bar hi kar payega" (6 slots).
-        // User: "agar e 4->8 ke bich 1:1 3-4 payment aya 1 ko chor ke baki sab flashout ho jayega"
-        // So yes, >0 existing means current is FlashOut.
 
         let isFlashOut = payoutsInSlot.length > 0;
         if (isFlashOut) {
@@ -73,7 +93,6 @@ export const matchingService = {
         // 5. Check Match History (First Match 2:1 Rule)
         // We count ALL history (including flashouts) for "Is First Match"?
         // User: "1:2 or 2:1 must have to done otherwise 1:1 main paisa nhi milega"
-        // If first match attempt was Flushed, did they "do" it? Yes, volume consumed.
         const allHistoryCount = await Payout.countDocuments({
             userId: userId,
             payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction', 'fast-track-flashout'] }
@@ -145,9 +164,17 @@ export const matchingService = {
                 netAmount = 0;
                 payoutType = 'fast-track-deduction';
                 status = 'deducted';
-                // Trigger Rank logic (e.g. Bronze at 12th)
+
+                // Trigger Star Logic at 12th Payout
                 if (closingCount === 12) {
-                    await rankService.forceUpgrade(userId, 'Bronze');
+                    // Mark User as Star
+                    finance.isStar = true;
+                    await finance.save();
+
+                    console.log(`[Star Matching] User ${finance.memberId} is now a STAR! Propagating...`);
+
+                    // Propagate Star +1 to Uplines
+                    await matchingService.propagateStarUpwards(userId);
                 }
             }
         }
@@ -156,6 +183,7 @@ export const matchingService = {
         finance.fastTrack.lastClosingTime = now;
 
         // Only increment Daily Closings if it was a VALID payout (not flushed)
+        // User rule: "ek din pe user 6 bar hi kar payega" (6 Opportunities)
         if (status !== 'flushed') {
             finance.fastTrack.dailyClosings += 1;
         }
@@ -195,9 +223,16 @@ export const matchingService = {
         await finance.save();
     },
 
+    /**
+     * Process Star Matching Bonus
+     * Triggered when Downline Rank Upgrades occur (Star Propagation).
+     */
     processStarMatching: async (userId) => {
         const finance = await UserFinance.findOne({ user: userId });
         if (!finance) return;
+
+        // 0. Check Day Change
+        await matchingService.checkDayChange(finance);
 
         // 1. Time Slot Logic (Same as Fast Track: 12-4-8)
         const now = new Date();
@@ -213,7 +248,7 @@ export const matchingService = {
         const slotEndTime = new Date(startOfToday);
         slotEndTime.setHours((slotIndex + 1) * 4);
 
-        // 2. Check for Existing Star Payout in THIS Slot
+        // 2. Check for Existing Payout in THIS Slot
         const payoutsInSlot = await Payout.find({
             userId: userId,
             payoutType: { $in: ['star-matching-bonus', 'star-matching-flashout'] },
@@ -274,13 +309,6 @@ export const matchingService = {
         let payoutType = 'star-matching-bonus';
 
         if (isFlashOut) {
-            payoutType = 'star-matching-flashout'; // Should add to Enum if not present, but using string for now (Enum validation might fail if strict)
-            // Added 'fast-track-flashout', likely need 'star-matching-flashout' too in Payout model.
-            // Wait, I only added 'fast-track-flashout'. I need to update Payout model for 'star-matching-flashout'.
-            // For now, let's reuse 'star-matching-bonus' with status 'flushed' if Model restricts.
-            // Model has 'star-matching-bonus'. 
-            // Better to use 'star-matching-flashout' and updated Model. 
-            // I will assume I update Model next step.
             payoutType = 'star-matching-flashout';
             status = 'flushed';
         } else {
@@ -315,7 +343,7 @@ export const matchingService = {
         await Payout.create({
             userId: userId,
             memberId: finance.memberId,
-            payoutType, // Make sure this is in Enum
+            payoutType,
             grossAmount: matchAmount,
             adminCharge,
             tdsDeducted: tdsAmount,
@@ -329,13 +357,9 @@ export const matchingService = {
         });
 
         // 7. Auto Rank Upgrade? 
-        // Only count valid matches for Rank? 
-        // User: "idhar koi 3 6 9 12 ka amount cut nhi hoga ... flashout idhar koi ... cut nhi hoga"
-        // Implicitly means FlashOut doesn't count for the "Good stuff".
-        // So we increment 'starMatching' count ONLY if not flushed.
-
         if (status !== 'flushed') {
-            finance.starMatching += 1; // 1 Pair matched
+            finance.starMatching += 1; // 1 Pair matched (Cumulative)
+            finance.currentRankMatchCount += 1; // For Next Rank (Resets on upgrade)
         }
 
         await finance.save();
@@ -343,6 +367,41 @@ export const matchingService = {
         if (status !== 'flushed') {
             // Trigger Rank Upgrade Check
             await rankService.checkRankUpgrade(userId);
+        }
+    },
+
+    /**
+     * Propagate Star Point Upwards
+     * When a user becomes a Star, their uplines get +1 Pending Star on the respective leg.
+     */
+    propagateStarUpwards: async (newStarUserId) => {
+        const User = await import('../../models/User.model.js').then(m => m.default);
+        const currentUser = await User.findById(newStarUserId);
+        if (!currentUser || !currentUser.parentId) return;
+
+        let currentMember = currentUser;
+
+        // Traverse Up
+        while (currentMember.parentId) {
+            const parent = await User.findOne({ memberId: currentMember.parentId });
+            if (!parent) break;
+
+            const parentFinance = await UserFinance.findOne({ memberId: parent.memberId });
+            if (parentFinance) {
+                if (currentMember.position === 'left') {
+                    parentFinance.starMatchingBonus.pendingStarsLeft += 1;
+                } else if (currentMember.position === 'right') {
+                    parentFinance.starMatchingBonus.pendingStarsRight += 1;
+                }
+
+                await parentFinance.save();
+
+                // Trigger Star Matching for Parent
+                matchingService.processStarMatching(parent._id).catch(e => console.error(e));
+            }
+
+            // Move up
+            currentMember = parent;
         }
     }
 };
