@@ -22,6 +22,7 @@ const payoutSchema = new mongoose.Schema({
             'house-fund',
             'royalty-fund',
             'ssvpl-super-bonus',
+            'star-matching-flashout',
             'lsp-bonus',
             'msp-bonus',
             'direct-referral',

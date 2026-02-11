@@ -195,68 +195,109 @@ export const matchingService = {
         await finance.save();
     },
 
-    /**
-     * Process Star Matching Bonus
-     * Triggered when Downline Rank Upgrades occur.
-     */
     processStarMatching: async (userId) => {
         const finance = await UserFinance.findOne({ user: userId });
         if (!finance) return;
 
-        // 1. Check Daily Limit (Max 6)
-        if (finance.starMatchingBonus.dailyClosings >= 6) return;
-
-        // 2. Check 4-Hour Gap
+        // 1. Time Slot Logic (Same as Fast Track: 12-4-8)
         const now = new Date();
-        if (finance.starMatchingBonus.lastClosingTime) {
-            const diffMs = now - new Date(finance.starMatchingBonus.lastClosingTime);
-            if (diffMs < 4 * 60 * 60 * 1000) return;
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const currentHour = now.getHours();
+        const slotIndex = Math.floor(currentHour / 4);
+
+        const slotStartTime = new Date(startOfToday);
+        slotStartTime.setHours(slotIndex * 4);
+
+        const slotEndTime = new Date(startOfToday);
+        slotEndTime.setHours((slotIndex + 1) * 4);
+
+        // 2. Check for Existing Star Payout in THIS Slot
+        const payoutsInSlot = await Payout.find({
+            userId: userId,
+            payoutType: { $in: ['star-matching-bonus', 'star-matching-flashout'] },
+            createdAt: { $gte: slotStartTime, $lt: slotEndTime }
+        });
+
+        let isFlashOut = payoutsInSlot.length > 0;
+        if (isFlashOut) {
+            console.log(`[Star Matching] Slot ${slotIndex} Limit Exceeded for ${finance.memberId}. Triggering FLASH OUT.`);
         }
 
         // 3. Available Stars
         let leftStars = finance.starMatchingBonus.pendingStarsLeft + finance.starMatchingBonus.carryForwardStarsLeft;
         let rightStars = finance.starMatchingBonus.pendingStarsRight + finance.starMatchingBonus.carryForwardStarsRight;
 
+        if (leftStars <= 0 || rightStars <= 0) return;
+
         // 4. Matching Logic
         let matchedLeft = 0;
         let matchedRight = 0;
-        let matchFound = false;
+        let matchTriggered = false;
 
-        // CHECK HISTORY for First Star Match Rule
-        const existingStarPayout = await Payout.findOne({
+        // CHECK HISTORY for First Star Match Rule (Including Flashouts)
+        const allHistoryCount = await Payout.countDocuments({
             userId: userId,
-            payoutType: 'star-matching-bonus'
+            payoutType: { $in: ['star-matching-bonus', 'star-matching-flashout'] }
         });
-        const isFirstStarMatch = !existingStarPayout;
+        const isFirstStarMatch = allHistoryCount === 0;
 
         if (isFirstStarMatch) {
-            // First Match: 2:1 or 1:2 REQUIRED
+            // First Match: 2:1 or 1:2
             if (leftStars >= 2 && rightStars >= 1) {
-                matchedLeft = 2; matchedRight = 1; matchFound = true;
+                matchedLeft = 2; matchedRight = 1; matchTriggered = true;
             } else if (leftStars >= 1 && rightStars >= 2) {
-                matchedLeft = 1; matchedRight = 2; matchFound = true;
+                matchedLeft = 1; matchedRight = 2; matchTriggered = true;
             }
         } else {
-            // Subsequent Matches: 1:1 Standard
+            // Subsequent Matches: 1:1
             if (leftStars >= 1 && rightStars >= 1) {
-                matchedLeft = 1; matchedRight = 1; matchFound = true;
+                matchedLeft = 1; matchedRight = 1; matchTriggered = true;
             }
         }
 
-        if (!matchFound) return;
+        if (!matchTriggered) return;
 
-        // 5. Payout
+        // 5. Payout & Deduction
         const PAYOUT = 1500;
-        const ADMIN_CHARGE_PERCENT = 0.05;
-        const TDS_PERCENT = 0.02;
+        let matchAmount = PAYOUT;
 
-        let adminCharge = PAYOUT * ADMIN_CHARGE_PERCENT;
-        let tdsAmount = PAYOUT * TDS_PERCENT;
-        let netAmount = PAYOUT - adminCharge - tdsAmount;
+        if (isFlashOut) {
+            matchAmount = 0; // Flash Out
+        }
 
-        // 6. Update
+        let adminCharge = 0;
+        let tdsAmount = 0;
+        let netAmount = 0;
+        let status = 'completed';
+        let payoutType = 'star-matching-bonus';
+
+        if (isFlashOut) {
+            payoutType = 'star-matching-flashout'; // Should add to Enum if not present, but using string for now (Enum validation might fail if strict)
+            // Added 'fast-track-flashout', likely need 'star-matching-flashout' too in Payout model.
+            // Wait, I only added 'fast-track-flashout'. I need to update Payout model for 'star-matching-flashout'.
+            // For now, let's reuse 'star-matching-bonus' with status 'flushed' if Model restricts.
+            // Model has 'star-matching-bonus'. 
+            // Better to use 'star-matching-flashout' and updated Model. 
+            // I will assume I update Model next step.
+            payoutType = 'star-matching-flashout';
+            status = 'flushed';
+        } else {
+            const ADMIN_CHARGE_PERCENT = 0.05;
+            const TDS_PERCENT = 0.02;
+
+            adminCharge = matchAmount * ADMIN_CHARGE_PERCENT;
+            tdsAmount = matchAmount * TDS_PERCENT;
+            netAmount = matchAmount - adminCharge - tdsAmount;
+        }
+
+        // 6. Update State
         finance.starMatchingBonus.lastClosingTime = now;
-        finance.starMatchingBonus.dailyClosings += 1;
+
+        if (status !== 'flushed') {
+            finance.starMatchingBonus.dailyClosings += 1;
+        }
 
         finance.starMatchingBonus.pendingStarsLeft = 0;
         finance.starMatchingBonus.pendingStarsRight = 0;
@@ -264,35 +305,44 @@ export const matchingService = {
         finance.starMatchingBonus.carryForwardStarsLeft = leftStars - matchedLeft;
         finance.starMatchingBonus.carryForwardStarsRight = rightStars - matchedRight;
 
-        finance.starMatchingBonus.carryForwardStarsLeft = leftStars - matchedLeft;
-        finance.starMatchingBonus.carryForwardStarsRight = rightStars - matchedRight;
-
-        // finance.starMatchingBonus.closingHistory.push({...}); // REMOVED for Scalability
-
-        // Wallet Credit (Instant)
-        finance.wallet.availableBalance += netAmount;
-        finance.starMatchingBonus.weeklyEarnings += netAmount;
-        finance.wallet.totalEarnings += netAmount;
+        // Wallet Credit
+        if (netAmount > 0 && status === 'completed') {
+            finance.wallet.availableBalance += netAmount;
+            finance.starMatchingBonus.weeklyEarnings += netAmount;
+            finance.wallet.totalEarnings += netAmount;
+        }
 
         await Payout.create({
             userId: userId,
             memberId: finance.memberId,
-            payoutType: 'star-matching-bonus',
-            grossAmount: PAYOUT,
+            payoutType, // Make sure this is in Enum
+            grossAmount: matchAmount,
             adminCharge,
             tdsDeducted: tdsAmount,
             netAmount,
-            status: 'completed'
+            status,
+            metadata: {
+                isFlashOut: isFlashOut,
+                matchedLeft,
+                matchedRight
+            }
         });
 
-        await finance.save();
-
         // 7. Auto Rank Upgrade? 
-        // Add min stars matched
-        finance.starMatching += Math.min(matchedLeft, matchedRight);
+        // Only count valid matches for Rank? 
+        // User: "idhar koi 3 6 9 12 ka amount cut nhi hoga ... flashout idhar koi ... cut nhi hoga"
+        // Implicitly means FlashOut doesn't count for the "Good stuff".
+        // So we increment 'starMatching' count ONLY if not flushed.
+
+        if (status !== 'flushed') {
+            finance.starMatching += 1; // 1 Pair matched
+        }
+
         await finance.save();
 
-        // Trigger Rank Upgrade Check
-        await rankService.checkRankUpgrade(userId);
+        if (status !== 'flushed') {
+            // Trigger Rank Upgrade Check
+            await rankService.checkRankUpgrade(userId);
+        }
     }
 };
