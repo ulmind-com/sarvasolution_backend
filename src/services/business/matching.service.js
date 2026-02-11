@@ -13,19 +13,20 @@ export const matchingService = {
         const finance = await UserFinance.findOne({ user: userId });
         if (!finance) return;
 
-        // 1. Qualification Check (1 Direct Left, 1 Direct Right)
+        // 1. Qualification Check (1 Direct Left, 1 Direct Right) REQUIRED FOR ALL
         const user = await import('../../models/User.model.js').then(m => m.default.findById(userId));
-        console.log(`[Matching] Checking User: ${user.memberId} | Active L/R: ${user.leftDirectActive}/${user.rightDirectActive}`);
 
         if (!user || user.leftDirectActive < 1 || user.rightDirectActive < 1) {
-            console.log(`[Matching] User ${user.memberId} NOT QUALIFIED yet.`);
+            console.log(`[Matching] User ${user.memberId} NOT QUALIFIED yet (Needs 1L + 1R Active Directs).`);
             return;
         }
 
-        // 2. Check Daily Closing Limit & Time
+        // 2. Time Check & Context Setup
         const now = new Date();
         const lastClosing = finance.fastTrack.lastClosingTime ? new Date(finance.fastTrack.lastClosingTime) : null;
+        let isFlashOut = false;
 
+        // Daily Limit Reset Logic
         if (lastClosing) {
             const isSameDay = now.getDate() === lastClosing.getDate() &&
                 now.getMonth() === lastClosing.getMonth() &&
@@ -42,158 +43,147 @@ export const matchingService = {
             return;
         }
 
-        // 3. Check 4-Hour Gap
+        // 4-Hour Gap Logic (Flash-Out vs Wait)
         if (lastClosing) {
             const diffMs = now - lastClosing;
-            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000;
+            const fourHoursMs = 4 * 60 * 60 * 1000 - 60000; // 1 min buffer
+
             if (diffMs < fourHoursMs) {
-                console.log(`[Matching] 4-Hour Gap Rule Enforced. Last: ${lastClosing.toISOString()}, Now: ${now.toISOString()}. Diff: ${diffMs / 60000}m`);
-                return;
+                // "Flash Out" Condition: If match happens inside 4 hours, it counts but pays 0.
+                isFlashOut = true;
+                console.log(`[Matching] ${user.memberId} inside 4-hour window. Match will FLASH OUT (Pay 0).`);
             }
-        } else {
-            console.log(`[Matching] First Closing (No Last Closing Time). Skipping 4-hour Gap Check.`);
         }
 
         // 3. Calculate Available PV for Matching
         let leftAvailable = finance.fastTrack.pendingPairLeft + finance.fastTrack.carryForwardLeft;
         let rightAvailable = finance.fastTrack.pendingPairRight + finance.fastTrack.carryForwardRight;
 
-        console.log(`[Matching] Available PV - Left: ${leftAvailable}, Right: ${rightAvailable}`);
+        // Base Unit (Testing: 1 PV = 1 Unit)
+        const UNIT_PV = 1;
+        const PAYOUT_PER_MATCH = 500;
 
         if (leftAvailable <= 0 || rightAvailable <= 0) return;
 
-        // 4. Matching Logic (1:1 and 2:1/1:2)
-        // Ratio: 500 PV match = 500 INR.
-
-        // NEW: Check if any previous payout exists for Fast Track
+        // 4. Checking Match History
+        // Check if any previous payout exists (excluding flashouts? No, flashout counts as a match event usually)
+        // User said: "1:2 or 2:1 must have to done otherwise 1:1 main paisa nhi milega"
+        // If first match was Flash Out, does it count as "done"? 
+        // Let's assume YES, because volume was consumed.
         const existingPayout = await Payout.findOne({
             userId: userId,
-            payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction'] }
+            payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction', 'fast-track-flashout'] }
         });
         const isFirstMatch = !existingPayout;
 
         let matchAmount = 0;
         let matchedLeft = 0;
         let matchedRight = 0;
-
-        // Base Unit
-        // Base Unit (UPDATED FOR TESTING: 1 PV = 1 Unit)
-        // Ideally should be in Configs/DB
-        const UNIT_PV = 1;
-        const PAYOUT_PER_MATCH = 500;
+        let matchTriggered = false;
 
         if (isFirstMatch) {
-            // Check 2:1 or 1:2
-            // 2:1 -> 1000 Left, 500 Right
-            // 1:2 -> 500 Left, 1000 Right
+            // first match Logic: 2:1 or 1:2
             if (leftAvailable >= 2 * UNIT_PV && rightAvailable >= 1 * UNIT_PV) {
                 matchedLeft = 2 * UNIT_PV;
                 matchedRight = 1 * UNIT_PV;
                 matchAmount = PAYOUT_PER_MATCH;
+                matchTriggered = true;
             } else if (leftAvailable >= 1 * UNIT_PV && rightAvailable >= 2 * UNIT_PV) {
                 matchedLeft = 1 * UNIT_PV;
                 matchedRight = 2 * UNIT_PV;
                 matchAmount = PAYOUT_PER_MATCH;
-            } else {
-                return; // First condition unmet
+                matchTriggered = true;
             }
         } else {
-            // Standard 1:1 Matching
+            // Subsequent Matches: 1:1
             if (leftAvailable >= UNIT_PV && rightAvailable >= UNIT_PV) {
                 matchedLeft = UNIT_PV;
                 matchedRight = UNIT_PV;
                 matchAmount = PAYOUT_PER_MATCH;
-            } else {
-                console.log(`[Matching] 1:1 Condition Failed (${leftAvailable}:${rightAvailable} < 500:500)`);
-                return; // No 1:1 match
+                matchTriggered = true;
             }
         }
 
-        console.log(`[Matching] MATCH FOUND! Amount: ${matchAmount}, Left: ${matchedLeft}, Right: ${matchedRight}`);
+        if (!matchTriggered) return;
 
-        // Deductions & Payout (5% Admin + 2% TDS)
-        const ADMIN_CHARGE_PERCENT = 0.05;
-        const TDS_PERCENT = 0.02;
+        // --- Apply Flash Out Logic ---
+        if (isFlashOut) {
+            matchAmount = 0; // Flash out
+        }
 
-        let adminCharge = matchAmount * ADMIN_CHARGE_PERCENT;
-        let tdsAmount = matchAmount * TDS_PERCENT;
-        let netAmount = matchAmount - adminCharge - tdsAmount;
+        // Deductions & Payout (If not flushed)
+        let adminCharge = 0;
+        let tdsAmount = 0;
+        let netAmount = 0;
         let isRankDeduction = false;
+        let status = 'completed';
+        let payoutType = 'fast-track-bonus';
 
-        // Rule: 3rd, 6th, 9th, 12th deduction
-        // Rule: 3rd, 6th, 9th, 12th deduction
-        // NEW: Check Payouts count for history instead of array
-        const previousPayoutsCount = await Payout.countDocuments({
-            userId: userId,
-            payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction'] }
-        });
-        const closingCount = previousPayoutsCount + 1;
-        const deductionPoints = [3, 6, 9, 12];
+        if (isFlashOut) {
+            payoutType = 'fast-track-flashout';
+            status = 'flushed';
+        } else {
+            // Normal Payout Logic
+            const ADMIN_CHARGE_PERCENT = 0.05;
+            const TDS_PERCENT = 0.02;
 
-        if (deductionPoints.includes(closingCount)) {
-            isRankDeduction = true;
-            // Full deduction for rank upgrade
-            netAmount = 0;
+            adminCharge = matchAmount * ADMIN_CHARGE_PERCENT;
+            tdsAmount = matchAmount * TDS_PERCENT;
+            netAmount = matchAmount - adminCharge - tdsAmount;
+
+            const previousPayoutsCount = await Payout.countDocuments({
+                userId: userId,
+                payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction'] }
+            });
+            const closingCount = previousPayoutsCount + 1;
+            const deductionPoints = [3, 6, 9, 12];
+
+            if (deductionPoints.includes(closingCount)) {
+                isRankDeduction = true;
+                netAmount = 0;
+                payoutType = 'fast-track-deduction';
+                status = 'deducted';
+                // Trigger Rank logic if needed
+                if (closingCount === 12) {
+                    await rankService.forceUpgrade(userId, 'Bronze');
+                }
+            }
         }
 
         // 6. Update State
-        // Reduce from Pending first, then Carry Forward
-
-        // Update DB
         finance.fastTrack.lastClosingTime = now;
         finance.fastTrack.dailyClosings += 1;
 
-        // Reset Pending (consumed or moved to CF)
-        finance.fastTrack.pendingPairLeft = 0;
+        // Deduct Matched Points (Flush removes them too)
+        finance.fastTrack.pendingPairLeft = 0; // Reset pending
         finance.fastTrack.pendingPairRight = 0;
 
-        // Update CF with remaining
+        // Calculate Remainder for CF
         finance.fastTrack.carryForwardLeft = leftAvailable - matchedLeft;
         finance.fastTrack.carryForwardRight = rightAvailable - matchedRight;
 
-        // History
-        // finance.fastTrack.closingHistory.push({...}); // REMOVED for Scalability
-
-        // Wallet Credit (To Weekly Earnings Buffer)
-        if (netAmount > 0) {
-            finance.wallet.availableBalance += netAmount; // Instant Credit
-            finance.fastTrack.weeklyEarnings += netAmount; // Buffer/Stats
-            finance.wallet.totalEarnings += netAmount; // Lifetime Stats increase immediately
-
-            await Payout.create({
-                userId: userId,
-                memberId: finance.memberId,
-                payoutType: 'fast-track-bonus',
-                grossAmount: matchAmount,
-                adminCharge,
-                tdsDeducted: tdsAmount,
-                netAmount,
-                status: 'completed',
-                metadata: {
-                    closingCount
-                }
-            });
-        } else if (isRankDeduction) {
-            // Record the deduction
-            await Payout.create({
-                userId: userId,
-                memberId: finance.memberId,
-                payoutType: 'fast-track-deduction',
-                grossAmount: matchAmount,
-                adminCharge: 0,
-                netAmount: 0,
-                status: 'deducted',
-                metadata: {
-                    closingCount,
-                    reason: 'Rank Upgrade Contribution'
-                }
-            });
-
-            // If 12th match (4th deduction), trigger Bronze Upgrade?
-            if (closingCount === 12) {
-                await rankService.forceUpgrade(userId, 'Bronze');
-            }
+        // Wallet Credit (Only if +ve and Completed)
+        if (netAmount > 0 && status === 'completed') {
+            finance.wallet.availableBalance += netAmount;
+            finance.fastTrack.weeklyEarnings += netAmount;
+            finance.wallet.totalEarnings += netAmount;
         }
+
+        // Log Transaction
+        await Payout.create({
+            userId: userId,
+            memberId: finance.memberId,
+            payoutType,
+            grossAmount: matchAmount,
+            adminCharge,
+            tdsDeducted: tdsAmount,
+            netAmount,
+            status,
+            metadata: {
+                isFlashOut: isFlashOut ? true : false,
+                reason: isFlashOut ? '4-Hour Window Flush' : 'Matching Bonus'
+            }
+        });
 
         await finance.save();
     },
