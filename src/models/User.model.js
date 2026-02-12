@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 import { addressSchema } from './schemas/address.schema.js';
 import { kycSchema } from './schemas/kyc.schema.js';
@@ -208,7 +209,6 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 // Generate Reset Password Token
-import crypto from 'crypto';
 userSchema.methods.getResetPasswordToken = function () {
     // Generate token
     const resetToken = crypto.randomBytes(20).toString('hex');
