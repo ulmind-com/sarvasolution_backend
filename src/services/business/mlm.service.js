@@ -470,6 +470,67 @@ export const mlmService = {
         return await buildTreeNode(rootUser, 1);
     },
 
-    getCompleteLegTeam: async (userId, leg, page = 1, limit = 10) => { return { members: [], pagination: {} }; },
+    /**
+     * Get Complete Team for a Leg (Left/Right) with Pagination
+     * Uses BFS to collect all descendant IDs, then fetches sorted/paginated data.
+     */
+    getCompleteLegTeam: async (userId, leg, page = 1, limit = 10) => {
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+
+        let startNodeId = null;
+        if (leg === 'left') startNodeId = user.leftChild;
+        else if (leg === 'right') startNodeId = user.rightChild;
+
+        if (!startNodeId) {
+            return {
+                members: [],
+                pagination: {
+                    total: 0,
+                    page,
+                    limit,
+                    pages: 0
+                }
+            };
+        }
+
+        // 1. Traverse and Collect ALL Member IDs in the Subtree (BFS)
+        // Using iterative approach to prevent stack overflow
+        const descendantIds = [];
+        const queue = [startNodeId];
+
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            descendantIds.push(currentId);
+
+            const currentNode = await User.findById(currentId).select('leftChild rightChild');
+            if (currentNode) {
+                if (currentNode.leftChild) queue.push(currentNode.leftChild);
+                if (currentNode.rightChild) queue.push(currentNode.rightChild);
+            }
+        }
+
+        // 2. Fetch Details with Pagination
+        const total = descendantIds.length;
+        const skip = (page - 1) * limit;
+        const totalPages = Math.ceil(total / limit);
+
+        const members = await User.find({ _id: { $in: descendantIds } })
+            .select('fullName memberId currentRank totalBV joiningDate status position sponsorId')
+            .sort({ createdAt: -1 }) // Show newest first
+            .skip(skip)
+            .limit(limit);
+
+        return {
+            members,
+            pagination: {
+                total,
+                page,
+                limit,
+                pages: totalPages
+            }
+        };
+    },
+
     updateTeamCountsUpTree: async (userId) => { }
 };
