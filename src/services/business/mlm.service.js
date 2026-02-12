@@ -391,7 +391,7 @@ export const mlmService = {
                 return count;
             };
 
-            // Recursive function to count total stars in a subtree
+            // Recursive function to count total Star MEMBERS in a subtree
             const countTotalStars = async (childId) => {
                 if (!childId) return 0;
 
@@ -399,7 +399,8 @@ export const mlmService = {
                 if (!child) return 0;
 
                 const childFinance = await UserFinance.findOne({ user: child._id });
-                let stars = childFinance?.starMatching || 0;
+                // Count 1 if this user IS a Star, else 0
+                let stars = (childFinance?.isStar) ? 1 : 0;
 
                 // Recursively sum stars from left and right subtrees
                 if (child.leftChild) {
@@ -427,6 +428,7 @@ export const mlmService = {
                 memberId: user.memberId,
                 fullName: user.fullName,
                 rank: user.currentRank,
+                isStar: finance?.isStar || false, // Added isStar status
                 position: user.position || 'root',
                 profileImage: user.profilePicture?.url || null,
                 sponsorId: user.sponsorId,
