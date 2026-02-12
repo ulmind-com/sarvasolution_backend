@@ -52,7 +52,20 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 export const getPayouts = asyncHandler(async (req, res) => {
     const { status } = req.query;
     const filter = {};
-    if (status) filter.status = status;
+
+    if (status === 'all') {
+        // Show all valid statuses, excluding any "unusual" or test data
+        filter.status = { $in: ['pending', 'completed', 'rejected', 'processing'] };
+    } else if (status) {
+        // Specific filter (pending, completed, rejected)
+        filter.status = status;
+    }
+    // If no status provided, it returns everything (current behavior), 
+    // but we might want to default to the 'all' behavior to be safe?
+    // Let's keep it safe:
+    if (!status) {
+        filter.status = { $in: ['pending', 'completed', 'rejected', 'processing'] };
+    }
 
     const payouts = await Payout.find(filter)
         .sort({ createdAt: -1 })
