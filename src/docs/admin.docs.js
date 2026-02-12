@@ -271,6 +271,63 @@
  *       200:
  *         description: Payout processed successfully
  * 
+ * /api/v1/admin/payouts/{payoutId}/accept:
+ *   patch:
+ *     summary: Mark Payout as Paid (Approve)
+ *     description: |
+ *       **Admin Access Only** - Approve a pending payout request. Status changes to 'completed'.
+ *       Pending withdrawal amount is cleared from user wallet.
+ *     tags: [Admin - Payouts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: payoutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Payout accepted successfully
+ *       400:
+ *         description: Invalid status transition
+ *       404:
+ *         description: Payout not found
+ * 
+ * /api/v1/admin/payouts/{payoutId}/reject:
+ *   patch:
+ *     summary: Reject Payout Request
+ *     description: |
+ *       **Admin Access Only** - Reject a pending payout request. Status changes to 'rejected'.
+ *       Funds are **REFUNDED** to the User's Available Balance.
+ *     tags: [Admin - Payouts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: payoutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rejectionReason]
+ *             properties:
+ *               rejectionReason:
+ *                 type: string
+ *                 example: "Start of year audit hold"
+ *     responses:
+ *       200:
+ *         description: Payout rejected and refunded
+ *       400:
+ *         description: Reason required (-10 chars)
+ *       404:
+ *         description: Payout not found
+ * 
  * /api/v1/admin/bv/allocate-manual:
  *   post:
  *     summary: Manually adjust/allocate BV to a user (Admin only)
