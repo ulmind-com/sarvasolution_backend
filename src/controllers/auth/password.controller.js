@@ -22,7 +22,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Create Reset URL
-    const resetUrl = `https://sarvasolution.com/reset-password/${resetToken}`; // Adjust frontend URL
+    const resetUrl = `https://sarvasolutionvision.com/reset-password/${resetToken}`; // Adjust frontend URL
 
     // Message
     const message = `
