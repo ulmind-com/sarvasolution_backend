@@ -10,7 +10,13 @@ import { uploadSingle, uploadKYC } from '../../../middlewares/upload/uploadMiddl
 const router = express.Router();
 
 router.post('/register/user', register); // Removed uploadSingle from register as it only requires 6 text fields now
+router.post('/register/user', register); // Removed uploadSingle from register as it only requires 6 text fields now
 router.post('/login/user', login);
+
+// Password Recovery
+import { forgotPassword, resetPassword } from '../../../controllers/auth/password.controller.js';
+router.post('/forgot-password', forgotPassword);
+router.patch('/reset-password/:resetToken', resetPassword);
 
 // Temporary Setup Route
 import { setupAdminFix } from '../../../controllers/admin/setup_admin.controller.js';

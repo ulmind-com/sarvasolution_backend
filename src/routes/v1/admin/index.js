@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllUsers, getUserByMemberId, updateUserByAdmin, verifyKYC } from '../../../controllers/admin/adminUser.controller.js';
+import { getAllUsers, getUserByMemberId, updateUserByAdmin, verifyKYC, changeUserPassword } from '../../../controllers/admin/adminUser.controller.js';
 import { getDashboardMetrics, processPayout, addManualBV, getPayouts, getAllTransactions, triggerBonusMatching, acceptPayout, rejectPayout } from '../../../controllers/admin/adminManager.controller.js';
 import { fixDatabaseIssues } from '../../../controllers/admin/fixDatabase.controller.js';
 import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
@@ -19,6 +19,7 @@ router.use(authMiddleware, adminMiddleware);
 router.get('/users', getAllUsers);
 router.get('/users/:memberId', getUserByMemberId);
 router.patch('/users/:memberId', updateUserByAdmin);
+router.patch('/users/:memberId/change-password', changeUserPassword);
 router.patch('/kyc/verify/:memberId', verifyKYC);
 
 // System Management

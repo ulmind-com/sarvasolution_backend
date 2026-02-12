@@ -185,3 +185,26 @@ export const verifyKYC = asyncHandler(async (req, res) => {
         new ApiResponse(200, user.kyc, `KYC has been ${status} successfully.`)
     );
 });
+/**
+ * Force Change User Password (Admin)
+ */
+export const changeUserPassword = asyncHandler(async (req, res) => {
+    const { memberId } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+        throw new ApiError(400, 'Password must be at least 6 characters');
+    }
+
+    const user = await User.findOne({ memberId });
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
+    user.password = newPassword; // Will be hashed by pre-save hook
+    await user.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, `Password changed successfully for ${user.fullName}`)
+    );
+});

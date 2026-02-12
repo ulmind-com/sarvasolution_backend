@@ -257,4 +257,50 @@
  *         $ref: '#/components/responses/BadRequest'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
+ * 
+ * /api/v1/forgot-password:
+ *   post:
+ *     summary: Request Password Reset
+ *     tags: [Public - Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Reset email sent
+ *       404:
+ *         description: Email not found
+ * 
+ * /api/v1/reset-password/{resetToken}:
+ *   patch:
+ *     summary: Reset Password using Token
+ *     tags: [Public - Auth]
+ *     parameters:
+ *       - in: path
+ *         name: resetToken
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *       400:
+ *         description: Invalid or expired token
  */

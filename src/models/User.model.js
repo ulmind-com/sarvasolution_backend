@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema({
     leftChild: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     rightChild: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
+    // Password Reset
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
+
     // BV Tracking System (SSVPL Standard)
     personalBV: { type: Number, default: 0 },
     leftLegBV: { type: Number, default: 0 },
@@ -201,6 +205,24 @@ userSchema.pre('save', async function () {
 // Compare Password
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Generate Reset Password Token
+import crypto from 'crypto';
+userSchema.methods.getResetPasswordToken = function () {
+    // Generate token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+
+    // Hash and set to resetPasswordToken
+    this.resetPasswordToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    // Set expire (10 minutes)
+    this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+    return resetToken;
 };
 
 // Generate unique member ID

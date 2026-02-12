@@ -181,6 +181,39 @@
  *         $ref: '#/components/responses/BadRequest'
  *       404:
  *         $ref: '#/components/responses/NotFound'
+ * /api/v1/admin/users/{memberId}/change-password:
+ *   patch:
+ *     summary: Force Change User Password (Admin only)
+ *     description: |
+ *       **Admin Access Only** - Directly updates a user's password without needing old password.
+ *     tags: [Admin - Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [newPassword]
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *                 example: "newSecurePas$123"
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         description: Password too short
+ *       404:
+ *         description: User not found
+ * 
  * /api/v1/admin/kyc/verify/{memberId}:
  *   patch:
  *     summary: Verify or Reject user KYC (Admin only)
