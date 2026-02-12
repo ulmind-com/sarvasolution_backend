@@ -1,5 +1,5 @@
 import User from '../../models/User.model.js';
-import { mailer } from '../../services/integration/mail.service.js';
+import { sendEmail } from '../../services/integration/mail.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
@@ -33,7 +33,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     `;
 
     try {
-        await mailer.sendEmail({
+        await sendEmail({
             to: user.email,
             subject: 'Password Reset Token',
             html: `
