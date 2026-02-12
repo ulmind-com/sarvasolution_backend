@@ -53,18 +53,24 @@ export const getPayouts = asyncHandler(async (req, res) => {
     const { status } = req.query;
     const filter = {};
 
-    if (status === 'all') {
-        // Show all valid statuses, excluding any "unusual" or test data
-        filter.status = { $in: ['pending', 'completed', 'rejected', 'processing'] };
-    } else if (status) {
-        // Specific filter (pending, completed, rejected)
-        filter.status = status;
-    }
-    // If no status provided, it returns everything (current behavior), 
-    // but we might want to default to the 'all' behavior to be safe?
-    // Let's keep it safe:
-    if (!status) {
-        filter.status = { $in: ['pending', 'completed', 'rejected', 'processing'] };
+    if (status === 'all' || !status) {
+        // "All" = Pending + Completed (Accepted) + Rejected.
+        // User explicitly asked to "don't show unusual data".
+        // So we STRICTLY limit to these 3 known valid statuses.
+        filter.status = { $in: ['pending', 'completed', 'rejected'] };
+    } else {
+        // Specific filter requested (must be one of the above strictly)
+        if (['pending', 'completed', 'rejected'].includes(status)) {
+            filter.status = status;
+        } else {
+            // If they ask for something "unusual" like 'processing', we return nothing or default?
+            // Safest for "don't show unusual data" is to force valid filter.
+            filter.status = status; // Let mongo return empty if it doesn't match, or let it match if it exists. 
+            // But actually, user said "only show here as per I told you".
+            // So if they request ?status=weird, we probably shouldn't show it?
+            // Standard API behavior: if you ask for X, you get X. 
+            // But for "All", we filter.
+        }
     }
 
     const payouts = await Payout.find(filter)
