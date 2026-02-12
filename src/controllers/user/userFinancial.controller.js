@@ -112,9 +112,12 @@ export const getTree = asyncHandler(async (req, res) => {
 /**
  * Get Bonus System Status (Fast Track & Star Matching)
  */
+/**
+ * Get Bonus System Status (Fast Track & Star Matching)
+ */
 export const getBonusStatus = asyncHandler(async (req, res) => {
     const finance = await UserFinance.findOne({ user: req.user._id })
-        .select('fastTrack starMatchingBonus starMatching');
+        .select('fastTrack starMatchingBonus starMatching wallet');
 
     if (!finance) throw new ApiError(404, 'Financial record not found');
 
@@ -138,6 +141,8 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
                 pendingRight: finance.fastTrack.pendingPairRight,
                 carryForwardLeft: finance.fastTrack.carryForwardLeft,
                 carryForwardRight: finance.fastTrack.carryForwardRight,
+                totalEarned: finance.fastTrack.totalEarned,
+                overallTotalEarnings: finance.wallet.totalEarnings, // Added as requested
                 history: fastTrackHistory
             },
             starMatching: {
@@ -148,8 +153,67 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
                 carryForwardLeft: finance.starMatchingBonus.carryForwardStarsLeft,
                 carryForwardRight: finance.starMatchingBonus.carryForwardStarsRight,
                 accumulatedStars: finance.starMatching,
+                totalEarned: finance.starMatchingBonus.totalEarned,
                 history: starMatchingHistory
             }
         }, 'Bonus status fetched')
+    );
+});
+
+/**
+ * Get Separated Fast Track Status
+ */
+export const getFastTrackBonusStatus = asyncHandler(async (req, res) => {
+    const finance = await UserFinance.findOne({ user: req.user._id })
+        .select('fastTrack wallet');
+
+    if (!finance) throw new ApiError(404, 'Financial record not found');
+
+    const history = await Payout.find({
+        userId: req.user._id,
+        payoutType: { $in: ['fast-track-bonus', 'fast-track-deduction', 'fast-track-flashout'] }
+    }).sort({ createdAt: -1 }).limit(10);
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            dailyClosings: finance.fastTrack.dailyClosings,
+            lastClosingTime: finance.fastTrack.lastClosingTime,
+            pendingLeft: finance.fastTrack.pendingPairLeft,
+            pendingRight: finance.fastTrack.pendingPairRight,
+            carryForwardLeft: finance.fastTrack.carryForwardLeft,
+            carryForwardRight: finance.fastTrack.carryForwardRight,
+            totalEarned: finance.fastTrack.totalEarned,
+            overallTotalEarnings: finance.wallet.totalEarnings, // Added as requested
+            history
+        }, 'Fast Track Bonus status fetched')
+    );
+});
+
+/**
+ * Get Separated Star Matching Status
+ */
+export const getStarMatchingBonusStatus = asyncHandler(async (req, res) => {
+    const finance = await UserFinance.findOne({ user: req.user._id })
+        .select('starMatchingBonus starMatching');
+
+    if (!finance) throw new ApiError(404, 'Financial record not found');
+
+    const history = await Payout.find({
+        userId: req.user._id,
+        payoutType: { $in: ['star-matching-bonus', 'star-matching-flashout'] }
+    }).sort({ createdAt: -1 }).limit(10);
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            dailyClosings: finance.starMatchingBonus.dailyClosings,
+            lastClosingTime: finance.starMatchingBonus.lastClosingTime,
+            pendingLeft: finance.starMatchingBonus.pendingStarsLeft,
+            pendingRight: finance.starMatchingBonus.pendingStarsRight,
+            carryForwardLeft: finance.starMatchingBonus.carryForwardStarsLeft,
+            carryForwardRight: finance.starMatchingBonus.carryForwardStarsRight,
+            accumulatedStars: finance.starMatching,
+            totalEarned: finance.starMatchingBonus.totalEarned,
+            history
+        }, 'Star Matching Bonus status fetched')
     );
 });
