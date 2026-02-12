@@ -107,6 +107,8 @@
  *                         pendingRight: { type: number }
  *                         carryForwardLeft: { type: number }
  *                         carryForwardRight: { type: number }
+ *                         totalEarned: { type: number }
+ *                         overallTotalEarnings: { type: number, description: "Total Wallet Earnings" }
  *                         nextClosingWindow: { type: string, format: date-time }
  *                         history:
  *                           type: array
@@ -118,9 +120,80 @@
  *                         pendingStarsLeft: { type: number }
  *                         pendingStarsRight: { type: number }
  *                         accumulatedStars: { type: number, description: "Total lifetime stars matched" }
+ *                         totalEarned: { type: number }
  *                         history:
  *                           type: array
  *                           items: { $ref: '#/components/schemas/Payout' }
+ * */
+
+/**
+ * @swagger
+ * /api/v1/user/fast-track-status:
+ *   get:
+ *     summary: Get Fast Track Bonus Status (User only)
+ *     description: |
+ *       **User Access Only** - Detailed stats for Fast Track Bonus (Daily Closings, Carry Forward, etc).
+ *     tags: [User - Financial]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Fast Track status retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     dailyClosings: { type: number, description: "Max 6 per day" }
+ *                     lastClosingTime: { type: string, format: date-time }
+ *                     pendingLeft: { type: number }
+ *                     pendingRight: { type: number }
+ *                     carryForwardLeft: { type: number }
+ *                     carryForwardRight: { type: number }
+ *                     totalEarned: { type: number }
+ *                     overallTotalEarnings: { type: number, description: "Total Wallet Earnings" }
+ *                     history:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/Payout' }
+ * */
+
+/**
+ * @swagger
+ * /api/v1/user/star-matching-status:
+ *   get:
+ *     summary: Get Star Matching Bonus Status (User only)
+ *     description: |
+ *       **User Access Only** - Detailed stats for Star Matching Bonus (Daily Closings, Accumulated Stars, etc).
+ *     tags: [User - Financial]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Star Matching status retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     dailyClosings: { type: number }
+ *                     lastClosingTime: { type: string, format: date-time }
+ *                     pendingLeft: { type: number, description: "Pending Stars Left" }
+ *                     pendingRight: { type: number, description: "Pending Stars Right" }
+ *                     carryForwardLeft: { type: number }
+ *                     carryForwardRight: { type: number }
+ *                     accumulatedStars: { type: number, description: "Total lifetime stars matched" }
+ *                     totalEarned: { type: number }
+ *                     history:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/Payout' }
  * */
 
 /**
