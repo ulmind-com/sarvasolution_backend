@@ -15,8 +15,8 @@ export const generateWelcomePDF = async (user) => {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
         // --- Design Constants ---
-        const primaryColor = '#2563EB'; // Royal Blue
-        const secondaryColor = '#1E293B'; // Slate 800
+        const primaryColor = '#2e7d32'; // Green
+        const secondaryColor = '#1b5e20'; // Dark Green
         const lightGray = '#F1F5F9'; // Slate 100
 
         // 1. Header Background
@@ -26,7 +26,7 @@ export const generateWelcomePDF = async (user) => {
         doc.fillColor('#FFFFFF')
             .fontSize(28)
             .font('Helvetica-Bold')
-            .text('SARVA SOLUTION', 50, 45, { align: 'left' });
+            .text('SARVA SOLUTION VISION', 50, 45, { align: 'left' });
 
         doc.fontSize(12)
             .font('Helvetica')
@@ -53,7 +53,7 @@ export const generateWelcomePDF = async (user) => {
         doc.fontSize(14).font('Helvetica').text(`Dear ${user.fullName},`, { align: 'left' });
         doc.moveDown();
         doc.fontSize(12).text(
-            'We are honored to officially welcome you to Sarva Solution. This document certifies your membership and confirms your commitment to building a successful digital future with us.',
+            'We are honored to officially welcome you to Sarva Solution Vision. This document certifies your membership and confirms your commitment to building a successful digital future with us.',
             { align: 'justify', lineGap: 5 }
         );
         doc.moveDown(2);
@@ -85,12 +85,12 @@ export const generateWelcomePDF = async (user) => {
         const footerY = 700;
         doc.fontSize(10).fillColor('#94A3B8').text('Authorized & Verified', 50, footerY, { align: 'center' });
         doc.moveDown();
-        doc.fillColor(secondaryColor).fontSize(14).font('Helvetica-Bold').text('Samiran Samanta', { align: 'center' });
-        doc.fontSize(10).font('Helvetica').text('Founder & CEO', { align: 'center' });
+        doc.fillColor(secondaryColor).fontSize(14).font('Helvetica-Bold').text('Sarva Solution Team', { align: 'center' });
+        doc.fontSize(10).font('Helvetica').text('Official Management', { align: 'center' });
 
         doc.rect(0, 780, 595.28, 62).fill(secondaryColor);
         doc.fillColor('#FFFFFF').fontSize(10)
-            .text('www.samiransamanta.in  |  info@samiransamanta.in', 50, 795, { align: 'center' });
+            .text('www.sarvasolutionvision.com  |  support@sarvasolutionvision.com', 50, 795, { align: 'center' });
 
         doc.end();
     });
