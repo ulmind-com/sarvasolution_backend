@@ -213,13 +213,13 @@ export const cronJobs = {
         };
 
         try {
-            // Find users with balance > 100 (optimization)
+            // Find users with balance > 450 (optimization)
             const finances = await UserFinance.find({
-                "wallet.availableBalance": { $gt: 100 }
+                "wallet.availableBalance": { $gt: 450 }
             }).populate('user');
 
             stats.totalScanned = finances.length;
-            console.log(chalk.cyan(`Found ${finances.length} users with balance > 100`));
+            console.log(chalk.cyan(`Found ${finances.length} users with balance > 450`));
 
             for (const finance of finances) {
                 if (!finance.user) continue;
