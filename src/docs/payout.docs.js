@@ -101,8 +101,13 @@
  *         required: false
  *         schema:
  *           type: string
- *           enum: [pending, completed, rejected, processing, failed]
- *         description: Filter payouts by status
+ *           enum: [pending, completed, rejected, all]
+ *         description: |
+ *           Filter payouts by status:
+ *           - `pending`: Show only Pending requests.
+ *           - `completed` (or `accepted`): Show only Completed/Accepted requests.
+ *           - `rejected`: Show only Rejected requests.
+ *           - `all`: Show History (Completed + Rejected), excluding Pending.
  *         example: pending
  *     responses:
  *       200:

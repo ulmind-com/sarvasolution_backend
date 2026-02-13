@@ -267,8 +267,13 @@
  *         required: false
  *         schema:
  *           type: string
- *           enum: [pending, completed, rejected, processing]
- *         description: Filter by status
+ *           enum: [pending, completed, rejected, all]
+ *         description: |
+ *           Filter by status:
+ *           - `pending`: Show only pending requests.
+ *           - `completed`: Show only accepted/completed requests.
+ *           - `rejected`: Show only rejected requests.
+ *           - `all`: Show transaction history (Completed + Rejected), excluding pending.
  *     responses:
  *       200:
  *         description: List of payouts retrieved
