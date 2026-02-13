@@ -53,22 +53,30 @@ export const getPayouts = asyncHandler(async (req, res) => {
     const { status } = req.query;
     const filter = {};
 
-    if (status === 'all' || !status) {
-        // "All" = Completed (Accepted) + Rejected.
-        // User requested to show only history here, excluding Pending.
+    if (status === 'pending') {
+        filter.status = 'pending';
+    } else if (status === 'accepted' || status === 'completed') {
+        filter.status = 'completed';
+    } else if (status === 'rejected') {
+        filter.status = 'rejected';
+    } else if (status === 'all') {
+        // User Requirement: "all" means Accepted + Rejected (History), EXCLUDING Pending
         filter.status = { $in: ['completed', 'rejected'] };
     } else {
-        // Specific filter requested (must be one of the above strictly)
-        if (['pending', 'completed', 'rejected'].includes(status)) {
-            filter.status = status;
-        } else {
-            // If they ask for something "unusual" like 'processing', we return nothing or default?
-            // Safest for "don't show unusual data" is to force valid filter.
-            filter.status = status; // Let mongo return empty if it doesn't match, or let it match if it exists. 
-            // But actually, user said "only show here as per I told you".
-            // So if they request ?status=weird, we probably shouldn't show it?
-            // Standard API behavior: if you ask for X, you get X. 
-            // But for "All", we filter.
+        // Default behavior if no status provided or invalid:
+        // If we want to show EVERYTHING including pending, we remove the filter.
+        // But user said "baki sob unsual gulo thakbena only ei gulai thakbe".
+        // Let's default to showing nothing or a safe default if param is missing?
+        // Usually, default is 'pending' for admin dashboards, or 'all'.
+        // Let's default to the "History" view (All) if not specified, 
+        // OR return everything. 
+        // Given user strictness, let's return EVERYTHING if no status is specified (standard), 
+        // but if they specified something invalid, maybe empty.
+        // Let's stick to the requested map. If status is undefined, maybe return all?
+        // Let's assume the frontend sends one of these 4. 
+        // If status is undefined, I will return { $in: ['pending', 'completed', 'rejected'] } to be safe and hide 'processing' etc.
+        if (!status) {
+            filter.status = { $in: ['pending', 'completed', 'rejected'] };
         }
     }
 
