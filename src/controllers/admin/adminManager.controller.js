@@ -54,10 +54,9 @@ export const getPayouts = asyncHandler(async (req, res) => {
     const filter = {};
 
     if (status === 'all' || !status) {
-        // "All" = Pending + Completed (Accepted) + Rejected.
-        // User explicitly asked to "don't show unusual data".
-        // So we STRICTLY limit to these 3 known valid statuses.
-        filter.status = { $in: ['pending', 'completed', 'rejected'] };
+        // "All" = Completed (Accepted) + Rejected.
+        // User requested to show only history here, excluding Pending.
+        filter.status = { $in: ['completed', 'rejected'] };
     } else {
         // Specific filter requested (must be one of the above strictly)
         if (['pending', 'completed', 'rejected'].includes(status)) {
