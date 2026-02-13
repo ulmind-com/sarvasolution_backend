@@ -19,7 +19,7 @@ const containerStyle = `
 `;
 
 const headerStyle = `
-    background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: #ffffff;
     padding: 30px;
     text-align: center;
@@ -42,7 +42,7 @@ const footerStyle = `
 const buttonStyle = `
     display: inline-block;
     padding: 12px 30px;
-    background-color: #1a237e;
+    background-color: #2e7d32;
     color: #ffffff;
     text-decoration: none;
     border-radius: 6px;
@@ -54,31 +54,38 @@ const layout = (title, content) => `
     <div style="${baseStyle}">
         <div style="${containerStyle}">
             <div style="${headerStyle}">
-                <h1 style="margin: 0; font-size: 24px;">SarvaSolution</h1>
+                <h1 style="margin: 0; font-size: 24px;">Sarva Solution Vision</h1>
                 <p style="margin: 5px 0 0; opacity: 0.8;">${title}</p>
             </div>
             <div style="${bodyStyle}">
                 ${content}
             </div>
             <div style="${footerStyle}">
-                <p>Digital Financial Services Reinvented</p>
-                <p style="margin: 5px 0 0;">&copy; 2026 SarvaSolution. All rights reserved.</p>
+                <p>from sarvasolutionvision team.</p>
+                <p style="margin: 5px 0 0;">&copy; 2026 Sarva Solution Vision. All rights reserved.</p>
             </div>
         </div>
     </div>
 `;
 
 export const templates = {
-    welcome: (name, memberId) => layout('Welcome to the Family!', `
-        <h2 style="color: #1a237e; margin-top: 0;">Hello, ${name}!</h2>
-        <p>Congratulations on joining SarvaSolution! We are thrilled to have you as part of our growing network of digital entrepreneurs.</p>
-        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 25px 0;">
-            <p style="margin: 0; font-weight: bold; color: #0d47a1;">Your Member ID:</p>
-            <p style="margin: 5px 0 0; font-size: 20px; color: #1a237e;">${memberId}</p>
+    welcome: (name, memberId, password) => layout('Welcome to the Family!', `
+        <p style="font-size: 18px; margin-top: 0;">Dear ${name},</p>
+        
+        <p>welcome to Sarva Solution Vision</p>
+        
+        <p>we are happy to have you join our growing community of digital entrepreneurs.</p>
+        
+        <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #c8e6c9;">
+            <p style="margin: 0; color: #1b5e20; font-weight: bold;">Here is your id no and password for login purpose:</p>
+            <div style="margin-top: 15px;">
+                <p style="margin: 5px 0; font-size: 16px; color: #2e7d32;"><strong>ID No:</strong> ${memberId}</p>
+                <p style="margin: 5px 0; font-size: 16px; color: #2e7d32;"><strong>Password:</strong> ${password || 'As set during registration'}</p>
+            </div>
         </div>
-        <p>Attached to this email, you will find your official Welcome Letter and Membership Certificate. Please keep these for your records.</p>
-        <p>Log in now to complete your profile and start your journey:</p>
-        <a href="https://sarvasolution.com/login" style="${buttonStyle}">Access Your Dashboard</a>
+        
+        <p>Log in now to start your journey:</p>
+        <a href="https://www.sarvasolutionvision.com/login" style="${buttonStyle}">Login Now</a>
     `),
 
     profileUpdate: (name, updatedFields) => layout('Profile Updated', `
@@ -114,7 +121,7 @@ export const templates = {
             ${isVerified
                 ? '<p>Your account is now fully active. You can now enjoy all premium features and payouts.</p>'
                 : '<p>Please log in to your dashboard, review the rejection reason, and resubmit correct documents.</p>'}
-            <a href="https://sarvasolution.com/dashboard" style="${buttonStyle}">Go to Dashboard</a>
+            <a href="https://www.sarvasolutionvision.com/dashboard" style="${buttonStyle}">Go to Dashboard</a>
         `);
     },
 

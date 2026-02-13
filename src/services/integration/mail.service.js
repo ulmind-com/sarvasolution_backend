@@ -136,13 +136,13 @@ export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
  * Export specialized mailers
  */
 export const mailer = {
-    sendWelcome: async (user) => {
+    sendWelcome: async (user, password) => {
         try {
             const pdfBuffer = await generateWelcomePDF(user);
             return await sendEmail({
                 to: user.email,
-                subject: 'Welcome to SarvaSolution - Your Membership Details',
-                html: templates.welcome(user.fullName, user.memberId),
+                subject: 'Welcome to Sarva Solution Vision - Your Membership Details',
+                html: templates.welcome(user.fullName, user.memberId, password),
                 attachments: [
                     {
                         filename: `Membership_Certificate_${user.memberId}.pdf`,

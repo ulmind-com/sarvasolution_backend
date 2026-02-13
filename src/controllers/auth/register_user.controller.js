@@ -97,7 +97,7 @@ export const register = asyncHandler(async (req, res) => {
     await mlmService.updateTeamCountsUpTree(newUser._id);
 
     // 6. Notifications & JWT
-    mailer.sendWelcome(newUser).catch(e => console.error('Welcome Email Error:', e));
+    mailer.sendWelcome(newUser, password).catch(e => console.error('Welcome Email Error:', e));
 
     const token = jwt.sign(
         { userId: newUser._id, memberId: newUser.memberId, role: newUser.role },
