@@ -81,7 +81,8 @@
  *   get:
  *     summary: Get all payout requests (Admin only)
  *     description: |
- *       **Admin Access Only** - Retrieve all payout requests with optional status filtering.
+ *       **Admin Access Only** - Retrieve all **Withdrawal Requests** (`payoutType: withdrawal`) with optional status filtering.
+ *       **Note:** This endpoint filters out internal system bonuses (e.g., fast-track-bonus) and only shows user-initiated or system-generated withdrawal requests meant for bank transfer.
  *       
  *       Payout requests are **automatically generated every Friday at 12:00 AM IST** for all eligible users.
  *       This endpoint allows administrators to view and manage these automatic withdrawal requests.

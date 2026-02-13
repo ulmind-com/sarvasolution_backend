@@ -257,7 +257,8 @@
  * 
  * /api/v1/admin/payouts:
  *   get:
- *     summary: Get all payout requests (Admin only)
+ *     summary: Get all payout requests (Withdrawals Only)
+ *     description: Returns only `payoutType: withdrawal`. Excludes internal bonus credits.
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []

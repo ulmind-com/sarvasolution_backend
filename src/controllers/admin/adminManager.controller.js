@@ -56,6 +56,9 @@ export const getPayouts = asyncHandler(async (req, res) => {
     // Normalize status to lowercase if present
     const queryStatus = status ? status.toLowerCase() : null;
 
+    // BASE FILTER: ALWAYS filter by 'withdrawal' type as this is the Payout Request API
+    filter.payoutType = 'withdrawal';
+
     if (queryStatus === 'pending') {
         filter.status = 'pending';
     } else if (queryStatus === 'accepted' || queryStatus === 'completed') {
@@ -74,7 +77,7 @@ export const getPayouts = asyncHandler(async (req, res) => {
             // Status provided but invalid/unknown -> likely returns 0 results
             filter.status = status;
         } else {
-            // No status provided -> Show everything relevant
+            // No status provided -> Show everything relevant (Pending + Completed + Rejected withdrawals)
             filter.status = { $in: ['pending', 'completed', 'rejected'] };
         }
     }
