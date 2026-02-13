@@ -226,17 +226,15 @@ export const cronJobs = {
 
                 const user = finance.user;
                 const balance = finance.wallet.availableBalance;
-                const minWithdrawal = user.compliance?.minimumWithdrawal || 450;
 
-                // KYC Verification Check
-                if (!user.kyc || user.kyc.status !== 'verified') {
-                    stats.skippedNoKYC++;
-                    console.log(chalk.yellow(`Skipping ${user.memberId}: KYC not verified (status: ${user.kyc?.status || 'none'})`));
-                    continue;
-                }
+                // User Request: Minimum > 450
+                const minWithdrawal = 450;
+
+                // User Request: No KYC Check for Automatic Payout
+                // if (!user.kyc || user.kyc.status !== 'verified') { ... } // REMOVED
 
                 // Balance Check
-                if (balance < minWithdrawal) {
+                if (balance <= minWithdrawal) {
                     stats.skippedLowBalance++;
                     continue;
                 }
@@ -245,11 +243,10 @@ export const cronJobs = {
                 try {
                     const requestedAmount = balance; // Withdraw EVERYTHING available
 
-                    // Deductions
-                    const adminChargePercent = user.compliance?.adminChargePercent || 5;
-                    const adminCharge = requestedAmount * (adminChargePercent / 100);
-                    const tdsAmount = requestedAmount * 0.02; // 2% TDS
-                    const netAmount = requestedAmount - adminCharge - tdsAmount;
+                    // User Request: No Admin Charge, No TDS
+                    const adminCharge = 0;
+                    const tdsAmount = 0;
+                    const netAmount = requestedAmount;
 
                     const payout = await import('../models/Payout.model.js').then(m => m.default.create({
                         userId: user._id,
