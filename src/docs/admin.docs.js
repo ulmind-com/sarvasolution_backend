@@ -269,11 +269,12 @@
  *           type: string
  *           enum: [pending, completed, rejected, all]
  *         description: |
- *           Filter by status:
+ *           Filter by status (Case-Insensitive):
  *           - `pending`: Show only pending requests.
  *           - `completed`: Show only accepted/completed requests.
  *           - `rejected`: Show only rejected requests.
  *           - `all`: Show transaction history (Completed + Rejected), excluding pending.
+ *           - *Invalid/Empty*: Returns strict match (likely 0 results) or All if omitted.
  *     responses:
  *       200:
  *         description: List of payouts retrieved

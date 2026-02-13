@@ -103,11 +103,12 @@
  *           type: string
  *           enum: [pending, completed, rejected, all]
  *         description: |
- *           Filter payouts by status:
+ *           Filter payouts by status (Case-Insensitive):
  *           - `pending`: Show only Pending requests.
  *           - `completed` (or `accepted`): Show only Completed/Accepted requests.
  *           - `rejected`: Show only Rejected requests.
  *           - `all`: Show History (Completed + Rejected), excluding Pending.
+ *           - *Invalid Status*: Returns empty list.
  *         example: pending
  *     responses:
  *       200:
