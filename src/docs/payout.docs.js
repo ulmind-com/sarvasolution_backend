@@ -88,8 +88,9 @@
  *       This endpoint allows administrators to view and manage these automatic withdrawal requests.
  *       
  *       **Eligibility Criteria (Automatic):**
- *       - Available Balance >= ₹450
- *       - KYC Status: Verified
+ *       - Available Balance > ₹450
+ *       - **No KYC Required**
+ *       - **No Admin/TDS Deductions** (100% of Available Balance is requested)
  *       
  *       Results include user details and bank information for processing.
  *     tags:

@@ -1,6 +1,11 @@
-FROM node:20-alpine
+FROM node:20-slim
 
-RUN apk add --no-cache wget
+# Install wget and tzdata using apt-get (Debian)
+RUN apt-get update && \
+    apt-get install -y wget tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV TZ=Asia/Kolkata
 
 WORKDIR /app
 

@@ -231,7 +231,7 @@ export const cronJobs = {
                 const minWithdrawal = 450;
 
                 // User Request: No KYC Check for Automatic Payout
-                // if (!user.kyc || user.kyc.status !== 'verified') { ... } // REMOVED
+                // if (!user.kyc || user.kyc.status !== 'verified') { ... } // SKIPPED
 
                 // Balance Check
                 if (balance <= minWithdrawal) {
@@ -246,7 +246,7 @@ export const cronJobs = {
                     // User Request: No Admin Charge, No TDS
                     const adminCharge = 0;
                     const tdsAmount = 0;
-                    const netAmount = requestedAmount;
+                    const netAmount = requestedAmount; // Full amount
 
                     const payout = await import('../models/Payout.model.js').then(m => m.default.create({
                         userId: user._id,
