@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import moment from 'moment-timezone';
 
 import { addressSchema } from './schemas/address.schema.js';
 import { kycSchema } from './schemas/kyc.schema.js';
@@ -191,10 +192,19 @@ const userSchema = new mongoose.Schema({
         publicId: { type: String, default: null }
     },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'inactive' }
+    status: { type: String, enum: ['active', 'inactive', 'suspended'], default: 'inactive' },
+
+    // Timezone Fields
+    createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') },
+    updatedAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
 
 }, {
     timestamps: true
+});
+
+userSchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 // Password Hashing

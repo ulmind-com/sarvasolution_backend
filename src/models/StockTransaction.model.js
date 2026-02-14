@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 
 const stockTransactionSchema = new mongoose.Schema({
     product: {
@@ -56,7 +57,11 @@ const stockTransactionSchema = new mongoose.Schema({
     metadata: {
         type: Map,
         of: String
-    }
+    },
+
+    // Timezone Fields (Only CreatedAt as UpdatedAt is disabled)
+    createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
+
 }, {
     timestamps: { createdAt: true, updatedAt: false }
 });

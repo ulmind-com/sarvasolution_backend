@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 import { addressSchema } from './schemas/address.schema.js';
 
 const franchiseSchema = new mongoose.Schema({
@@ -90,10 +91,19 @@ const franchiseSchema = new mongoose.Schema({
 
     // Metadata
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    deletedAt: { type: Date, default: null }
+    deletedAt: { type: Date, default: null },
+
+    // Timezone Fields
+    createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') },
+    updatedAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
 
 }, {
     timestamps: true
+});
+
+franchiseSchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 // Soft Delete Middleware

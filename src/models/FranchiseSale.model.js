@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 
 const franchiseSaleItemSchema = new mongoose.Schema({
     product: {
@@ -147,10 +148,19 @@ const franchiseSaleSchema = new mongoose.Schema({
     deletedAt: {
         type: Date,
         default: null
-    }
+    },
+
+    // Timezone Fields
+    createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') },
+    updatedAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
 
 }, {
     timestamps: true
+});
+
+franchiseSaleSchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 // Indexes

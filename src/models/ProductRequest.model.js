@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 
 const productRequestItemSchema = new mongoose.Schema({
     product: {
@@ -74,10 +75,19 @@ const productRequestSchema = new mongoose.Schema({
     invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
 
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    updatedAt: { type: Date, default: Date.now },
+
+    // Timezone Fields
+    createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') },
+    updatedAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
 
 }, {
     timestamps: true
+});
+
+productRequestSchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 productRequestSchema.index({ franchise: 1, requestDate: -1 });

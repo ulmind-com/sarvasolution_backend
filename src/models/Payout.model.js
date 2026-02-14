@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 
 const payoutSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -48,9 +49,24 @@ const payoutSchema = new mongoose.Schema({
         leftBV: Number,
         rightBV: Number,
         unitsEarned: Number
+    },
+    // User Request: Store Indian Time explicitly for visibility
+    createdAt_IST: {
+        type: String,
+        default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss')
+    },
+    updatedAt_IST: {
+        type: String,
+        default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss')
     }
 }, {
     timestamps: true
+});
+
+// Middleware to update updatedAt_IST on save
+payoutSchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 payoutSchema.index({ userId: 1, status: 1 });

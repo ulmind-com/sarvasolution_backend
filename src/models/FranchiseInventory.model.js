@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 
 const franchiseInventorySchema = new mongoose.Schema({
     franchise: {
@@ -41,9 +42,19 @@ const franchiseInventorySchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
-    }
+    },
+
+    // Timezone Fields
+    createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') },
+    updatedAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
+
 }, {
     timestamps: true
+});
+
+franchiseInventorySchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 // Composite index to ensure unique entry per product per franchise (unless batching requires splits)

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 import { fundSchema } from './schemas/fund.schema.js';
 
 const userFinanceSchema = new mongoose.Schema({
@@ -120,8 +121,17 @@ const userFinanceSchema = new mongoose.Schema({
         targetBV: { type: Number, default: 500000 }
     }
 
+    // Timezone Fields
+    , createdAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') },
+    updatedAt_IST: { type: String, default: () => moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss') }
+
 }, {
     timestamps: true
+});
+
+userFinanceSchema.pre('save', function (next) {
+    this.updatedAt_IST = moment().tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+    next();
 });
 
 const UserFinance = mongoose.model('UserFinance', userFinanceSchema);
