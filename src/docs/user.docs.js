@@ -301,12 +301,13 @@
  *                     sponsorId: { type: string }
  *                     joiningDate: { type: string, format: date-time }
  *                     status: { type: string, enum: [active, inactive, blocked] }
- *                     leftCompleteActive: { type: integer, description: "Total active members in entire left subtree" }
- *                     leftCompleteInactive: { type: integer, description: "Total inactive members in entire left subtree" }
- *                     rightCompleteActive: { type: integer, description: "Total active members in entire right subtree" }
- *                     rightCompleteInactive: { type: integer, description: "Total inactive members in entire right subtree" }
+ *                     leftDirectActive: { type: integer }
+ *                     leftDirectInactive: { type: integer }
+ *                     rightDirectActive: { type: integer }
+ *                     rightDirectInactive: { type: integer }
  *                     leftTeamCount: { type: integer, description: "Total recursive members in left leg" }
  *                     rightTeamCount: { type: integer, description: "Total recursive members in right leg" }
+
  *                     leftLegBV: { type: number, description: "Business Volume in left leg" }
  *                     rightLegBV: { type: number, description: "Business Volume in right leg" }
  *                     leftLegStars: { type: number, description: "Total accumulated stars in left leg" }
@@ -332,8 +333,7 @@
  *         schema:
  *           type: integer
  *           default: 3
- *           maximum: 10
- *         description: Depth of the tree to retrieve (Max 10)
+ *         description: Depth of the tree to retrieve (Unlimited)
  *     responses:
  *       200:
  *         description: Tree structure retrieved

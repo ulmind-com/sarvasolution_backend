@@ -95,12 +95,12 @@ export const getTree = asyncHandler(async (req, res) => {
 
     if (!targetUser) throw new ApiError(404, 'User not found');
 
-    // Parse depth with safety limits
+    // Parse depth
     let treeDepth = 3;
     if (depth) {
         treeDepth = parseInt(depth);
         if (isNaN(treeDepth)) treeDepth = 3;
-        if (treeDepth > 10) treeDepth = 10; // Max limit to prevent performance DoS
+        // No max limit as per requirement
     }
 
     const tree = await mlmService.getGenealogyTree(targetUser._id, treeDepth);
