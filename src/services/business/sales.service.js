@@ -5,6 +5,7 @@ import Product from '../../models/Product.model.js';
 import { generateInvoicePDFBuffer } from '../integration/pdf.service.js';
 import { sendInvoiceEmailWithAttachment } from '../integration/email.service.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { getISTDate, getISTMoment } from '../../utils/date.util.js';
 
 /**
  * Process a Sales Transaction (Atomic)
@@ -78,7 +79,7 @@ export const processSaleTransaction = async ({
 
         if (existingStock) {
             existingStock.stockQuantity += Number(item.quantity);
-            existingStock.updatedAt = new Date();
+            existingStock.updatedAt = getISTDate();
             await existingStock.save({ session });
         } else {
             await FranchiseInventory.create([{
@@ -105,7 +106,7 @@ export const processSaleTransaction = async ({
     }
 
     // 4. Generate Invoice No
-    const currentYear = new Date().getFullYear();
+    const currentYear = getISTMoment().year();
     const count = await Invoice.countDocuments().session(session);
     const invoiceNo = `INV-${currentYear}-${String(count + 1).padStart(5, '0')}`;
 
@@ -117,7 +118,7 @@ export const processSaleTransaction = async ({
     // 6. Create Invoice
     const invoice = await Invoice.create([{
         invoiceNo,
-        invoiceDate: invoiceDate || new Date(),
+        invoiceDate: invoiceDate || getISTDate(),
         franchise: franchise._id,
         items: processedItems,
         subTotal,
@@ -136,7 +137,7 @@ export const processSaleTransaction = async ({
         status: 'paid',
         paymentStatus: 'paid',
         paidAmount: grandTotal,
-        paymentDate: new Date()
+        paymentDate: getISTDate()
     }], { session });
 
     return { invoice: invoice[0], processedItems, grandTotal, subTotal, gstAmount, gstRate };

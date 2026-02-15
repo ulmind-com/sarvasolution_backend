@@ -6,6 +6,7 @@ import { mailer } from '../../services/integration/mail.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { getISTStartOfDay, getISTDate } from '../../utils/date.util.js';
 
 /**
  * Get Admin Dashboard Metrics
@@ -15,8 +16,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     const activeMembers = await User.countDocuments({ status: 'active', role: 'user' });
 
     // Today's BV Volume
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = getISTStartOfDay(); // Returns UTC Date corresponding to IST 00:00
     const todayBV = await BVTransaction.aggregate([
         { $match: { createdAt: { $gte: startOfDay } } },
         { $group: { _id: null, total: { $sum: "$bvAmount" } } }
@@ -122,7 +122,7 @@ export const processPayout = asyncHandler(async (req, res) => {
         if (user.wallet.pendingWithdrawal < 0) user.wallet.pendingWithdrawal = 0; // Safety
 
         payout.status = 'completed';
-        payout.processedAt = new Date();
+        payout.processedAt = getISTDate();
 
         // Notify User
         mailer.payoutProcessed(user, payout.netAmount, payout.payoutType).catch(err => console.error('Payout mail error:', err));
@@ -173,7 +173,7 @@ export const acceptPayout = asyncHandler(async (req, res) => {
     if (user.wallet.pendingWithdrawal < 0) user.wallet.pendingWithdrawal = 0; // Safety check
 
     payout.status = 'completed';
-    payout.processedAt = new Date();
+    payout.processedAt = getISTDate();
 
     await user.save();
     await payout.save();

@@ -1,14 +1,7 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import moment from 'moment-timezone';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import chalk from 'chalk';
-
-// Load Env
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+import moment from 'moment-timezone';
+import Configs from '../config/config.js';
 
 // Import Models
 import User from '../models/User.model.js';
@@ -40,52 +33,65 @@ const models = [
 ];
 
 const updateTimezones = async () => {
+    console.log(chalk.yellow('Starting Timezone Migration Script...'));
+
+    if (!Configs.MONGO_URI) {
+        console.error(chalk.red('FATAL: MONGO_URI is not defined in Configs. Check .env file.'));
+        process.exit(1);
+    }
+
+    console.log(chalk.blue(`Use MONGO_URI from Configs...`));
+
     try {
-        console.log(chalk.blue('Connecting to MongoDB...'));
-        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/sarvasolution_mlm');
-        console.log(chalk.green('Connected to MongoDB.'));
+        await mongoose.connect(Configs.MONGO_URI, {
+            serverSelectionTimeoutMS: 5000
+        });
+        console.log(chalk.green('✓ Connected to MongoDB.'));
 
         for (const { name, model } of models) {
-            console.log(chalk.cyan(`\nProcessing ${name}...`));
+            process.stdout.write(chalk.cyan(`Processing ${name}... `));
 
-            const docs = await model.find({});
-            console.log(`Found ${docs.length} documents.`);
+            try {
+                const docs = await model.find({});
 
-            let updatedCount = 0;
-            const bulkOps = [];
+                if (docs.length === 0) {
+                    console.log(chalk.yellow('Skipped (0 docs)'));
+                    continue;
+                }
 
-            for (const doc of docs) {
-                // Determine format based on existing fields
-                // If createdAt exists, convert to IST string
-                // If not, maybe use _id timestamp
+                let updatedCount = 0;
+                const bulkOps = [];
 
-                const createdDate = doc.createdAt || doc._id.getTimestamp();
-                const updatedDate = doc.updatedAt || doc.createdAt || new Date();
+                for (const doc of docs) {
+                    const createdDate = doc.createdAt || (doc._id && doc._id.getTimestamp()) || new Date();
+                    const updatedDate = doc.updatedAt || new Date();
 
-                const createdAt_IST = moment(createdDate).tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
-                const updatedAt_IST = moment(updatedDate).tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+                    const createdAt_IST = moment(createdDate).tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
+                    const updatedAt_IST = moment(updatedDate).tz("Asia/Kolkata").format('YYYY-MM-DD HH:mm:ss');
 
-                // Prepare Update Operation
-                bulkOps.push({
-                    updateOne: {
-                        filter: { _id: doc._id },
-                        update: {
-                            $set: {
-                                createdAt_IST: createdAt_IST,
-                                updatedAt_IST: updatedAt_IST
+                    bulkOps.push({
+                        updateOne: {
+                            filter: { _id: doc._id },
+                            update: {
+                                $set: {
+                                    createdAt_IST: createdAt_IST,
+                                    updatedAt_IST: updatedAt_IST
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-                updatedCount++;
-            }
+                    updatedCount++;
+                }
 
-            if (bulkOps.length > 0) {
-                await model.bulkWrite(bulkOps);
-                console.log(chalk.green(`✓ Updated ${updatedCount} documents in ${name}`));
-            } else {
-                console.log(chalk.yellow(`- No documents to update in ${name}`));
+                if (bulkOps.length > 0) {
+                    await model.bulkWrite(bulkOps);
+                    console.log(chalk.green(`✓ Updated ${updatedCount}/${docs.length}`));
+                } else {
+                    console.log(chalk.yellow('- No updates needed'));
+                }
+            } catch (err) {
+                console.log(chalk.red(`Error processing ${name}: ${err.message}`));
             }
         }
 
@@ -93,7 +99,7 @@ const updateTimezones = async () => {
         process.exit(0);
 
     } catch (error) {
-        console.error(chalk.red('Migration Error:'), error);
+        console.error(chalk.red('\nMigration Error:'), error.message);
         process.exit(1);
     }
 };

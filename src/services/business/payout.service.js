@@ -1,6 +1,7 @@
 import User from '../../models/User.model.js';
 import Payout from '../../models/Payout.model.js';
 import { ApiError } from '../../utils/ApiError.js';
+import moment from 'moment-timezone';
 
 /**
  * Service to handle withdrawals and payout management.
@@ -60,10 +61,24 @@ export const payoutService = {
      * Helper to get next Friday (SSVPL Payout day)
      */
     getNextPayoutDate: () => {
-        const today = new Date();
-        const nextFriday = new Date(today);
-        nextFriday.setDate(today.getDate() + (5 + 7 - today.getDay()) % 7);
-        nextFriday.setHours(11, 0, 0, 0);
-        return nextFriday;
+        // Get current time in IST
+        const today = moment().tz("Asia/Kolkata");
+
+        // Calculate days until next Friday (5)
+        // IsoWeekday: 1=Mon ... 5=Fri ... 7=Sun
+        const dayOfWeek = today.isoWeekday();
+        const targetDay = 5; // Friday
+
+        let daysToAdd = targetDay - dayOfWeek;
+        if (daysToAdd <= 0) {
+            daysToAdd += 7; // If today is Friday or later, target next week
+        }
+
+        const nextFriday = today.add(daysToAdd, 'days');
+
+        // Set to 11:00 AM IST as per original intent (was setHours(11))
+        nextFriday.hour(11).minute(0).second(0).millisecond(0);
+
+        return nextFriday.toDate(); // Return as JS Date object (UTC equivalent)
     }
 };

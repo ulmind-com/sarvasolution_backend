@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import moment from 'moment-timezone';
 
 /**
  * Generate Invoice PDF Buffer (Redesigned)
@@ -57,7 +58,10 @@ export const generateInvoicePDFBuffer = async (data) => {
             leftY += 12;
             doc.text(`Invoice No. : ${data.details?.invoiceNo || '-'}`, 40, leftY);
             leftY += 12;
-            doc.text(`Date : ${data.details?.invoiceDate ? new Date(data.details.invoiceDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 40, leftY);
+            const invoiceDateStr = data.details?.invoiceDate
+                ? moment(data.details.invoiceDate).tz('Asia/Kolkata').format('DD/MM/YYYY')
+                : moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
+            doc.text(`Date : ${invoiceDateStr}`, 40, leftY);
 
             // Right Column (Transport Info)
             let rightY = startY + 10;

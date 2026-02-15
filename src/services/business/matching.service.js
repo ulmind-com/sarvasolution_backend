@@ -2,29 +2,29 @@ import UserFinance from '../../models/UserFinance.model.js';
 import Payout from '../../models/Payout.model.js';
 import Configs from '../../config/config.js';
 import { rankService } from './rank.service.js';
+import moment from 'moment-timezone';
+
+const TIMEZONE = "Asia/Kolkata";
 
 export const matchingService = {
 
     /**
      * Helper: Check Day Change and Reset Daily Limits
-     * Ensures dailyClosings count resets at midnight (00:00).
+     * Ensures dailyClosings count resets at midnight (00:00) IST.
      */
     checkDayChange: async (finance) => {
-        const now = new Date();
-        const lastClosing = finance.fastTrack.lastClosingTime ? new Date(finance.fastTrack.lastClosingTime) : null;
+        const nowIST = moment().tz(TIMEZONE);
+        const lastClosing = finance.fastTrack.lastClosingTime ? moment(finance.fastTrack.lastClosingTime).tz(TIMEZONE) : null;
 
         if (lastClosing) {
-            const isSameDay =
-                now.getDate() === lastClosing.getDate() &&
-                now.getMonth() === lastClosing.getMonth() &&
-                now.getFullYear() === lastClosing.getFullYear();
+            const isSameDay = nowIST.isSame(lastClosing, 'day');
 
             if (!isSameDay) {
                 // New Day! Reset Counters
                 finance.fastTrack.dailyClosings = 0;
                 finance.starMatchingBonus.dailyClosings = 0;
                 // Note: We do NOT reset Carry Forward. Only Daily Limits.
-                console.log(`[Matching] New Day Detected for ${finance.memberId}. Resetting Daily Counters.`);
+                console.log(`[Matching] New Day Detected for ${finance.memberId} (IST). Resetting Daily Counters.`);
             }
         }
     },
@@ -48,20 +48,17 @@ export const matchingService = {
             return;
         }
 
-        // 2. Determine Current Time Slot (Fixed 4-Hour Windows)
+        // 2. Determine Current Time Slot (Fixed 4-Hour Windows IST)
         // Slots: 00-04, 04-08, 08-12, 12-16, 16-20, 20-00
-        const now = new Date();
-        const startOfToday = new Date(now);
-        startOfToday.setHours(0, 0, 0, 0);
+        const nowIST = moment().tz(TIMEZONE);
+        const startOfTodayIST = nowIST.clone().startOf('day'); // 00:00:00 IST
 
-        const currentHour = now.getHours(); // 0-23
+        const currentHour = nowIST.hour(); // 0-23 (IST)
         const slotIndex = Math.floor(currentHour / 4); // 0 to 5
 
-        const slotStartTime = new Date(startOfToday);
-        slotStartTime.setHours(slotIndex * 4);
-
-        const slotEndTime = new Date(startOfToday);
-        slotEndTime.setHours((slotIndex + 1) * 4);
+        // Calculate Slot Boundaries in IST, then convert to JS Date (UTC)
+        const slotStartTime = startOfTodayIST.clone().add(slotIndex * 4, 'hours').toDate();
+        const slotEndTime = startOfTodayIST.clone().add((slotIndex + 1) * 4, 'hours').toDate();
 
         // 3. Check for Existing Payout in THIS Slot
         // WE CHECK FOR *ANY* PAYOUT (Bonus, Deduction, OR Flashout) to determine if we act?
@@ -180,7 +177,7 @@ export const matchingService = {
         }
 
         // 7. Update State
-        finance.fastTrack.lastClosingTime = now;
+        finance.fastTrack.lastClosingTime = nowIST.toDate();
 
         // Only increment Daily Closings if it was a VALID payout (not flushed)
         // User rule: "ek din pe user 6 bar hi kar payega" (6 Opportunities)
@@ -234,19 +231,15 @@ export const matchingService = {
         // 0. Check Day Change
         await matchingService.checkDayChange(finance);
 
-        // 1. Time Slot Logic (Same as Fast Track: 12-4-8)
-        const now = new Date();
-        const startOfToday = new Date(now);
-        startOfToday.setHours(0, 0, 0, 0);
+        // 1. Time Slot Logic (Same as Fast Track: 12-4-8 IST)
+        const nowIST = moment().tz(TIMEZONE);
+        const startOfTodayIST = nowIST.clone().startOf('day');
 
-        const currentHour = now.getHours();
+        const currentHour = nowIST.hour();
         const slotIndex = Math.floor(currentHour / 4);
 
-        const slotStartTime = new Date(startOfToday);
-        slotStartTime.setHours(slotIndex * 4);
-
-        const slotEndTime = new Date(startOfToday);
-        slotEndTime.setHours((slotIndex + 1) * 4);
+        const slotStartTime = startOfTodayIST.clone().add(slotIndex * 4, 'hours').toDate();
+        const slotEndTime = startOfTodayIST.clone().add((slotIndex + 1) * 4, 'hours').toDate();
 
         // 2. Check for Existing Payout in THIS Slot
         const payoutsInSlot = await Payout.find({
@@ -321,7 +314,7 @@ export const matchingService = {
         }
 
         // 6. Update State
-        finance.starMatchingBonus.lastClosingTime = now;
+        finance.starMatchingBonus.lastClosingTime = nowIST.toDate();
 
         if (status !== 'flushed') {
             finance.starMatchingBonus.dailyClosings += 1;

@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import UserFinance from '../models/UserFinance.model.js';
 import chalk from 'chalk';
 import moment from 'moment-timezone';
+import { getISTDate } from '../utils/date.util.js';
 
 export const cronJobs = {
     /**
@@ -257,7 +258,7 @@ export const cronJobs = {
                         tdsDeducted: tdsAmount,
                         netAmount,
                         status: 'pending',
-                        scheduledFor: new Date()
+                        scheduledFor: getISTDate()
                     }));
 
                     // Update Wallet
