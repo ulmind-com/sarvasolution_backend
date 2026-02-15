@@ -1,6 +1,6 @@
 import User from '../../models/User.model.js';
 import BankAccount from '../../models/BankAccount.model.js';
-import { uploadToCloudinary } from '../../services/integration/cloudinary.service.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../../services/integration/cloudinary.service.js';
 import { mailer } from '../../services/integration/mail.service.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
@@ -96,6 +96,11 @@ export const updateProfile = asyncHandler(async (req, res) => {
 
     // Profile Picture
     if (req.file) {
+        // Delete old profile picture if exists
+        if (user.profilePicture?.publicId) {
+            await deleteFromCloudinary(user.profilePicture.publicId);
+        }
+
         const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
         user.profilePicture = uploadResult;
         updatedFields.push('Profile Picture');

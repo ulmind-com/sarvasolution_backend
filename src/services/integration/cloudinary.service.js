@@ -85,3 +85,17 @@ export const uploadPDFToCloudinary = (pdfBuffer, folder = 'sarvasolution/invoice
     });
 };
 
+/**
+ * Delete file from Cloudinary
+ * @param {String} publicId - Public ID of the file to delete
+ */
+export const deleteFromCloudinary = async (publicId) => {
+    try {
+        if (!publicId) return;
+        console.log(`[Cloudinary] Deleting file: ${publicId}`);
+        await cloudinary.uploader.destroy(publicId);
+    } catch (error) {
+        console.error('[Cloudinary] Delete Error:', error);
+        // We don't throw error here to prevent breaking the flow, just log it
+    }
+};
