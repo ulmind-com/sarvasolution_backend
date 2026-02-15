@@ -489,4 +489,94 @@ export const mlmService = {
 
         return buildNode(rootNode, 1);
     },
+
+    /**
+     * Get Complete Team for a Leg (Left/Right) with Pagination and Optimization
+     * Uses $graphLookup to fetch valid descendants efficiently
+     */
+    getCompleteLegTeam: async (userId, leg, page = 1, limit = 10) => {
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+
+        let startNodeId = null;
+        if (leg === 'left') startNodeId = user.leftChild;
+        else if (leg === 'right') startNodeId = user.rightChild;
+
+        if (!startNodeId) {
+            return {
+                members: [],
+                pagination: { total: 0, page, limit, pages: 0 }
+            };
+        }
+
+        const startNode = await User.findById(startNodeId);
+        if (!startNode) {
+            return {
+                members: [],
+                pagination: { total: 0, page, limit, pages: 0 }
+            };
+        }
+
+        // Use $graphLookup to find ALL descendants of the startNode
+        const data = await User.aggregate([
+            { $match: { _id: startNode._id } },
+            {
+                $graphLookup: {
+                    from: 'users',
+                    startWith: '$memberId', // Start with MemberID string
+                    connectFromField: 'memberId',
+                    connectToField: 'parentId',
+                    as: 'descendants',
+                    depthField: 'depth'
+                }
+            },
+            {
+                $project: {
+                    allDescendants: {
+                        $concatArrays: [["$$ROOT"], "$descendants"]
+                    }
+                }
+            },
+            { $unwind: "$allDescendants" },
+            { $replaceRoot: { newRoot: "$allDescendants" } },
+            { $sort: { createdAt: -1 } },
+            {
+                $facet: {
+                    metadata: [{ $count: "total" }],
+                    data: [{ $skip: (page - 1) * limit }, { $limit: limit }]
+                }
+            }
+        ]);
+
+        if (!data || data.length === 0) {
+            return {
+                members: [],
+                pagination: { total: 0, page, limit, pages: 0 }
+            };
+        }
+
+        const result = data[0];
+        const total = result.metadata[0] ? result.metadata[0].total : 0;
+
+        // Map raw aggregation result to cleaner object
+        const members = result.data.map(m => ({
+            memberId: m.memberId,
+            fullName: m.fullName,
+            rank: m.currentRank,
+            joiningDate: m.createdAt,
+            status: m.status,
+            sponsorId: m.sponsorId,
+            profilePicture: m.profilePicture?.url || null
+        }));
+
+        return {
+            members,
+            pagination: {
+                total,
+                page,
+                limit,
+                pages: Math.ceil(total / limit)
+            }
+        };
+    },
 };
