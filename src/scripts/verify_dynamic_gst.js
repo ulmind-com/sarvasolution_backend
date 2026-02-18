@@ -39,14 +39,28 @@ const verifyDynamicGST = async () => {
         console.log(`Creating test data with suffix: ${suffix}`);
 
         // Franchise (West Bengal)
+        const franchiseOwner = await User.create({
+            memberId: `FRA-OWNER-${suffix}`,
+            username: `fraowner${suffix}`,
+            email: `fraowner${suffix}@test.com`,
+            password: 'password',
+            fullName: 'Franchise Owner',
+            phone: '6666666666',
+            role: 'franchise_owner',
+            address: { state: 'West Bengal' }
+        });
+
         const franchise = await Franchise.create({
             franchiseId: `TEST-FRA-${suffix}`,
+            vendorId: `VEN-${suffix}`, // Required Field
             name: 'Test Franchise',
             shopName: 'Test Shop',
             email: `fra${suffix}@test.com`,
             password: 'password',
             phone: '9999999999',
             shopAddress: {
+                level: 'Store', // Address schema likely needs level or similar if strictly validated, but usually not strict. 
+                // Checking address schema in next step if this fails, but basic fields should work.
                 state: 'West Bengal',
                 street: 'Test St',
                 city: 'Kolkata',
@@ -56,7 +70,8 @@ const verifyDynamicGST = async () => {
             state: 'West Bengal',
             area: 'Test Area',
             pincode: '700001',
-            status: 'active'
+            status: 'active',
+            createdBy: franchiseOwner._id // Required Field
         });
 
         // User (Intra-state: West Bengal)

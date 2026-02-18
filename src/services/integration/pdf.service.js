@@ -113,7 +113,9 @@ export const generateInvoicePDFBuffer = async (data) => {
             // --- 4. Table Grid ---
             const tableTop = Math.max(recY, sendY) + 20;
             // Removed Batch and UOM columns as per requirement
-            const colWidths = [25, 150, 40, 35, 45, 45, 50, 40, 50, 50, 50, 50];
+            // Adjusted widths to fit 535px total (approx A4 usable width)
+            // Sl:25, Desc:140, HSN:40, Qty:30, Rate:40, MRP:40, Gross:45, Disc:25, Taxable:45, CGST:35, SGST:35, IGST:35
+            const colWidths = [25, 140, 40, 30, 40, 40, 45, 25, 45, 35, 35, 35];
             // Cols: Sl, Description, HSN, QTY, Rate, MRP, Gross, Disc, Taxable, CGST, SGST, IGST
             // X Positions Calculation
             let currentX = 30;

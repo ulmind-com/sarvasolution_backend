@@ -78,8 +78,7 @@ export const generateWelcomePDF = async (user) => {
         doc.font('Helvetica-Bold').text('Joining Date:', labelX, lineY + step);
         doc.font('Helvetica').text(new Date(user.createdAt || Date.now()).toLocaleDateString(), valueX, lineY + step);
 
-        doc.font('Helvetica-Bold').text('Status:', labelX, lineY + step * 2);
-        doc.fillColor(primaryColor).font('Helvetica-Bold').text('ACTIVE', valueX, lineY + step * 2);
+        // Status field removed as per request
 
         // 6. Footer
         const footerY = 700;
