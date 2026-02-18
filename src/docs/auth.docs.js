@@ -62,6 +62,35 @@
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  * 
+ * /api/v1/user-name/{memberId}:
+ *   get:
+ *     summary: Get User Name by Member ID (Public)
+ *     description: |
+ *       **Public Access** - Retrieve the full name of a user for validation during registration.
+ *     tags: [Public - Auth]
+ *     parameters:
+ *       - in: path
+ *         name: memberId
+ *         required: true
+ *         schema: { type: string }
+ *         example: "SVS12345678"
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fullName: { type: string }
+ *                     memberId: { type: string }
+ *       404:
+ *         description: User not found
+ * 
  * /api/v1/login/user:
  *   post:
  *     summary: User Login (Public)

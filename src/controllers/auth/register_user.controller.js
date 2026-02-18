@@ -26,8 +26,8 @@ export const register = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Required: sponsorId, email, phone, fullName, panCardNumber, password.');
     }
 
-    const existingUser = await User.findOne({ phone });
-    if (existingUser) throw new ApiError(400, 'Phone number already registered');
+    const phoneCount = await User.countDocuments({ phone });
+    if (phoneCount >= 3) throw new ApiError(400, 'Maximum 3 accounts allowed per mobile number');
 
     const panCount = await User.countDocuments({ panCardNumber: panCardNumber.toUpperCase() });
     if (panCount >= 3) throw new ApiError(400, 'Maximum 3 accounts allowed per PAN card');

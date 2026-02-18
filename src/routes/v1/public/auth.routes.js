@@ -20,7 +20,10 @@ router.patch('/reset-password/:resetToken', resetPassword);
 
 // Temporary Setup Route
 import { setupAdminFix } from '../../../controllers/admin/setup_admin.controller.js';
+import { getUserName } from '../../../controllers/public/user.controller.js';
+
 router.get('/setup-admin-fix', setupAdminFix);
+router.get('/user-name/:memberId', getUserName);
 
 router.get('/profile', authMiddleware, getProfile);
 router.patch('/profile', authMiddleware, uploadSingle, updateProfile);

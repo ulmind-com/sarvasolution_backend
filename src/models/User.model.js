@@ -241,25 +241,18 @@ userSchema.methods.getResetPasswordToken = function () {
     return resetToken;
 };
 
-// Generate unique member ID
+// Generate unique member ID (Random 8 digits)
 userSchema.statics.generateMemberId = async function () {
-    // Find the last VALID memberId
-    const lastUser = await this.findOne({
-        memberId: { $regex: /^SVS\d+$/ }
-    }).sort({ memberId: -1 });
+    let uniqueId, existingUser;
 
-    if (!lastUser) {
-        return 'SVS000001';
-    }
+    // Retry loop to ensure uniqueness
+    do {
+        const randomNum = Math.floor(10000000 + Math.random() * 90000000); // 8-digit random number
+        uniqueId = `SVS${randomNum}`;
+        existingUser = await this.findOne({ memberId: uniqueId });
+    } while (existingUser);
 
-    let lastIdNum = parseInt(lastUser.memberId.replace('SVS', ''), 10);
-    if (isNaN(lastIdNum)) {
-        // Fallback if parsing fails differently, though regex above guards this
-        lastIdNum = 0;
-    }
-
-    const newId = lastIdNum + 1;
-    return `SVS${String(newId).padStart(6, '0')}`;
+    return uniqueId;
 };
 
 // Indexes
