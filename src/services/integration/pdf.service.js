@@ -84,10 +84,16 @@ export const generateInvoicePDFBuffer = async (data) => {
             doc.font('Helvetica-Bold').text('Details Of Receiver(Billed To)', 40, partiesY);
             doc.font('Helvetica');
             let recY = partiesY + 15;
-            doc.text(`Name : ${data.receiver?.name || 'Grand User'}`, 40, recY);
-            recY += 12;
-            doc.text(`Address : ${data.receiver?.fullAddress || ''}`, 40, recY);
-            recY += 12;
+
+            const recNameHeight = doc.heightOfString(`Name : ${data.receiver?.name || 'Grand User'}`, { width: 250 });
+            doc.text(`Name : ${data.receiver?.name || 'Grand User'}`, 40, recY, { width: 250 });
+            recY += recNameHeight + 2; // +2 padding
+
+            const recAddressText = `Address : ${data.receiver?.fullAddress || ''}`;
+            const recAddressHeight = doc.heightOfString(recAddressText, { width: 250 });
+            doc.text(recAddressText, 40, recY, { width: 250 });
+            recY += recAddressHeight + 2;
+
             doc.text(`City : ${data.receiver?.city || ''}`, 40, recY);
             recY += 12;
             doc.text(`State : ${data.receiver?.state || ''}`, 40, recY);
@@ -95,20 +101,27 @@ export const generateInvoicePDFBuffer = async (data) => {
             doc.text(`Pincode : ${data.receiver?.pincode || ''}`, 40, recY);
             recY += 12;
             doc.text(`Contact : ${data.receiver?.phone || ''}`, 40, recY);
+            recY += 12; // Final increment to ensure spacing from table
 
             // Ship To (Sender/Franchise - Right)
             doc.font('Helvetica-Bold').text('Details Of Sender(Ship To)', rightX, partiesY);
             doc.font('Helvetica');
             let sendY = partiesY + 15;
-            doc.text(`Name : ${data.sender?.name || 'Sarva Solution'}`, rightX, sendY);
-            sendY += 12;
-            const senderAddr = data.sender?.address || '';
-            const senderCity = data.sender?.city || '';
-            doc.text(`Address : ${senderAddr}, ${senderCity}`, rightX, sendY);
-            sendY += 12;
+
+            const sendNameText = `Name : ${data.sender?.name || 'Sarva Solution'}`;
+            const sendNameHeight = doc.heightOfString(sendNameText, { width: 250 });
+            doc.text(sendNameText, rightX, sendY, { width: 250 });
+            sendY += sendNameHeight + 2;
+
+            const senderAddrText = `Address : ${data.sender?.address || ''}, ${data.sender?.city || ''}`;
+            const senderAddrHeight = doc.heightOfString(senderAddrText, { width: 250 });
+            doc.text(senderAddrText, rightX, sendY, { width: 250 });
+            sendY += senderAddrHeight + 2;
+
             doc.text(`State : ${data.sender?.state || ''}`, rightX, sendY);
             sendY += 12;
             doc.text(`Contact No : ${data.sender?.phone || ''}`, rightX, sendY);
+            sendY += 12;
 
             // --- 4. Table Grid ---
             const tableTop = Math.max(recY, sendY) + 20;
