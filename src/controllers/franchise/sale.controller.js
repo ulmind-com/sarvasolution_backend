@@ -48,6 +48,12 @@ export const sellToUser = asyncHandler(async (req, res) => {
     // Check if this is first purchase (using explicit flag)
     const isFirstPurchase = !user.isFirstPurchaseDone;
 
+    // Determine Tax Type (IGST or CGST+SGST)
+    const franchise = await Franchise.findById(req.franchise._id);
+    const franchiseState = franchise.shopAddress?.state || 'West Bengal';
+    const userState = user.address?.state || 'West Bengal';
+    const isInterState = franchiseState.toLowerCase().trim() !== userState.toLowerCase().trim();
+
     // 2. Start transaction
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -56,6 +62,7 @@ export const sellToUser = asyncHandler(async (req, res) => {
         let subTotal = 0;
         let totalPV = 0;
         let totalBV = 0;
+        let totalGstAmount = 0; // Accumulated Tax
         const processedItems = [];
 
         // 3. Process each item
@@ -76,26 +83,42 @@ export const sellToUser = asyncHandler(async (req, res) => {
             }
 
             // Calculate values based on purchase type
-            // FIRST PURCHASE: Only PV, BV = 0
-            // REPURCHASE: Only BV, PV = 0
             let itemPV = 0;
             let itemBV = 0;
 
             if (isFirstPurchase) {
-                // First purchase: Only calculate PV
                 itemPV = product.pv * item.quantity;
                 itemBV = 0;
             } else {
-                // Repurchase: Only calculate BV
                 itemPV = 0;
                 itemBV = product.bv * item.quantity;
             }
 
-            const amount = product.price * item.quantity;
+            const amount = product.price * item.quantity; // Taxable Value
+
+            // Dynamic Tax Calculation (Per Item)
+            const cgstRate = product.cgst || 0;
+            const sgstRate = product.sgst || 0;
+            let taxAmount = 0;
+
+            // We store the product's defined rates (cgstRate, sgstRate) in the item 
+            // regardless of transaction type, so we have a record of the % applied.
+            // If Inter-state, we just sum them up for display.
+
+            if (isInterState) {
+                const totalRate = cgstRate + sgstRate;
+                taxAmount = (amount * totalRate) / 100;
+            } else {
+                // Intra-State
+                const cgstAmt = (amount * cgstRate) / 100;
+                const sgstAmt = (amount * sgstRate) / 100;
+                taxAmount = cgstAmt + sgstAmt;
+            }
 
             totalPV += itemPV;
             totalBV += itemBV;
             subTotal += amount;
+            totalGstAmount += taxAmount;
 
             // Deduct from franchise inventory
             franchiseStock.stockQuantity -= item.quantity;
@@ -107,19 +130,30 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 quantity: item.quantity,
                 price: product.price,
                 productDP: product.productDP,
-                pv: product.pv,  // Keep product PV for reference
-                bv: product.bv,  // Keep product BV for reference
-                totalPV: itemPV, // Will be 0 for repurchase
-                totalBV: itemBV, // Will be 0 for first purchase
+                pv: product.pv,
+                bv: product.bv,
+                totalPV: itemPV,
+                totalBV: itemBV,
                 amount,
-                hsnCode: product.hsnCode
+                hsnCode: product.hsnCode,
+                // New Fields
+                cgstRate: cgstRate, // Always store the source rates
+                sgstRate: sgstRate,
+                taxAmount: taxAmount,
+                // For PDF convenience (computed on the fly usually, but passing here)
+                cgstAmount: isInterState ? 0 : (amount * cgstRate) / 100,
+                sgstAmount: isInterState ? 0 : (amount * sgstRate) / 100,
+                igstAmount: isInterState ? taxAmount : 0
             });
         }
 
-        // 4. Calculate GST
-        const gstRate = 18;
-        const gstAmount = (subTotal * gstRate) / 100;
-        const grandTotal = subTotal + gstAmount;
+        // 4. Final Totals
+        // Use accumulated GST amount instead of flat 18%
+        // Calculate an "Average" GST rate for the record if needed, or just store amount.
+        // The Schema has gstRate (default 18). We can set it to 0 or average?
+        // Let's keep it as 0 or null if varying, but schema requires Number.
+        // We will store 0 as it's item-wise now.
+        const grandTotal = subTotal + totalGstAmount;
 
         // 5. Generate sale number
         const currentYear = new Date().getFullYear();
@@ -127,20 +161,13 @@ export const sellToUser = asyncHandler(async (req, res) => {
         const saleNo = `FS-${currentYear}-${String(count + 1).padStart(5, '0')}`;
 
         // 6. Validate Purchase Type and Determine Activation
-        // At this point, totalPV and totalBV are already correctly calculated based on isFirstPurchase
         let willActivate = false;
 
         if (isFirstPurchase) {
-            // FIRST PURCHASE: Must have >= 1 PV to activate account
-            // totalBV is already 0 from item processing
             if (totalPV < 1) {
                 throw new ApiError(400, 'First purchase must have at least 1 PV to activate the account and generate the bill.');
             }
             willActivate = (user.status === 'inactive');
-        } else {
-            // REPURCHASE: Only BV matters
-            // totalPV is already 0 from item processing
-            // No minimum BV requirement for repurchase
         }
 
         // 7. Create sale record
@@ -150,12 +177,12 @@ export const sellToUser = asyncHandler(async (req, res) => {
             franchise: req.franchise._id,
             user: user._id,
             memberId: user.memberId,
-            items: processedItems,
+            items: processedItems, // Now contains tax breakups
             subTotal,
-            gstRate,
-            gstAmount,
+            gstRate: 0, // Mixed rates possible, so 0. Details in items.
+            gstAmount: totalGstAmount,
             grandTotal,
-            totalPV, // Will be 0 for repurchase
+            totalPV,
             totalBV,
             isFirstPurchase,
             userActivated: willActivate,
@@ -164,11 +191,9 @@ export const sellToUser = asyncHandler(async (req, res) => {
         }], { session });
 
         // 8. Update user PV/BV based on purchase type
-        // Fix: Update both User and UserFinance models to keep them in sync
         const financeUpdate = {};
 
         if (isFirstPurchase) {
-            // FIRST PURCHASE: Only add PV, no BV
             user.personalPV += totalPV;
             user.totalPV += totalPV;
             user.thisMonthPV += totalPV;
@@ -179,10 +204,8 @@ export const sellToUser = asyncHandler(async (req, res) => {
             financeUpdate.thisMonthPV = totalPV;
             financeUpdate.thisYearPV = totalPV;
 
-            // Mark first purchase as done
             user.isFirstPurchaseDone = true;
         } else {
-            // REPURCHASE: Only add BV, no PV
             user.personalBV += totalBV;
             user.totalBV += totalBV;
             user.thisMonthBV += totalBV;
@@ -194,38 +217,32 @@ export const sellToUser = asyncHandler(async (req, res) => {
             financeUpdate.thisYearBV = totalBV;
         }
 
-        // Update UserFinance document
         await UserFinance.findOneAndUpdate(
             { user: user._id },
             {
                 $inc: financeUpdate,
-                $setOnInsert: { memberId: user.memberId } // Create if missing (safety)
+                $setOnInsert: { memberId: user.memberId }
             },
             { upsert: true, new: true, session }
         );
 
-        // 9. ACTIVATION LOGIC - First purchase with PV >= 1
+        // 9. ACTIVATION LOGIC
         let activationMessage = '';
         if (willActivate) {
             user.status = 'active';
             activationMessage = ' - User account activated!';
-
-            // Update Sponsor Counts (Inactive -> Active)
             await import('../../services/business/mlm.service.js').then(m => m.mlmService.handleUserActivation(user));
-
-            // CRITICAL: Propagate PV up the tree to trigger matching bonuses
             const mlmModule = await import('../../services/business/mlm.service.js');
             await mlmModule.mlmService.propagateBVUpTree(
                 user._id,
                 user.position,
-                totalBV || 0, // BV amount (0 for first purchase)
+                totalBV || 0,
                 'first-purchase',
                 `SALE-${sale[0].saleNo}`,
-                totalPV || 0  // PV amount (actual value for first purchase)
+                totalPV || 0
             );
         }
 
-        // Save User Updates (Activation, PV/BV, FirstPurchaseFlag)
         await user.save({ session });
 
         // 11. Post-transaction: Generate PDF and send email
@@ -234,44 +251,17 @@ export const sellToUser = asyncHandler(async (req, res) => {
         let pdfPublicId = null;
 
         try {
-            // Get franchise details for PDF (Sender)
-            const franchise = await Franchise.findById(req.franchise._id);
+            // Populate product names for PDF (Product ID used in processing)
+            // processedItems already has most data. Need Name, HSN, Batch, Mrp from DB?
+            // Actually, we fetched product inside loop. 
+            // We need to re-fetch or map? 
+            // Let's map `processedItems` and fetch Product names efficiently or reuse logic.
+            // Wait, we pushed `processedItems` manually. It has product ID.
+            // We can iterate processedItems and assume `product` is ObjectId.
 
-            // Determine Tax Type (IGST or CGST+SGST)
-            // Logic: If Franchise State differs from User State -> IGST, else CGST+SGST
-            // Defaulting to West Bengal for Franchise if missing (common logic, or use 'N/A')
-            const franchiseState = franchise.shopAddress?.state || 'West Bengal';
-            const userState = user.address?.state || 'West Bengal';
-            const isInterState = franchiseState.toLowerCase() !== userState.toLowerCase();
-
-            // Populate product details for PDF with calculated fields
             const populatedItems = await Promise.all(
                 processedItems.map(async (item) => {
                     const product = await Product.findById(item.product);
-
-                    // Tax Calculation per item
-                    // Assuming product.price is taxable value? 
-                    // No, usually Price in DB is base price. 
-                    // Let's assume item.amount (qty * price) is the Taxable Value.
-                    const taxableValue = item.amount;
-
-                    // Calculate Tax amounts per item for the table
-                    const gstPercent = 18; // Standard or from product? Using 18 as per previous code
-                    // Ideally: const gstPercent = (product.gst + product.cgst + product.sgst) || 18;
-
-                    let cgstRate = 0, sgstRate = 0, igstRate = 0;
-                    let cgstAmount = 0, sgstAmount = 0, igstAmount = 0;
-
-                    if (isInterState) {
-                        igstRate = gstPercent;
-                        igstAmount = (taxableValue * igstRate) / 100;
-                    } else {
-                        cgstRate = gstPercent / 2;
-                        sgstRate = gstPercent / 2;
-                        cgstAmount = (taxableValue * cgstRate) / 100;
-                        sgstAmount = (taxableValue * sgstRate) / 100;
-                    }
-
                     return {
                         ...item,
                         productName: product.productName,
@@ -279,20 +269,36 @@ export const sellToUser = asyncHandler(async (req, res) => {
                         batchNo: product.batchNo,
                         mrp: product.mrp,
                         rate: product.price, // Base rate
-                        taxableValue: taxableValue,
-                        cgstRate, cgstAmount,
-                        sgstRate, sgstAmount,
-                        igstRate, igstAmount
+                        taxableValue: item.amount,
+                        // Use calculated values
+                        cgstRate: item.cgstRate,
+                        sgstRate: item.sgstRate,
+                        igstRate: item.cgstRate + item.sgstRate, // Derived
+                        cgstAmount: item.cgstAmount,
+                        sgstAmount: item.sgstAmount,
+                        igstAmount: item.igstAmount
                     };
                 })
             );
+
+            // Calculate totals for PDF footer
+            // We need breakdown of CGST/SGST/IGST totals
+            let totalCGST = 0;
+            let totalSGST = 0;
+            let totalIGST = 0;
+
+            populatedItems.forEach(item => {
+                totalCGST += item.cgstAmount || 0;
+                totalSGST += item.sgstAmount || 0;
+                totalIGST += item.igstAmount || 0;
+            });
 
             // Generate PDF
             const pdfBuffer = await generateInvoicePDFBuffer({
                 details: {
                     invoiceNo: saleNo,
                     invoiceDate: new Date(),
-                    reverseCharge: 'No', // Hardcoded for now
+                    reverseCharge: 'No',
                     transportMode: 'N/A',
                     vehicleNo: 'N/A'
                 },
@@ -301,32 +307,32 @@ export const sellToUser = asyncHandler(async (req, res) => {
                     shopName: franchise.shopName,
                     address: franchise.shopAddress?.street || '',
                     city: franchise.city,
-                    state: franchise.shopAddress?.state || '',
+                    state: franchiseState,
                     pincode: franchise.shopAddress?.pincode || '',
                     phone: franchise.phone,
-                    gstin: '19ABRCS5991B1ZQ' // Updated GST number
+                    gstin: '19ABRCS5991B1ZQ'
                 },
                 receiver: {
                     name: user.fullName,
                     fullAddress: user.address?.street || 'N/A',
                     city: user.address?.city || 'N/A',
-                    state: user.address?.state || 'N/A',
+                    state: userState,
                     pincode: user.address?.zipCode || 'N/A',
                     phone: user.phone,
-                    gstin: 'N/A' // User GST usually N/A for B2C
+                    gstin: 'N/A'
                 },
                 items: populatedItems,
-                isFirstPurchase, // Pass purchase type flag for conditional display
+                isFirstPurchase,
                 totals: {
                     totalPV,
-                    totalBV, // Include totalBV for repurchase display
-                    subTotal, // Taxable Value Total
-                    gstRate,
-                    totalCGST: isInterState ? 0 : gstAmount / 2,
-                    totalSGST: isInterState ? 0 : gstAmount / 2,
-                    totalIGST: isInterState ? gstAmount : 0,
+                    totalBV,
+                    subTotal,
+                    gstRate: 0, // Mixed
+                    totalCGST,
+                    totalSGST,
+                    totalIGST,
                     grandTotal,
-                    amountInWords: 'Rupees ...' // Can add a util for number to words later
+                    amountInWords: 'Rupees ...'
                 }
             });
 
@@ -340,7 +346,6 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 pdfCloudinaryUrl = pdfUploadResult.url;
                 pdfPublicId = pdfUploadResult.publicId;
 
-                // Update the sale record with PDF URL
                 await FranchiseSale.findByIdAndUpdate(sale[0]._id, {
                     pdfUrl: pdfCloudinaryUrl,
                     pdfPublicId: pdfPublicId
@@ -349,10 +354,9 @@ export const sellToUser = asyncHandler(async (req, res) => {
                 console.log(`[PDF] Uploaded to Cloudinary: ${pdfCloudinaryUrl}`);
             } catch (pdfUploadError) {
                 console.error('Error uploading PDF to Cloudinary:', pdfUploadError);
-                // Don't fail the sale if PDF upload fails
             }
 
-            // Send email with PDF attachment
+            // Send email
             emailSent = await sendInvoiceEmailWithAttachment({
                 email: user.email,
                 franchiseName: user.fullName,
@@ -365,10 +369,8 @@ export const sellToUser = asyncHandler(async (req, res) => {
 
         } catch (emailError) {
             console.error('Error sending invoice email:', emailError);
-            // Don't fail the sale if email fails
         }
 
-        // Commit the transaction
         await session.commitTransaction();
 
         return res.status(201).json(

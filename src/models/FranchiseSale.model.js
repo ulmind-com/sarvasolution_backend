@@ -44,7 +44,13 @@ const franchiseSaleItemSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    hsnCode: String
+    hsnCode: String,
+
+    // Dynamic Tax Fields (Added in Phase 26)
+    cgstRate: { type: Number, default: 0 },
+    sgstRate: { type: Number, default: 0 },
+    // igstRate removed as per user request (derived from cgst+sgst)
+    taxAmount: { type: Number, default: 0 } // Total tax for this line item
 });
 
 const franchiseSaleSchema = new mongoose.Schema({
