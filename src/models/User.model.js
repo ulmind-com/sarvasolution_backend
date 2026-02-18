@@ -50,8 +50,14 @@ const userSchema = new mongoose.Schema({
     rightDirectInactive: { type: Number, default: 0 },
 
     // Total Team Counts (Recursive)
-    leftTeamCount: { type: Number, default: 0 },
-    rightTeamCount: { type: Number, default: 0 }, // Total downline count
+    leftTeamCount: { type: Number, default: 0 }, // Total (Active + Inactive)
+    rightTeamCount: { type: Number, default: 0 },
+
+    // Detailed Recursive Counts (Added for Tree View)
+    leftTeamActive: { type: Number, default: 0 },
+    leftTeamInactive: { type: Number, default: 0 },
+    rightTeamActive: { type: Number, default: 0 },
+    rightTeamInactive: { type: Number, default: 0 },
 
     totalBV: { type: Number, default: 0 },
     thisMonthBV: { type: Number, default: 0 },

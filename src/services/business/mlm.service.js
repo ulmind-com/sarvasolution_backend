@@ -354,13 +354,38 @@ export const mlmService = {
         }
 
         await sponsor.save();
+
+        // --- NEW: Propagate Active/Inactive Count Changes Up the Tree ---
+        let current = user;
+        let parentId = user.parentId;
+        let currentPosition = user.position; // Position relative to immediate parent
+
+        while (parentId) {
+            const parent = await User.findOne({ memberId: parentId });
+            if (!parent) break;
+
+            // Update parent's team counters
+            if (currentPosition === 'left') {
+                parent.leftTeamInactive = Math.max(0, parent.leftTeamInactive - 1);
+                parent.leftTeamActive += 1;
+            } else if (currentPosition === 'right') {
+                parent.rightTeamInactive = Math.max(0, parent.rightTeamInactive - 1);
+                parent.rightTeamActive += 1;
+            }
+            await parent.save();
+
+            // Move up
+            currentPosition = parent.position;
+            parentId = parent.parentId;
+        }
     },
 
     /**
      * Update Team Counts Up the Tree (Recursive / Iterative)
      * Increments `leftTeamCount` or `rightTeamCount` for all ancestors.
+     * Also updates Active/Inactive counts based on new user status (usually inactive on join).
      */
-    updateTeamCountsUpTree: async (userId) => {
+    updateTeamCountsUpTree: async (userId, status = 'inactive') => {
         let current = await User.findById(userId);
         if (!current) return;
 
@@ -373,8 +398,12 @@ export const mlmService = {
 
             if (currentPosition === 'left') {
                 parent.leftTeamCount += 1;
+                if (status === 'active') parent.leftTeamActive += 1;
+                else parent.leftTeamInactive += 1;
             } else if (currentPosition === 'right') {
                 parent.rightTeamCount += 1;
+                if (status === 'active') parent.rightTeamActive += 1;
+                else parent.rightTeamInactive += 1;
             }
 
             await parent.save();
@@ -440,13 +469,13 @@ export const mlmService = {
                 joiningDate: user.createdAt,
                 status: user.status,
 
-                // Direct Team Stats (O(1) from User model)
-                leftDirectActive: user.leftDirectActive || 0,
-                leftDirectInactive: user.leftDirectInactive || 0,
-                rightDirectActive: user.rightDirectActive || 0,
-                rightDirectInactive: user.rightDirectInactive || 0,
+                // Total Team Stats (Active + Inactive Breakdown)
+                leftDirectActive: user.leftTeamActive || 0,
+                leftDirectInactive: user.leftTeamInactive || 0,
+                rightDirectActive: user.rightTeamActive || 0,
+                rightDirectInactive: user.rightTeamInactive || 0,
 
-                // Total Team Count (Active + Inactive)
+                // Legacy Total Counts (kept for reference)
                 leftTeamCount: leftTeamCount,
                 rightTeamCount: rightTeamCount,
 
