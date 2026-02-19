@@ -460,4 +460,55 @@
  *                       type: array
  *                     pagination:
  *                       type: object
- */
+ * 
+ * /api/v1/admin/franchise/{franchiseId}:
+ *   put:
+ *     summary: Update Franchise Details (Admin only)
+ *     description: |
+ *       **Admin Access Only** - Update details including **Password**, Address, Shop Name, etc.
+ *       Immutable fields: `vendorId`, `email` (use direct DB update if critical).
+ *     tags: [Admin - Franchise]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: franchiseId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               shopName: { type: string }
+ *               phone: { type: string }
+ *               password: { type: string, description: "Send new password to reset it" }
+ *               city: { type: string }
+ *               shopAddress: { type: object }
+ *     responses:
+ *       200:
+ *         description: Franchise updated
+ *       404:
+ *         description: Franchise not found
+ * 
+ *   delete:
+ *     summary: Delete Franchise (Soft Delete)
+ *     description: |
+ *       **Admin Access Only** - Soft delete a franchise (mark as inactive/deleted).
+ *     tags: [Admin - Franchise]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: franchiseId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Franchise deleted successfully
+ *       404:
+ *         description: Franchise not found
+ * */

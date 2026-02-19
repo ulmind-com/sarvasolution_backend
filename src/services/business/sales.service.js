@@ -27,11 +27,21 @@ export const processSaleTransaction = async ({
     user
 }) => {
     const processedItems = [];
-    let subTotal = 0;
+    let subTotal = 0; // This will be Total Taxable Value
+
+    // Tax Totals
+    let totalCGST = 0;
+    let totalSGST = 0;
+    let totalIGST = 0;
+    let totalTaxAmount = 0;
+
+    // Determine Admin State (Fixed) and Franchise State
+    const adminState = 'West Bengal';
+    const franchiseState = franchise.shopAddress?.state || franchise.state || '';
+    const isInterState = adminState.toLowerCase() !== franchiseState.toLowerCase();
 
     for (const item of items) {
         const product = await Product.findById(item.productId).session(session);
-        // Skip if product invalid/inactive? Or throw? Throwing ensures data integrity.
         if (!product || !product.isActive) {
             throw new ApiError(400, `Product not found or inactive: ${item.productId}`);
         }
@@ -40,18 +50,61 @@ export const processSaleTransaction = async ({
             throw new ApiError(400, `Insufficient stock for ${product.productName}. Available: ${product.stockQuantity}`);
         }
 
-        const itemAmount = item.quantity * product.price; // DP
-        subTotal += itemAmount;
+        // --- Pricing & Tax Calculation ---
+        const taxableValue = item.quantity * product.price; // DP is Taxable Value
+        subTotal += taxableValue;
+
+        // Fetch Tax Rates from Product
+        const cgstRate = product.cgst || 0;
+        const sgstRate = product.sgst || 0;
+        // If product doesn't have explicit IGST, we can derive or assume standard (CGST+SGST)
+        // Usually IGST = CGST + SGST
+        const productIgstRate = (product.cgst || 0) + (product.sgst || 0);
+
+        let itemCGST = 0;
+        let itemSGST = 0;
+        let itemIGST = 0;
+        let itemTaxAmount = 0;
+
+        if (isInterState) {
+            // Inter-state: Charge IGST only
+            itemIGST = (taxableValue * productIgstRate) / 100;
+            itemTaxAmount = itemIGST;
+        } else {
+            // Intra-state: Charge CGST + SGST
+            itemCGST = (taxableValue * cgstRate) / 100;
+            itemSGST = (taxableValue * sgstRate) / 100;
+            itemTaxAmount = itemCGST + itemSGST;
+        }
+
+        // Add to Global Totals
+        totalCGST += itemCGST;
+        totalSGST += itemSGST;
+        totalIGST += itemIGST;
+        totalTaxAmount += itemTaxAmount;
 
         processedItems.push({
             product: product._id,
             quantity: item.quantity,
             productDP: product.price,
             productMRP: product.mrp,
-            amount: itemAmount,
+            amount: taxableValue + itemTaxAmount, // Item Total Amount (Price + Tax)
+
+            // Detailed Breakdown
+            taxableValue: taxableValue,
+            cgstRate: isInterState ? 0 : cgstRate,
+            sgstRate: isInterState ? 0 : sgstRate,
+            igstRate: isInterState ? productIgstRate : 0,
+
+            taxAmount: itemTaxAmount,
+            cgstAmount: itemCGST,
+            sgstAmount: itemSGST,
+            igstAmount: itemIGST,
+
             hsnCode: product.hsnCode,
             batchNo: product.batchNo,
-            name: product.productName // For PDF
+            productName: product.productName, // Renaming key for PDF consistency 'name' vs 'productName'
+            name: product.productName // Keeping both for compatibility
         });
 
         // 1. Deduct Main Inventory
@@ -110,10 +163,8 @@ export const processSaleTransaction = async ({
     const count = await Invoice.countDocuments().session(session);
     const invoiceNo = `INV-${currentYear}-${String(count + 1).padStart(5, '0')}`;
 
-    // 5. Calculate GST
-    const gstRate = 18;
-    const gstAmount = (subTotal * gstRate) / 100;
-    const grandTotal = subTotal + gstAmount;
+    // 5. Final Totals
+    const grandTotal = subTotal + totalTaxAmount;
 
     // 6. Create Invoice
     const invoice = await Invoice.create([{
@@ -121,10 +172,18 @@ export const processSaleTransaction = async ({
         invoiceDate: invoiceDate || getISTDate(),
         franchise: franchise._id,
         items: processedItems,
-        subTotal,
-        gstRate,
-        gstAmount,
+
+        // Financials
+        subTotal, // Taxable Value
+        totalTaxableValue: subTotal,
+        gstRate: 0, // Mixed rates, set 0
+        gstAmount: totalTaxAmount,
+
+        totalCGST,
+        totalSGST,
+        totalIGST,
         grandTotal,
+
         deliveryAddress: {
             franchiseName: franchise.name,
             shopName: franchise.shopName,
@@ -140,7 +199,19 @@ export const processSaleTransaction = async ({
         paymentDate: getISTDate()
     }], { session });
 
-    return { invoice: invoice[0], processedItems, grandTotal, subTotal, gstAmount, gstRate };
+    return {
+        invoice: invoice[0],
+        processedItems,
+        grandTotal,
+        totals: { // Returning a 'totals' object for easy PDF consumption
+            totalPV: 0,
+            totalBV: 0,
+            totalCGST,
+            totalSGST,
+            totalIGST,
+            grandTotal
+        }
+    };
 };
 
 /**
@@ -150,14 +221,36 @@ export const processSaleTransaction = async ({
 export const handlePostSaleActions = async (invoice, processedItems, franchise) => {
     try {
         const invoiceDataForPdf = {
-            invoiceNo: invoice.invoiceNo,
-            invoiceDate: invoice.invoiceDate,
+            details: {
+                invoiceNo: invoice.invoiceNo,
+                invoiceDate: invoice.invoiceDate,
+                // Add transport info if available
+            },
+            sender: {
+                name: 'Sarva Solution',
+                address: 'Head Office Address', // Update with actual HO address if available
+                city: 'Kolkata',
+                state: 'West Bengal',
+                phone: '9832775700', // Admin Phone
+                gstin: 'DEFAULTGSTIN' // Update if available in env or constant
+            },
+            receiver: {
+                name: franchise.name,
+                fullAddress: `${franchise.shopAddress.street}, ${franchise.shopAddress.landmark}`,
+                city: franchise.city,
+                state: franchise.shopAddress?.state || franchise.state,
+                pincode: franchise.shopAddress.pincode,
+                phone: franchise.mobile
+            },
             items: processedItems,
-            subTotal: invoice.subTotal,
-            gstRate: invoice.gstRate,
-            gstAmount: invoice.gstAmount,
-            grandTotal: invoice.grandTotal,
-            deliveryAddress: invoice.deliveryAddress
+            totals: {
+                subTotal: invoice.subTotal, // Taxable Value
+                totalCGST: invoice.totalCGST || 0,
+                totalSGST: invoice.totalSGST || 0,
+                totalIGST: invoice.totalIGST || 0,
+                grandTotal: invoice.grandTotal,
+                totalBV: 0 // Admin Sale
+            }
         };
 
         // Generate PDF Buffer (no Cloudinary upload)

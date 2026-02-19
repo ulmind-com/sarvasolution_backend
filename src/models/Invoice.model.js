@@ -24,6 +24,17 @@ const invoiceItemSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // Detailed Tax Breakdown
+    taxableValue: { type: Number, default: 0 },
+    cgstRate: { type: Number, default: 0 }, // Percent
+    sgstRate: { type: Number, default: 0 },
+    igstRate: { type: Number, default: 0 },
+
+    taxAmount: { type: Number, default: 0 }, // Total Tax for this item
+    cgstAmount: { type: Number, default: 0 },
+    sgstAmount: { type: Number, default: 0 },
+    igstAmount: { type: Number, default: 0 },
+
     hsnCode: String,
     batchNo: String
 });
@@ -57,13 +68,17 @@ const invoiceSchema = new mongoose.Schema({
     },
     gstRate: {
         type: Number,
-        required: true,
-        default: 18
+        default: 0 // Deprecated global rate, keeping for backward compat if needed
     },
     gstAmount: {
         type: Number,
-        required: true
+        required: true // Keeping as Total Tax Amount
     },
+    // Detailed Total Tax Breakdown
+    totalCGST: { type: Number, default: 0 },
+    totalSGST: { type: Number, default: 0 },
+    totalIGST: { type: Number, default: 0 },
+    totalTaxableValue: { type: Number, default: 0 },
     grandTotal: {
         type: Number,
         required: true

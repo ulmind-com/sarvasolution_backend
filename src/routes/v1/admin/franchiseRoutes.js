@@ -3,6 +3,7 @@ import {
     createFranchise,
     listFranchises,
     updateFranchise,
+    deleteFranchise,
     blockFranchise,
     unblockFranchise,
     getFranchiseBySearch
@@ -20,6 +21,7 @@ router.post('/create', validateFranchiseCreation, createFranchise);
 router.get('/search', getFranchiseBySearch);
 router.get('/list', listFranchises);
 router.put('/:franchiseId', updateFranchise);
+router.delete('/:franchiseId', deleteFranchise);
 router.patch('/:franchiseId/block', blockFranchise);
 router.patch('/:franchiseId/unblock', unblockFranchise);
 

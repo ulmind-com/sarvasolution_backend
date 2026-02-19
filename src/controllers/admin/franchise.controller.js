@@ -81,9 +81,12 @@ export const updateFranchise = asyncHandler(async (req, res) => {
 
     // Prevent updating immutable fields
     delete updates.vendorId;
-    delete updates.password;
     delete updates.role;
-    delete updates.email; // Usually email changes require separate verification
+    // delete updates.email; // Allow email update if needed, but carefully
+
+    if (updates.password) {
+        updates.password = await bcrypt.hash(updates.password, 10);
+    }
 
     const franchise = await Franchise.findByIdAndUpdate(franchiseId, updates, { new: true }).select('-password');
     if (!franchise) throw new ApiError(404, "Franchise not found");
@@ -133,6 +136,25 @@ export const unblockFranchise = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new ApiResponse(200, { _id: franchise._id, status: franchise.status }, "Franchise unblocked")
+    );
+});
+
+/**
+ * Delete Franchise (Soft Delete)
+ */
+export const deleteFranchise = asyncHandler(async (req, res) => {
+    const { franchiseId } = req.params;
+
+    const franchise = await Franchise.findById(franchiseId);
+    if (!franchise) throw new ApiError(404, "Franchise not found");
+
+    // Soft delete
+    franchise.deletedAt = new Date();
+    franchise.isActive = false; // Optional, depending on schema
+    await franchise.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, { _id: franchise._id }, "Franchise deleted successfully")
     );
 });
 

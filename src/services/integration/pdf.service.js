@@ -23,8 +23,14 @@ export const generateInvoicePDFBuffer = async (data) => {
 
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => {
-                const pdfBuffer = Buffer.concat(buffers);
-                resolve(pdfBuffer);
+                try {
+                    const pdfBuffer = Buffer.concat(buffers);
+                    console.log('PDF Generated Size:', pdfBuffer.length);
+                    resolve(pdfBuffer);
+                } catch (err) {
+                    console.error('Buffer Concat Error:', err);
+                    reject(err);
+                }
             });
             doc.on('error', (err) => {
                 console.error('PDFKit Error:', err);
