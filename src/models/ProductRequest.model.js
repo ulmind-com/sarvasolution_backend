@@ -63,7 +63,14 @@ const productRequestSchema = new mongoose.Schema({
     items: [productRequestItemSchema],
 
     // Estimated Totals (Final totals determined by Invoice)
-    estimatedTotal: Number,
+    estimatedTotal: Number, // Deprecated in favor of grandTotal, but kept for legacy
+
+    // Detailed Tax Breakdown
+    totalTaxableValue: { type: Number, default: 0 },
+    totalCGST: { type: Number, default: 0 },
+    totalSGST: { type: Number, default: 0 },
+    totalIGST: { type: Number, default: 0 },
+    grandTotal: { type: Number, default: 0 },
 
     // Approval Workflow
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
