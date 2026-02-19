@@ -242,7 +242,9 @@ export const generateInvoicePDFBuffer = async (data) => {
             doc.fontSize(8).text('Authorised Signature', 450, sigY);
             doc.text(`For ${data.sender?.shopName || 'Authorised Signatory'}`, 400, sigY + 15, { align: 'right', width: 150 });
 
+            console.log('Finalizing PDF Document...');
             doc.end();
+            console.log('doc.end() called.');
         } catch (error) {
             console.error('Critical PDF Generation Error:', error);
             resolve(Buffer.from('Error generating PDF: Internal Error'));
