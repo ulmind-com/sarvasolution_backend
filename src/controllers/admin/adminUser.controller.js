@@ -208,3 +208,64 @@ export const changeUserPassword = asyncHandler(async (req, res) => {
         new ApiResponse(200, {}, `Password changed successfully for ${user.fullName}`)
     );
 });
+/**
+ * Get all users with full KYC and Bank details for verification (Admin only)
+ */
+export const getUsersKYCDetails = asyncHandler(async (req, res) => {
+    const { status } = req.query;
+
+    const pipeline = [];
+
+    // Filter by KYC status if provided
+    if (status && ['none', 'pending', 'verified', 'rejected'].includes(status)) {
+        pipeline.push({
+            $match: { 'kyc.status': status }
+        });
+    }
+
+    // Lookup BankAccount details
+    pipeline.push({
+        $lookup: {
+            from: 'bankaccounts', // collection name in MongoDB
+            localField: '_id',
+            foreignField: 'userId',
+            as: 'bankAccount'
+        }
+    });
+
+    // Unwind bankAccount (since it's a 1-to-1 relationship, but lookup returns array)
+    pipeline.push({
+        $unwind: {
+            path: '$bankAccount',
+            preserveNullAndEmptyArrays: true
+        }
+    });
+
+    // Project only necessary fields
+    pipeline.push({
+        $project: {
+            fullName: 1,
+            memberId: 1,
+            phone: 1,
+            email: 1,
+            panCardNumber: 1,
+            address: 1,
+            kyc: 1,
+            status: 1,
+            role: 1,
+            bankAccount: {
+                accountName: 1,
+                accountNumber: 1,
+                bankName: 1,
+                ifscCode: 1,
+                branch: 1
+            }
+        }
+    });
+
+    const users = await User.aggregate(pipeline);
+
+    return res.status(200).json(
+        new ApiResponse(200, users, 'User KYC and bank details fetched successfully')
+    );
+});

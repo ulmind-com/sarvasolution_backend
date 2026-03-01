@@ -38,7 +38,60 @@
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  * 
+ * /api/v1/admin/users/kyc-details:
+ *   get:
+ *     summary: Get all users with full KYC and Bank details (Admin only)
+ *     description: |
+ *       **Admin Access Only** - Retrieve a comprehensive list of users including their KYC status, Aadhaar/PAN info, and Bank account details.
+ *       Used by admins to verify users' identities and bank accounts.
+ *     tags:
+ *       - Admin - Users
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [none, pending, verified, rejected]
+ *         description: Filter by KYC status
+ *     responses:
+ *       200:
+ *         description: User KYC and bank details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       fullName: { type: string }
+ *                       memberId: { type: string }
+ *                       phone: { type: string }
+ *                       email: { type: string }
+ *                       panCardNumber: { type: string }
+ *                       address: { $ref: '#/components/schemas/Address' }
+ *                       kyc: { $ref: '#/components/schemas/KYC' }
+ *                       bankAccount:
+ *                         type: object
+ *                         properties:
+ *                           accountName: { type: string }
+ *                           accountNumber: { type: string }
+ *                           bankName: { type: string }
+ *                           ifscCode: { type: string }
+ *                           branch: { type: string }
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ * 
  * /api/v1/admin/users/{memberId}:
+
  *   get:
  *     summary: Get user details by member ID (Admin only)
  *     description: |
