@@ -82,7 +82,12 @@ export const activateUser = asyncHandler(async (req, res) => {
         new ApiResponse(200, {
             memberId: user.memberId,
             status: user.status,
-            personalBV: userFinance.personalBV
+            personalBV: userFinance.personalBV,
+            totalBV: userFinance.totalBV,
+            personalPV: userFinance.personalPV,
+            totalPV: userFinance.totalPV,
+            leftLegBV: userFinance.leftLegBV,
+            rightLegBV: userFinance.rightLegBV
         }, 'User activated successfully. BV Propagated.')
     );
 });

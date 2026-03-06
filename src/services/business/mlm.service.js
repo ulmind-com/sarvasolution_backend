@@ -444,7 +444,7 @@ export const mlmService = {
 
         // Helper to find checking finance for stars (bulk fetch)
         const allUserIds = [rootNode._id, ...descendants.map(d => d._id)];
-        const finances = await UserFinance.find({ user: { $in: allUserIds } }).select('user isStar leftLegBV rightLegBV').lean();
+        const finances = await UserFinance.find({ user: { $in: allUserIds } }).select('user isStar leftLegBV rightLegBV leftLegPV rightLegPV').lean();
         const financeMap = new Map();
         finances.forEach(f => financeMap.set(f.user.toString(), f));
 
@@ -479,9 +479,11 @@ export const mlmService = {
                 leftTeamCount: leftTeamCount,
                 rightTeamCount: rightTeamCount,
 
-                // Retaining BV info
+                // Retaining BV/PV info
                 leftLegBV: finance?.leftLegBV || 0,
                 rightLegBV: finance?.rightLegBV || 0,
+                leftLegPV: finance?.leftLegPV || 0,
+                rightLegPV: finance?.rightLegPV || 0,
 
                 // Stars need to be counted? 
                 // If we didn't store "leftLegStars", we can't easily deliver it without recursion.

@@ -117,7 +117,7 @@ export const getTree = asyncHandler(async (req, res) => {
  */
 export const getBonusStatus = asyncHandler(async (req, res) => {
     const finance = await UserFinance.findOne({ user: req.user._id })
-        .select('fastTrack starMatchingBonus starMatching wallet');
+        .select('fastTrack starMatchingBonus starMatching wallet leftLegBV rightLegBV totalBV leftLegPV rightLegPV totalPV');
 
     if (!finance) throw new ApiError(404, 'Financial record not found');
 
@@ -141,6 +141,12 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
                 pendingRight: finance.fastTrack.pendingPairRight,
                 carryForwardLeft: finance.fastTrack.carryForwardLeft,
                 carryForwardRight: finance.fastTrack.carryForwardRight,
+                leftLegBV: finance.leftLegBV,
+                rightLegBV: finance.rightLegBV,
+                totalBV: finance.totalBV,
+                leftLegPV: finance.leftLegPV,
+                rightLegPV: finance.rightLegPV,
+                totalPV: finance.totalPV,
                 totalEarned: finance.fastTrack.totalEarned,
                 overallTotalEarnings: finance.wallet.totalEarnings, // Added as requested
                 history: fastTrackHistory
@@ -153,6 +159,12 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
                 carryForwardLeft: finance.starMatchingBonus.carryForwardStarsLeft,
                 carryForwardRight: finance.starMatchingBonus.carryForwardStarsRight,
                 accumulatedStars: finance.starMatching,
+                leftLegBV: finance.leftLegBV,
+                rightLegBV: finance.rightLegBV,
+                totalBV: finance.totalBV,
+                leftLegPV: finance.leftLegPV,
+                rightLegPV: finance.rightLegPV,
+                totalPV: finance.totalPV,
                 totalEarned: finance.starMatchingBonus.totalEarned,
                 history: starMatchingHistory
             }
@@ -165,7 +177,7 @@ export const getBonusStatus = asyncHandler(async (req, res) => {
  */
 export const getFastTrackBonusStatus = asyncHandler(async (req, res) => {
     const finance = await UserFinance.findOne({ user: req.user._id })
-        .select('fastTrack wallet');
+        .select('fastTrack wallet leftLegBV rightLegBV totalBV leftLegPV rightLegPV totalPV');
 
     if (!finance) throw new ApiError(404, 'Financial record not found');
 
@@ -182,6 +194,12 @@ export const getFastTrackBonusStatus = asyncHandler(async (req, res) => {
             pendingRight: finance.fastTrack.pendingPairRight,
             carryForwardLeft: finance.fastTrack.carryForwardLeft,
             carryForwardRight: finance.fastTrack.carryForwardRight,
+            leftLegBV: finance.leftLegBV,
+            rightLegBV: finance.rightLegBV,
+            totalBV: finance.totalBV,
+            leftLegPV: finance.leftLegPV,
+            rightLegPV: finance.rightLegPV,
+            totalPV: finance.totalPV,
             totalEarned: finance.fastTrack.totalEarned,
             overallTotalEarnings: finance.wallet.totalEarnings, // Added as requested
             history
@@ -194,7 +212,7 @@ export const getFastTrackBonusStatus = asyncHandler(async (req, res) => {
  */
 export const getStarMatchingBonusStatus = asyncHandler(async (req, res) => {
     const finance = await UserFinance.findOne({ user: req.user._id })
-        .select('starMatchingBonus starMatching');
+        .select('starMatchingBonus starMatching leftLegBV rightLegBV totalBV leftLegPV rightLegPV totalPV');
 
     if (!finance) throw new ApiError(404, 'Financial record not found');
 
@@ -212,6 +230,12 @@ export const getStarMatchingBonusStatus = asyncHandler(async (req, res) => {
             carryForwardLeft: finance.starMatchingBonus.carryForwardStarsLeft,
             carryForwardRight: finance.starMatchingBonus.carryForwardStarsRight,
             accumulatedStars: finance.starMatching,
+            leftLegBV: finance.leftLegBV,
+            rightLegBV: finance.rightLegBV,
+            totalBV: finance.totalBV,
+            leftLegPV: finance.leftLegPV,
+            rightLegPV: finance.rightLegPV,
+            totalPV: finance.totalPV,
             totalEarned: finance.starMatchingBonus.totalEarned,
             history
         }, 'Star Matching Bonus status fetched')

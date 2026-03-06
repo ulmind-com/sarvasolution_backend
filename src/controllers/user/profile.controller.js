@@ -31,7 +31,11 @@ export const getFirstPurchaseStatus = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new ApiResponse(200, {
-            isFirstPurchaseDone: user.isFirstPurchaseDone
+            isFirstPurchaseDone: user.isFirstPurchaseDone,
+            personalPV: user.personalPV,
+            totalPV: user.totalPV,
+            personalBV: user.personalBV,
+            totalBV: user.totalBV
         }, 'First purchase status fetched successfully')
     );
 });
