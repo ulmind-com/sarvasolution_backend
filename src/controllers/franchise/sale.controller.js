@@ -192,6 +192,7 @@ export const sellToUser = asyncHandler(async (req, res) => {
 
         // 8. Update user PV/BV based on purchase type
         const financeUpdate = {};
+        const repurchaseBonusUpdate = {};
 
         if (isFirstPurchase) {
             user.personalPV += totalPV;
@@ -215,16 +216,41 @@ export const sellToUser = asyncHandler(async (req, res) => {
             financeUpdate.totalBV = totalBV;
             financeUpdate.thisMonthBV = totalBV;
             financeUpdate.thisYearBV = totalBV;
+
+            // Phase 2: Self Repurchase Bonus Tracking (1st to 10th of every month)
+            // Rule: If user is active (already first purchase done) and date is between 1-10
+            const nowIST = moment().tz("Asia/Kolkata");
+            const dayOfMonth = nowIST.date();
+
+            if (dayOfMonth >= 1 && dayOfMonth <= 10) {
+                // Increment window BV
+                repurchaseBonusUpdate["selfPurchase.repurchaseWindowBV"] = totalBV;
+            }
         }
 
-        await UserFinance.findOneAndUpdate(
+        const updatedFinance = await UserFinance.findOneAndUpdate(
             { user: user._id },
             {
-                $inc: financeUpdate,
+                $inc: { ...financeUpdate, ...repurchaseBonusUpdate },
                 $setOnInsert: { memberId: user.memberId }
             },
             { upsert: true, new: true, session }
         );
+
+        // Check if eligibility should be set
+        if (!isFirstPurchase && updatedFinance.selfPurchase.repurchaseWindowBV >= 500 && !updatedFinance.selfPurchase.eligibleForRepurchaseBonus) {
+            updatedFinance.selfPurchase.eligibleForRepurchaseBonus = true;
+            await updatedFinance.save({ session });
+
+            // Sync with User model too
+            user.selfPurchase.eligibleForRepurchaseBonus = true;
+            user.selfPurchase.repurchaseWindowBV = updatedFinance.selfPurchase.repurchaseWindowBV;
+        }
+
+        if (!isFirstPurchase) {
+            user.selfPurchase.repurchaseWindowBV = updatedFinance.selfPurchase.repurchaseWindowBV;
+            user.selfPurchase.thisMonthBV = updatedFinance.selfPurchase.thisMonthBV;
+        }
 
         // 9. ACTIVATION LOGIC
         let activationMessage = '';

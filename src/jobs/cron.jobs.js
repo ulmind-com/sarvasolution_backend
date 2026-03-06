@@ -3,6 +3,8 @@ import UserFinance from '../models/UserFinance.model.js';
 import chalk from 'chalk';
 import moment from 'moment-timezone';
 import { getISTDate } from '../utils/date.util.js';
+import { bonusService } from '../services/business/bonus.service.js';
+import User from '../models/User.model.js';
 
 export const cronJobs = {
     /**
@@ -165,13 +167,33 @@ export const cronJobs = {
      */
     async resetMonthlyCounters() {
         try {
+            console.log(chalk.yellow('Processing Monthly Repurchase Bonus Pool before reset...'));
+            await bonusService.processMonthlyRepurchaseBonusPool();
+
+            console.log(chalk.yellow('Resetting Monthly Counters...'));
+
+            // 1. Update UserFinance
             await UserFinance.updateMany({}, {
                 $set: {
                     thisMonthBV: 0,
                     thisMonthPV: 0,
-                    "selfPurchase.thisMonthBV": 0
+                    "selfPurchase.thisMonthBV": 0,
+                    "selfPurchase.repurchaseWindowBV": 0,
+                    "selfPurchase.eligibleForRepurchaseBonus": false
                 }
             });
+
+            // 2. Sync with User model (optional but good for consistency if fields exist at root or nested)
+            await User.updateMany({}, {
+                $set: {
+                    thisMonthBV: 0,
+                    thisMonthPV: 0,
+                    "selfPurchase.thisMonthBV": 0,
+                    "selfPurchase.repurchaseWindowBV": 0,
+                    "selfPurchase.eligibleForRepurchaseBonus": false
+                }
+            });
+
             console.log('Monthly counters reset successfully.');
         } catch (e) {
             console.error('Monthly Reset Error:', e);

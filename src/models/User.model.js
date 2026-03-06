@@ -126,7 +126,9 @@ const userSchema = new mongoose.Schema({
         lastPurchaseDate: Date,
         thisMonthBV: { type: Number, default: 0 },
         bonusEarned: { type: Number, default: 0 },
-        eligibleForPrize: { type: Boolean, default: false }
+        eligibleForPrize: { type: Boolean, default: false },
+        eligibleForRepurchaseBonus: { type: Boolean, default: false }, // Phase 2
+        repurchaseWindowBV: { type: Number, default: 0 } // BV generated between 1st-10th
     },
     isFirstPurchaseDone: { type: Boolean, default: false },
     beginnerBonus: {

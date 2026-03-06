@@ -7,6 +7,8 @@
  *     description: Payout request management and processing (Admin Access Only)
  *   - name: Admin - System
  *     description: System management, metrics, and database operations (Admin Access Only)
+ *   - name: Admin - Bonus
+ *     description: Bonus pool management and distribution (Admin Access Only)
  * 
  * /api/v1/admin/users:
  *   get:
@@ -564,4 +566,89 @@
  *         description: Franchise deleted successfully
  *       404:
  *         description: Franchise not found
+ * 
+ * /api/v1/admin/bonus/repurchase-pool:
+ *   get:
+ *     summary: Get all Repurchase Bonus Pool history (Admin only)
+ *     description: Retrieve a paginated history of all monthly repurchase bonus pools and their distribution status.
+ *     tags: [Admin - Bonus]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *     responses:
+ *       200:
+ *         description: List of bonus pools retrieved successfully
+ * 
+ * /api/v1/admin/bonus/repurchase-qualifiers/{poolId}:
+ *   get:
+ *     summary: Get Qualifiers for a specific pool (Admin only)
+ *     description: Retrieve a list of users who qualified for a specific monthly bonus pool.
+ *     tags: [Admin - Bonus]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: poolId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Qualifiers and pool details retrieved successfully
+ * 
+ * /api/v1/admin/bonus/repurchase-history:
+ *   get:
+ *     summary: Get Global Repurchase Bonus History (Admin only)
+ *     description: Retrieve a paginated log of all repurchase bonus payouts distributed across the system.
+ *     tags: [Admin - Bonus]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: memberId
+ *         schema: { type: string }
+ *         description: Filter by specific member ID
+ *     responses:
+ *       200:
+ *         description: Global history retrieved successfully
+ * 
+ * /api/v1/admin/bonus/live-qualifiers:
+ *   get:
+ *     summary: Get Current Window Qualifiers (Admin only)
+ *     description: View users who have already qualified (500+ BV) in the current month's window (1st-10th).
+ *     tags: [Admin - Bonus]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *     responses:
+ *       200:
+ *         description: Live qualifiers retrieved successfully
+ * 
+ * /api/v1/admin/bonus/trigger-repurchase-distribution:
+ *   post:
+ *     summary: Manually trigger bonus distribution (Admin only)
+ *     description: Force the calculation and distribution of the 7% repurchase bonus for the previous month.
+ *     tags: [Admin - Bonus]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Distribution triggered successfully
  * */

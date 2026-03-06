@@ -527,4 +527,33 @@
  *         description: Account activated successfully
  *       400:
  *         description: Already active or invalid request
- */
+ * 
+ * /api/v1/user/bonus/repurchase-status:
+ *   get:
+ *     summary: Get personal repurchase status and eligibility overview (User only)
+ *     description: Check your current BV in the repurchase window (1st-10th), eligibility status, and see recent 5 distributions.
+ *     tags: [User - Financial]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Status overview retrieved successfully
+ * 
+ * /api/v1/user/bonus/repurchase-history:
+ *   get:
+ *     summary: Get full repurchase bonus history (User only)
+ *     description: Paginated history of all Self Repurchase Bonuses earned by the user.
+ *     tags: [User - Financial]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 10 }
+ *     responses:
+ *       200:
+ *         description: Full history retrieved successfully
+ * */

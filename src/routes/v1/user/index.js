@@ -2,6 +2,7 @@ import express from 'express';
 import { getBVSummary, getFundsStatus, requestPayout, getWalletInfo, getTree, getPayouts, getBonusStatus, getFastTrackBonusStatus, getStarMatchingBonusStatus } from '../../../controllers/user/userFinancial.controller.js';
 import { getUserProducts, getProductDetails } from '../../../controllers/user/product.controller.js';
 import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
+import bonusRoutes from './bonusRoutes.js';
 
 const router = express.Router();
 
@@ -32,5 +33,7 @@ import { activateUser } from '../../../controllers/user/activate_user.controller
 router.post('/activate', activateUser);
 router.get('/direct-team', getDirectTeam); // New Route for Direct Team List
 router.get('/team/complete', getCompleteTeam); // Recursively fetch complete team by leg
+
+router.use('/bonus', bonusRoutes);
 
 export default router;

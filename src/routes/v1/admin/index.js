@@ -10,6 +10,7 @@ import productRoutes from './productRoutes.js';
 import franchiseRoutes from './franchiseRoutes.js';
 import saleRoutes from './saleRoutes.js';
 import requestRoutes from './requestRoutes.js';
+import bonusRoutes from './bonusRoutes.js';
 
 const router = express.Router();
 
@@ -41,6 +42,7 @@ router.use('/product', productRoutes);
 router.use('/franchise', franchiseRoutes);
 router.use('/sales', saleRoutes);
 router.use('/requests', requestRoutes); // Pluralized to match user preference
+router.use('/bonus', bonusRoutes);
 
 
 export default router;
