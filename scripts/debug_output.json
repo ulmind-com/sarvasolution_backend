@@ -1,0 +1,104 @@
+{
+  "SVS000075": {
+    "personalBV": 510,
+    "thisMonthBV": 510,
+    "finance": {
+      "personalBV": 510,
+      "thisMonthBV": 510,
+      "leftLegBV": 0,
+      "rightLegBV": 0,
+      "thisMonthLeftLegBV": 0,
+      "thisMonthRightLegBV": 0
+    },
+    "pathToRoot": [
+      {
+        "member": "SVS000075",
+        "position": "left",
+        "parent": "SVS000040"
+      },
+      {
+        "member": "SVS000040",
+        "position": "right",
+        "parent": "SVS000026"
+      },
+      {
+        "member": "SVS000026",
+        "position": "right",
+        "parent": "SVS000012"
+      },
+      {
+        "member": "SVS000012",
+        "position": "right",
+        "parent": "SVS000005"
+      },
+      {
+        "member": "SVS000005",
+        "position": "right",
+        "parent": "SVS000002"
+      },
+      {
+        "member": "SVS000002",
+        "position": "left",
+        "parent": "SVS000001"
+      },
+      {
+        "member": "SVS000001",
+        "position": "root"
+      }
+    ]
+  },
+  "SVS000041": {
+    "personalBV": 510,
+    "thisMonthBV": 510,
+    "finance": {
+      "personalBV": 510,
+      "thisMonthBV": 510,
+      "leftLegBV": 0,
+      "rightLegBV": 0,
+      "thisMonthLeftLegBV": 0,
+      "thisMonthRightLegBV": 0
+    },
+    "pathToRoot": [
+      {
+        "member": "SVS000041",
+        "position": "right",
+        "parent": "SVS000040"
+      },
+      {
+        "member": "SVS000040",
+        "position": "right",
+        "parent": "SVS000026"
+      },
+      {
+        "member": "SVS000026",
+        "position": "right",
+        "parent": "SVS000012"
+      },
+      {
+        "member": "SVS000012",
+        "position": "right",
+        "parent": "SVS000005"
+      },
+      {
+        "member": "SVS000005",
+        "position": "right",
+        "parent": "SVS000002"
+      },
+      {
+        "member": "SVS000002",
+        "position": "left",
+        "parent": "SVS000001"
+      },
+      {
+        "member": "SVS000001",
+        "position": "root"
+      }
+    ]
+  },
+  "SVS000001_SUPER": {
+    "leftLegBV": 2190,
+    "rightLegBV": 50,
+    "thisMonthLeftLegBV": 2190,
+    "thisMonthRightLegBV": 50
+  }
+}

@@ -20,7 +20,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "https://sarvasolution-backend.onrender.com/health"]
       interval: 30s
       timeout: 10s
       retries: 3

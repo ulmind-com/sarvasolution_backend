@@ -61,6 +61,8 @@ const userSchema = new mongoose.Schema({
 
     totalBV: { type: Number, default: 0 },
     thisMonthBV: { type: Number, default: 0 },
+    thisMonthLeftLegBV: { type: Number, default: 0 },
+    thisMonthRightLegBV: { type: Number, default: 0 },
     thisYearBV: { type: Number, default: 0 },
     carryForwardLeft: { type: Number, default: 0 },
     carryForwardRight: { type: Number, default: 0 },

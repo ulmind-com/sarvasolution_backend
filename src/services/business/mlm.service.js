@@ -103,44 +103,48 @@ export const mlmService = {
         let currentPosition = current.position;
 
         while (parentMemberId) {
-            // Revert to findOne for String MemberID
             const parent = await User.findOne({ memberId: parentMemberId });
             if (!parent) break;
 
-            if (parent.status === 'active') { // Only active accumulate
-                // --- Update UserFinance ---
-                let userFinance = await UserFinance.findOne({ user: parent._id });
-                if (!userFinance) {
-                    userFinance = new UserFinance({ user: parent._id, memberId: parent.memberId });
-                }
+            // --- ALWAYS update Leg BV for ALL ancestors (regardless of status) ---
+            let userFinance = await UserFinance.findOne({ user: parent._id });
+            if (!userFinance) {
+                userFinance = new UserFinance({ user: parent._id, memberId: parent.memberId });
+            }
 
+            if (currentPosition === 'left') {
+                userFinance.leftLegBV += bvAmount;
+                userFinance.thisMonthLeftLegBV += bvAmount;
+                userFinance.leftLegPV += pvAmount;
+
+                parent.leftLegBV += bvAmount;
+                parent.thisMonthLeftLegBV += bvAmount;
+                parent.leftLegPV += pvAmount;
+            } else {
+                userFinance.rightLegBV += bvAmount;
+                userFinance.thisMonthRightLegBV += bvAmount;
+                userFinance.rightLegPV += pvAmount;
+
+                parent.rightLegBV += bvAmount;
+                parent.thisMonthRightLegBV += bvAmount;
+                parent.rightLegPV += pvAmount;
+            }
+
+            // --- Only active users accumulate totals and trigger bonuses ---
+            if (parent.status === 'active') {
                 if (currentPosition === 'left') {
-                    userFinance.leftLegBV += bvAmount;
-                    userFinance.leftLegPV += pvAmount;
                     userFinance.fastTrack.pendingPairLeft += pvAmount;
-
-                    // Sync User Model
-                    parent.leftLegBV += bvAmount;
-                    parent.leftLegPV += pvAmount;
                 } else {
-                    userFinance.rightLegBV += bvAmount;
-                    userFinance.rightLegPV += pvAmount;
                     userFinance.fastTrack.pendingPairRight += pvAmount;
-
-                    // Sync User Model
-                    parent.rightLegBV += bvAmount;
-                    parent.rightLegPV += pvAmount;
                 }
+
                 userFinance.totalBV += bvAmount;
                 userFinance.totalPV += pvAmount;
-
                 userFinance.thisMonthBV += bvAmount;
                 userFinance.thisMonthPV += pvAmount;
-
                 userFinance.thisYearBV += bvAmount;
                 userFinance.thisYearPV += pvAmount;
 
-                // Sync User Model Totals
                 parent.totalBV += bvAmount;
                 parent.totalPV += pvAmount;
                 parent.thisMonthPV += pvAmount;
@@ -148,24 +152,24 @@ export const mlmService = {
                 parent.thisMonthBV += bvAmount;
                 parent.thisYearBV += bvAmount;
 
-                await userFinance.save();
-                await parent.save();
-
                 // Trigger Fast Track Bonus (PV Based)
                 if (pvAmount > 0) {
                     await matchingService.processFastTrackMatching(parent._id);
                 }
-
-                await BVTransaction.create({
-                    userId: parent._id,
-                    transactionType,
-                    bvAmount,
-                    pvAmount,
-                    legAffected: currentPosition,
-                    fromUserId: userId,
-                    referenceId
-                });
             }
+
+            await userFinance.save();
+            await parent.save();
+
+            await BVTransaction.create({
+                userId: parent._id,
+                transactionType,
+                bvAmount,
+                pvAmount,
+                legAffected: currentPosition,
+                fromUserId: userId,
+                referenceId
+            });
 
             // Move up
             currentPosition = parent.position;
@@ -444,7 +448,7 @@ export const mlmService = {
 
         // Helper to find checking finance for stars (bulk fetch)
         const allUserIds = [rootNode._id, ...descendants.map(d => d._id)];
-        const finances = await UserFinance.find({ user: { $in: allUserIds } }).select('user isStar leftLegBV rightLegBV leftLegPV rightLegPV').lean();
+        const finances = await UserFinance.find({ user: { $in: allUserIds } }).select('user isStar leftLegBV rightLegBV thisMonthLeftLegBV thisMonthRightLegBV leftLegPV rightLegPV').lean();
         const financeMap = new Map();
         finances.forEach(f => financeMap.set(f.user.toString(), f));
 
@@ -482,6 +486,8 @@ export const mlmService = {
                 // Retaining BV/PV info
                 leftLegBV: finance?.leftLegBV || 0,
                 rightLegBV: finance?.rightLegBV || 0,
+                thisMonthLeftLegBV: finance?.thisMonthLeftLegBV || 0,
+                thisMonthRightLegBV: finance?.thisMonthRightLegBV || 0,
                 leftLegPV: finance?.leftLegPV || 0,
                 rightLegPV: finance?.rightLegPV || 0,
 

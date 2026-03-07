@@ -34,7 +34,7 @@ async function testCreateProduct() {
         // Or I can temporarily disable auth in the route for testing? 
         // Better to login.
 
-        const loginRes = await fetch('http://localhost:8000/api/v1/login/user', {
+        const loginRes = await fetch('https://sarvasolution-backend.onrender.com/api/v1/login/user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -53,7 +53,7 @@ async function testCreateProduct() {
         // If it returns 400 (Missing fields), then auth passed? No.
 
         console.log("Sending request...");
-        const res = await fetch('http://localhost:8000/api/v1/admin/product/create', {
+        const res = await fetch('https://sarvasolution-backend.onrender.com/api/v1/admin/product/create', {
             method: 'POST',
             headers: {
                 // 'Content-Type': 'multipart/form-data' // fetch/FormData handles boundary automatically

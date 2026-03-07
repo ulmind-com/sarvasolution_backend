@@ -1,0 +1,41 @@
+[
+  {
+    "member": "SVS000040",
+    "name": "ase",
+    "personalBV": 0,
+    "leftChild": "SVS000075",
+    "rightChild": "SVS000041",
+    "finance": {
+      "llbv": 510,
+      "rlbv": 510,
+      "tmlbv": 510,
+      "tmrbv": 510
+    }
+  },
+  {
+    "member": "SVS000041",
+    "name": "hgt",
+    "personalBV": 510,
+    "leftChild": null,
+    "rightChild": "SVS000042",
+    "finance": {
+      "llbv": 0,
+      "rlbv": 0,
+      "tmlbv": 0,
+      "tmrbv": 0
+    }
+  },
+  {
+    "member": "SVS000075",
+    "name": "mnbv",
+    "personalBV": 510,
+    "leftChild": null,
+    "rightChild": null,
+    "finance": {
+      "llbv": 0,
+      "rlbv": 0,
+      "tmlbv": 0,
+      "tmrbv": 0
+    }
+  }
+]
