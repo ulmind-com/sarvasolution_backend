@@ -1,0 +1,77 @@
+[
+  {
+    "member": "SVS000001",
+    "name": "Super Admin",
+    "position": "root",
+    "parent": null,
+    "personalBV": 510,
+    "lifetime": {
+      "left": 1680,
+      "right": 50
+    },
+    "thisMonth": {
+      "left": 1680,
+      "right": 50
+    }
+  },
+  {
+    "member": "SVS000012",
+    "name": "Anis",
+    "position": "right",
+    "parent": "SVS000005",
+    "personalBV": 0,
+    "lifetime": {
+      "left": 510,
+      "right": 510
+    },
+    "thisMonth": {
+      "left": 510,
+      "right": 510
+    }
+  },
+  {
+    "member": "SVS000002",
+    "name": "Adil Rahman",
+    "position": "left",
+    "parent": "SVS000001",
+    "personalBV": 510,
+    "lifetime": {
+      "left": 150,
+      "right": 1020
+    },
+    "thisMonth": {
+      "left": 150,
+      "right": 1020
+    }
+  },
+  {
+    "member": "SVS000005",
+    "name": "Swastika Roy",
+    "position": "right",
+    "parent": "SVS000002",
+    "personalBV": 0,
+    "lifetime": {
+      "left": 0,
+      "right": 1020
+    },
+    "thisMonth": {
+      "left": 0,
+      "right": 1020
+    }
+  },
+  {
+    "member": "SVS000038",
+    "name": "Super",
+    "position": "left",
+    "parent": "SVS000012",
+    "personalBV": 510,
+    "lifetime": {
+      "left": 0,
+      "right": 0
+    },
+    "thisMonth": {
+      "left": 0,
+      "right": 0
+    }
+  }
+]

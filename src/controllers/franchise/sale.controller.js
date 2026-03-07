@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import moment from 'moment-timezone';
 import FranchiseSale from '../../models/FranchiseSale.model.js';
 import FranchiseInventory from '../../models/FranchiseInventory.model.js';
 import Product from '../../models/Product.model.js';
@@ -258,16 +259,17 @@ export const sellToUser = asyncHandler(async (req, res) => {
             user.status = 'active';
             activationMessage = ' - User account activated!';
             await import('../../services/business/mlm.service.js').then(m => m.mlmService.handleUserActivation(user));
-            const mlmModule = await import('../../services/business/mlm.service.js');
-            await mlmModule.mlmService.propagateBVUpTree(
-                user._id,
-                user.position,
-                totalBV || 0,
-                'first-purchase',
-                `SALE-${sale[0].saleNo}`,
-                totalPV || 0
-            );
         }
+
+        const mlmModule = await import('../../services/business/mlm.service.js');
+        await mlmModule.mlmService.propagateBVUpTree(
+            user._id,
+            user.position,
+            totalBV || 0,
+            isFirstPurchase ? 'first-purchase' : 'repurchase',
+            `SALE-${sale[0].saleNo}`,
+            totalPV || 0
+        );
 
         await user.save({ session });
 

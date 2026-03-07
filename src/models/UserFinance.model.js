@@ -12,6 +12,8 @@ const userFinanceSchema = new mongoose.Schema({
     rightLegBV: { type: Number, default: 0 },
     totalBV: { type: Number, default: 0 }, // Cumulative
     thisMonthBV: { type: Number, default: 0 },
+    thisMonthLeftLegBV: { type: Number, default: 0 },
+    thisMonthRightLegBV: { type: Number, default: 0 },
     thisYearBV: { type: Number, default: 0 },
     carryForwardLeft: { type: Number, default: 0 },
     carryForwardRight: { type: Number, default: 0 },

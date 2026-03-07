@@ -28,6 +28,10 @@
  *                   type: object
  *                   properties:
  *                     isFirstPurchaseDone: { type: boolean }
+ *                     personalPV: { type: number, description: "Personal PV from repurchases" }
+ *                     totalPV: { type: number, description: "Total PV including team" }
+ *                     personalBV: { type: number }
+ *                     totalBV: { type: number }
  * */
 
 /**
@@ -107,6 +111,12 @@
  *                         pendingRight: { type: number }
  *                         carryForwardLeft: { type: number }
  *                         carryForwardRight: { type: number }
+ *                         leftLegBV: { type: number }
+ *                         rightLegBV: { type: number }
+ *                         totalBV: { type: number }
+ *                         leftLegPV: { type: number }
+ *                         rightLegPV: { type: number }
+ *                         totalPV: { type: number }
  *                         totalEarned: { type: number }
  *                         overallTotalEarnings: { type: number, description: "Total Wallet Earnings" }
  *                         nextClosingWindow: { type: string, format: date-time }
@@ -120,6 +130,12 @@
  *                         pendingStarsLeft: { type: number }
  *                         pendingStarsRight: { type: number }
  *                         accumulatedStars: { type: number, description: "Total lifetime stars matched" }
+ *                         leftLegBV: { type: number }
+ *                         rightLegBV: { type: number }
+ *                         totalBV: { type: number }
+ *                         leftLegPV: { type: number }
+ *                         rightLegPV: { type: number }
+ *                         totalPV: { type: number }
  *                         totalEarned: { type: number }
  *                         history:
  *                           type: array
@@ -154,6 +170,12 @@
  *                     pendingRight: { type: number }
  *                     carryForwardLeft: { type: number }
  *                     carryForwardRight: { type: number }
+ *                     leftLegBV: { type: number }
+ *                     rightLegBV: { type: number }
+ *                     totalBV: { type: number }
+ *                     leftLegPV: { type: number }
+ *                     rightLegPV: { type: number }
+ *                     totalPV: { type: number }
  *                     totalEarned: { type: number }
  *                     overallTotalEarnings: { type: number, description: "Total Wallet Earnings" }
  *                     history:
@@ -190,6 +212,12 @@
  *                     carryForwardLeft: { type: number }
  *                     carryForwardRight: { type: number }
  *                     accumulatedStars: { type: number, description: "Total lifetime stars matched" }
+ *                     leftLegBV: { type: number }
+ *                     rightLegBV: { type: number }
+ *                     totalBV: { type: number }
+ *                     leftLegPV: { type: number }
+ *                     rightLegPV: { type: number }
+ *                     totalPV: { type: number }
  *                     totalEarned: { type: number }
  *                     history:
  *                       type: array
@@ -310,6 +338,9 @@
 
  *                     leftLegBV: { type: number, description: "Business Volume in left leg" }
  *                     rightLegBV: { type: number, description: "Business Volume in right leg" }
+ *                     leftLegPV: { type: number, description: "Personal Volume in left leg" }
+ *                     rightLegPV: { type: number, description: "Personal Volume in right leg" }
+ *                     totalPV: { type: number, description: "Total PV" }
  *                     leftLegStars: { type: number, description: "Total accumulated stars in left leg" }
  *                     rightLegStars: { type: number, description: "Total accumulated stars in right leg" }
  *                     left: { type: object }
