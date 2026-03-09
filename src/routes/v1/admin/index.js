@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllUsers, getUserByMemberId, updateUserByAdmin, verifyKYC, changeUserPassword, getUsersKYCDetails } from '../../../controllers/admin/adminUser.controller.js';
+import { getAllUsers, getAllUserWallets, getUserByMemberId, updateUserByAdmin, verifyKYC, changeUserPassword, getUsersKYCDetails } from '../../../controllers/admin/adminUser.controller.js';
 
 import { getDashboardMetrics, processPayout, addManualBV, getPayouts, getAllTransactions, triggerBonusMatching, acceptPayout, rejectPayout } from '../../../controllers/admin/adminManager.controller.js';
 import { fixDatabaseIssues } from '../../../controllers/admin/fixDatabase.controller.js';
@@ -18,6 +18,7 @@ const router = express.Router();
 router.use(authMiddleware, adminMiddleware);
 
 // User Management
+router.get('/users/wallets', getAllUserWallets);
 router.get('/users', getAllUsers);
 router.get('/users/kyc-details', getUsersKYCDetails);
 router.get('/users/:memberId', getUserByMemberId);

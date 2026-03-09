@@ -196,6 +196,11 @@ const userSchema = new mongoose.Schema({
     // Profile & KYC (Modularized)
     address: { type: addressSchema, default: {} },
     kyc: { type: kycSchema, default: {} },
+    nominee: {
+        name: { type: String, default: '' },
+        relation: { type: String, default: '' },
+        dateOfBirth: { type: String, default: '' }
+    },
 
     profilePicture: {
         url: { type: String, default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT11ii7P372sU9BZPZgOR6ohoQbBJWbkJ0OVA&s' },

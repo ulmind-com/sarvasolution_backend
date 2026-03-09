@@ -5,13 +5,38 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 
+import UserFinance from '../../models/UserFinance.model.js';
+
 /**
  * Get all users with basic details
  */
 export const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({}).select('fullName memberId phone email role status rank joiningDate isFirstPurchaseDone');
+    const users = await User.find({}).select('fullName memberId phone email role status rank joiningDate isFirstPurchaseDone wallet');
     return res.status(200).json(
         new ApiResponse(200, users, 'Users fetched successfully')
+    );
+});
+
+/**
+ * Get all users' wallet balances (Merged)
+ */
+export const getAllUserWallets = asyncHandler(async (req, res) => {
+    const users = await User.find({}).select('fullName memberId phone email status rank joiningDate').lean();
+    const userIds = users.map(u => u._id);
+    const finances = await UserFinance.find({ user: { $in: userIds } }).select('user wallet').lean();
+
+    const financeMap = {};
+    finances.forEach(f => {
+        financeMap[f.user.toString()] = f.wallet;
+    });
+
+    const mergedUsers = users.map(user => ({
+        ...user,
+        wallet: financeMap[user._id.toString()] || { availableBalance: 0, totalEarnings: 0, withdrawnAmount: 0, pendingWithdrawal: 0 }
+    }));
+
+    return res.status(200).json(
+        new ApiResponse(200, mergedUsers, 'User wallets fetched successfully')
     );
 });
 
@@ -27,9 +52,15 @@ export const getUserByMemberId = asyncHandler(async (req, res) => {
     }
 
     const bankAccount = await BankAccount.findOne({ userId: user._id });
+    const userFinance = await UserFinance.findOne({ user: user._id }).select('wallet');
+
+    const userData = user.toObject();
+    if (userFinance && userFinance.wallet) {
+        userData.wallet = userFinance.wallet;
+    }
 
     return res.status(200).json(
-        new ApiResponse(200, { user, bankAccount }, 'User details fetched successfully')
+        new ApiResponse(200, { user: userData, bankAccount }, 'User details fetched successfully')
     );
 });
 

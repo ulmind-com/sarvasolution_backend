@@ -20,7 +20,7 @@ export const submitKYC = asyncHandler(async (req, res) => {
     }
 
     // Enforce "Only Once" rule
-    if (user.kyc && ['pending', 'verified'].includes(user.kyc.status)) {
+    if (user.kyc && ['pending', 'approved'].includes(user.kyc.status)) {
         throw new ApiError(400, `KYC submission is already ${user.kyc.status}.`);
     }
 

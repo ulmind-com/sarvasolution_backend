@@ -20,7 +20,8 @@ export const updateProfile = asyncHandler(async (req, res) => {
         panCardNumber,
         address,
         bankDetails,
-        username
+        username,
+        nominee
     } = body;
 
     // Handle nested objects if sent as strings via FormData
@@ -30,6 +31,9 @@ export const updateProfile = asyncHandler(async (req, res) => {
         }
         if (typeof address === 'string' && address.trim().startsWith('{')) {
             address = JSON.parse(address);
+        }
+        if (typeof nominee === 'string' && nominee.trim().startsWith('{')) {
+            nominee = JSON.parse(nominee);
         }
     } catch (e) {
         console.error('Error parsing JSON fields in profile update:', e);
@@ -93,6 +97,10 @@ export const updateProfile = asyncHandler(async (req, res) => {
         user.address = { ...user.address, ...address };
         updatedFields.push('Address');
     }
+    if (nominee) {
+        user.nominee = { ...user.nominee, ...nominee };
+        updatedFields.push('Nominee Details');
+    }
 
     // Profile Picture
     if (req.file) {
@@ -101,7 +109,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
             await deleteFromCloudinary(user.profilePicture.publicId);
         }
 
-        const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles');
+        const uploadResult = await uploadToCloudinary(req.file.buffer, 'sarvasolution/profiles', true);
         user.profilePicture = uploadResult;
         updatedFields.push('Profile Picture');
     }
