@@ -20,8 +20,9 @@ export const bonusService = {
 
         // Rule: Need 2 direct sponsors for most bonuses
         if (user.directSponsors.count < 2) return;
-        const adminCharge = bonus * 0.05;
-        const netAmount = bonus - adminCharge;
+        const adminCharge = bonus * 0.05;   // 5% Admin
+        const tdsDeducted = bonus * 0.02;   // 2% TDS
+        const netAmount = bonus - adminCharge - tdsDeducted; // 93% net
 
         await Payout.create({
             userId,
@@ -29,6 +30,7 @@ export const bonusService = {
             payoutType: 'repurchase-self',
             grossAmount: bonus,
             adminCharge,
+            tdsDeducted,
             netAmount,
             status: 'pending'
         });
@@ -72,8 +74,9 @@ export const bonusService = {
      * Helper to create a payout for bonuses
      */
     createBonusPayout: async (user, type, amount) => {
-        const adminCharge = amount * 0.05;
-        const netAmount = amount - adminCharge;
+        const adminCharge = amount * 0.05;   // 5% Admin
+        const tdsDeducted = amount * 0.02;   // 2% TDS
+        const netAmount = amount - adminCharge - tdsDeducted; // 93% net
 
         await Payout.create({
             userId: user._id,
@@ -81,12 +84,13 @@ export const bonusService = {
             payoutType: type,
             grossAmount: amount,
             adminCharge,
+            tdsDeducted,
             netAmount,
             status: 'pending'
         });
 
         user.wallet.availableBalance += netAmount;
-        user.wallet.totalEarnings += netAmount;
+        user.wallet.totalEarnings += amount; // totalEarnings tracks gross
     },
 
     /**
@@ -149,8 +153,9 @@ export const bonusService = {
             }
 
             const bonusPerHead = poolAmount / qualifierCount;
-            const adminChargePerHead = bonusPerHead * 0.05;
-            const netBonusPerHead = bonusPerHead - adminChargePerHead;
+            const adminChargePerHead = bonusPerHead * 0.05;   // 5% Admin
+            const tdsPerHead = bonusPerHead * 0.02;           // 2% TDS
+            const netBonusPerHead = bonusPerHead - adminChargePerHead - tdsPerHead; // 93% net
 
             console.log(`Distributing ₹${poolAmount.toFixed(2)} to ${qualifierCount} qualifiers. Bonus per head: ₹${bonusPerHead.toFixed(2)}`);
 
@@ -165,13 +170,14 @@ export const bonusService = {
                     payoutType: 'repurchase-bonus',
                     grossAmount: bonusPerHead,
                     adminCharge: adminChargePerHead,
+                    tdsDeducted: tdsPerHead,
                     netAmount: netBonusPerHead,
                     status: 'pending'
                 });
 
-                // Update Finance
+                // Update Finance — credit 93% net to wallet
                 finance.wallet.availableBalance += netBonusPerHead;
-                finance.wallet.totalEarnings += netBonusPerHead;
+                finance.wallet.totalEarnings += bonusPerHead; // totalEarnings tracks gross
                 finance.selfPurchase.bonusEarned += bonusPerHead;
 
                 // We'll reset eligibility in the reset job, but we could do it here too if needed
@@ -184,7 +190,7 @@ export const bonusService = {
                 await User.findByIdAndUpdate(finance.user._id, {
                     $inc: {
                         "wallet.availableBalance": netBonusPerHead,
-                        "wallet.totalEarnings": netBonusPerHead,
+                        "wallet.totalEarnings": bonusPerHead, // totalEarnings tracks gross
                         "selfPurchase.bonusEarned": bonusPerHead
                     }
                 });

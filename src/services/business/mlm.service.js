@@ -6,6 +6,7 @@ import BVTransaction from '../../models/BVTransaction.model.js';
 import Payout from '../../models/Payout.model.js';
 import Configs from '../../config/config.js';
 import chalk from 'chalk';
+import moment from 'moment-timezone';
 
 /**
  * Service to handle Genealogy Tree logic and BV propagation.
@@ -452,11 +453,80 @@ export const mlmService = {
         const financeMap = new Map();
         finances.forEach(f => financeMap.set(f.user.toString(), f));
 
+        // --- NEW LOGIC: Half-Yearly & Annual BV Aggregation ---
+        const now = moment().tz("Asia/Kolkata");
+        const year = now.year();
+        const month = now.month();
+
+        let annualStart, annualEnd, halfYearlyStart, halfYearlyEnd;
+        if (month >= 3) { // April (3) to December
+            annualStart = moment.tz([year, 3, 1], "Asia/Kolkata").startOf('day');
+            annualEnd = moment.tz([year + 1, 2, 31], "Asia/Kolkata").endOf('day');
+            if (month <= 8) { // April to Sept (8)
+                halfYearlyStart = moment.tz([year, 3, 1], "Asia/Kolkata").startOf('day');
+                halfYearlyEnd = moment.tz([year, 8, 30], "Asia/Kolkata").endOf('day');
+            } else { // Oct to Dec
+                halfYearlyStart = moment.tz([year, 9, 1], "Asia/Kolkata").startOf('day');
+                halfYearlyEnd = moment.tz([year + 1, 2, 31], "Asia/Kolkata").endOf('day');
+            }
+        } else { // Jan to March
+            annualStart = moment.tz([year - 1, 3, 1], "Asia/Kolkata").startOf('day');
+            annualEnd = moment.tz([year, 2, 31], "Asia/Kolkata").endOf('day');
+            halfYearlyStart = moment.tz([year - 1, 9, 1], "Asia/Kolkata").startOf('day');
+            halfYearlyEnd = moment.tz([year, 2, 31], "Asia/Kolkata").endOf('day');
+        }
+
+        const transactions = await BVTransaction.aggregate([
+            {
+                $match: {
+                    userId: { $in: allUserIds },
+                    legAffected: { $in: ['left', 'right'] },
+                    createdAt: { $gte: annualStart.toDate(), $lte: annualEnd.toDate() }
+                }
+            },
+            {
+                $group: {
+                    _id: { userId: "$userId", leg: "$legAffected" },
+                    annualSum: { $sum: "$bvAmount" },
+                    halfSum: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        { $gte: ["$createdAt", halfYearlyStart.toDate()] },
+                                        { $lte: ["$createdAt", halfYearlyEnd.toDate()] }
+                                    ]
+                                },
+                                "$bvAmount",
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        const historyMap = new Map();
+        transactions.forEach(t => {
+            const userIdStr = t._id.userId.toString();
+            if (!historyMap.has(userIdStr)) {
+                historyMap.set(userIdStr, { left: { half: 0, annual: 0 }, right: { half: 0, annual: 0 } });
+            }
+            if (t._id.leg === 'left') {
+                historyMap.get(userIdStr).left.half = t.halfSum;
+                historyMap.get(userIdStr).left.annual = t.annualSum;
+            } else if (t._id.leg === 'right') {
+                historyMap.get(userIdStr).right.half = t.halfSum;
+                historyMap.get(userIdStr).right.annual = t.annualSum;
+            }
+        });
+
         // Recursive function to reconstruct tree from flat list
         const buildNode = (user, currentLevel) => {
             if (currentLevel > depth) return null;
 
             const finance = financeMap.get(user._id.toString());
+            const history = historyMap.get(user._id.toString()) || { left: { half: 0, annual: 0 }, right: { half: 0, annual: 0 } };
 
             // Use stored counts!
             const leftTeamCount = user.leftTeamCount || 0;
@@ -483,19 +553,22 @@ export const mlmService = {
                 leftTeamCount: leftTeamCount,
                 rightTeamCount: rightTeamCount,
 
-                // Retaining BV/PV info
+                // BV Histories
                 leftLegBV: finance?.leftLegBV || 0,
                 rightLegBV: finance?.rightLegBV || 0,
                 thisMonthLeftLegBV: finance?.thisMonthLeftLegBV || 0,
                 thisMonthRightLegBV: finance?.thisMonthRightLegBV || 0,
+
+                halfYearlyLeftLegBV: history.left.half,
+                halfYearlyRightLegBV: history.right.half,
+                annualLeftLegBV: history.left.annual,
+                annualRightLegBV: history.right.annual,
+
                 leftLegPV: finance?.leftLegPV || 0,
                 rightLegPV: finance?.rightLegPV || 0,
 
                 // Stars need to be counted? 
-                // If we didn't store "leftLegStars", we can't easily deliver it without recursion.
-                // For this optimization, we will set them to 0 or null unless specific calculation is requested.
-                // Or we can approximate from the fetched visual tree (limited accuracy).
-                leftLegStars: 0, // Pending optimization: add 'leftLegStars' to User/UserFinance model
+                leftLegStars: 0,
                 rightLegStars: 0,
 
                 children: [] // Optional: Flat array or left/right props

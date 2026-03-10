@@ -177,6 +177,8 @@ export const cronJobs = {
                 $set: {
                     thisMonthBV: 0,
                     thisMonthPV: 0,
+                    thisMonthLeftLegBV: 0,
+                    thisMonthRightLegBV: 0,
                     "selfPurchase.thisMonthBV": 0,
                     "selfPurchase.repurchaseWindowBV": 0,
                     "selfPurchase.eligibleForRepurchaseBonus": false
@@ -188,6 +190,8 @@ export const cronJobs = {
                 $set: {
                     thisMonthBV: 0,
                     thisMonthPV: 0,
+                    thisMonthLeftLegBV: 0,
+                    thisMonthRightLegBV: 0,
                     "selfPurchase.thisMonthBV": 0,
                     "selfPurchase.repurchaseWindowBV": 0,
                     "selfPurchase.eligibleForRepurchaseBonus": false

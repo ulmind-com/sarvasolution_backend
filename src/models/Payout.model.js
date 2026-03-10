@@ -14,7 +14,9 @@ const payoutSchema = new mongoose.Schema({
             'star-matching-bonus',
             'star-matching',
             'repurchase-self',
+            'repurchase-bonus',          // Monthly pool distribution (was missing!)
             'beginner-bonus',
+            'beginner-matching-bonus',
             'startup-bonus',
             'leadership-bonus',
             'tour-fund',

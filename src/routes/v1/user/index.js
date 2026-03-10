@@ -27,12 +27,14 @@ router.post('/request-payout', requestPayout);
 // Product Browsing (authenticated)
 router.get('/products', getUserProducts);
 
-import { getDirectTeam, getCompleteTeam } from '../../../controllers/user/user.controller.js';
+import { getDirectTeam, getCompleteTeam, getMyPurchases } from '../../../controllers/user/user.controller.js';
 import { activateUser } from '../../../controllers/user/activate_user.controller.js';
 
 router.post('/activate', activateUser);
 router.get('/direct-team', getDirectTeam); // New Route for Direct Team List
 router.get('/team/complete', getCompleteTeam); // Recursively fetch complete team by leg
+
+router.get('/purchases', getMyPurchases); // New Route for User Purchase History
 
 router.use('/bonus', bonusRoutes);
 

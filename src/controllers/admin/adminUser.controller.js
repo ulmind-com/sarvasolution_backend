@@ -11,9 +11,41 @@ import UserFinance from '../../models/UserFinance.model.js';
  * Get all users with basic details
  */
 export const getAllUsers = asyncHandler(async (req, res) => {
-    const users = await User.find({}).select('fullName memberId phone email role status rank joiningDate isFirstPurchaseDone wallet');
+    const users = await User.find({}).select('fullName memberId phone email role status createdAt createdAt_IST isFirstPurchaseDone').lean();
+
+    // Fetch first purchase date for activationDate mapping
+    const { default: FranchiseSale } = await import('../../models/FranchiseSale.model.js');
+    const userIds = users.filter(u => u.isFirstPurchaseDone || u.status === 'active').map(u => u._id);
+
+    const firstSales = await FranchiseSale.aggregate([
+        { $match: { user: { $in: userIds } } },
+        { $sort: { saleDate: 1 } },
+        { $group: { _id: "$user", firstPurchaseDate: { $first: "$saleDate" } } }
+    ]);
+
+    const activationMap = {};
+    firstSales.forEach(sale => {
+        activationMap[sale._id.toString()] = sale.firstPurchaseDate;
+    });
+
+    // Fetch UserFinance to get the CORRECT currentRank
+    const { default: UserFinance } = await import('../../models/UserFinance.model.js');
+    const finances = await UserFinance.find({ user: { $in: users.map(u => u._id) } }).select('user currentRank').lean();
+
+    const rankMap = {};
+    finances.forEach(f => {
+        rankMap[f.user.toString()] = f.currentRank;
+    });
+
+    const enrichedUsers = users.map(u => ({
+        ...u,
+        rank: rankMap[u._id.toString()] || 'Associate',
+        joiningDate: u.createdAt_IST || u.createdAt,
+        activationDate: activationMap[u._id.toString()] || null
+    }));
+
     return res.status(200).json(
-        new ApiResponse(200, users, 'Users fetched successfully')
+        new ApiResponse(200, enrichedUsers, 'Users fetched successfully')
     );
 });
 

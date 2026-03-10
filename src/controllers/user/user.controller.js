@@ -62,3 +62,37 @@ export const getCompleteTeam = async (req, res) => {
         throw new ApiError(500, error.message || "Failed to fetch complete team");
     }
 };
+
+/**
+ * Get User's Purchase History
+ */
+export const getMyPurchases = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const purchases = await (await import('../../models/FranchiseSale.model.js')).default.find({ user: req.user._id })
+            .populate('franchise', 'name shopName vendorId')
+            .populate('items.product', 'productName productImage')
+            .sort({ saleDate: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await (await import('../../models/FranchiseSale.model.js')).default.countDocuments({ user: req.user._id });
+
+        return res.status(200).json(
+            new ApiResponse(200, {
+                purchases,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    pages: Math.ceil(total / limit)
+                }
+            }, "Purchase history fetched successfully")
+        );
+    } catch (error) {
+        throw new ApiError(500, error.message || "Something went wrong fetching purchase history");
+    }
+};

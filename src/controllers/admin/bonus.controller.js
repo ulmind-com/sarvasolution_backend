@@ -80,9 +80,42 @@ export const getLiveQualifiers = asyncHandler(async (req, res) => {
 
     const total = await UserFinance.countDocuments(query);
 
+    // Calculate exact qualification date for the frontend
+    const { default: FranchiseSale } = await import('../../models/FranchiseSale.model.js');
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const enrichedQualifiers = await Promise.all(qualifiers.map(async (uf) => {
+        let qualificationDate = uf.selfPurchase.lastPurchaseDate || uf.updatedAt;
+
+        if (uf.user) {
+            const sales = await FranchiseSale.find({
+                user: uf.user._id,
+                saleDate: { $gte: startOfMonth }
+            }).sort({ saleDate: 1 });
+
+            let accBV = 0;
+            for (let sale of sales) {
+                accBV += sale.totalBV;
+                if (accBV >= 500) {
+                    qualificationDate = sale.saleDate;
+                    break;
+                }
+            }
+        }
+
+        return {
+            ...uf.toObject(),
+            user: uf.user, // Keep populated user
+            qualificationDate,
+            currentBV: uf.selfPurchase.repurchaseWindowBV
+        };
+    }));
+
     return res.status(200).json(
         new ApiResponse(200, {
-            qualifiers,
+            qualifiers: enrichedQualifiers,
             pagination: {
                 total,
                 page: Number(page),

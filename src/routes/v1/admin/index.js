@@ -1,7 +1,7 @@
 import express from 'express';
 import { getAllUsers, getAllUserWallets, getUserByMemberId, updateUserByAdmin, verifyKYC, changeUserPassword, getUsersKYCDetails } from '../../../controllers/admin/adminUser.controller.js';
 
-import { getDashboardMetrics, processPayout, addManualBV, getPayouts, getAllTransactions, triggerBonusMatching, acceptPayout, rejectPayout } from '../../../controllers/admin/adminManager.controller.js';
+import { getDashboardMetrics, processPayout, addManualBV, getPayouts, getAllTransactions, triggerBonusMatching, acceptPayout, rejectPayout, getCompanyBVHistory } from '../../../controllers/admin/adminManager.controller.js';
 import { fixDatabaseIssues } from '../../../controllers/admin/fixDatabase.controller.js';
 import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
 import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
@@ -37,6 +37,7 @@ router.get('/transactions', getAllTransactions); // New Audit Route
 router.post('/bv/allocate-manual', addManualBV);
 router.post('/trigger-bonus', triggerBonusMatching);
 router.post('/fix-database', fixDatabaseIssues); // Fix data inconsistencies
+router.get('/company-bv', getCompanyBVHistory); // Get Month-wise Company BV History
 
 // Sub-Modules
 router.use('/product', productRoutes);

@@ -341,3 +341,51 @@ export const triggerBonusMatching = asyncHandler(async (req, res) => {
         new ApiResponse(200, {}, `${resultMsg} successfully`)
     );
 });
+
+/**
+ * Get Company BV History (Month-wise)
+ */
+export const getCompanyBVHistory = asyncHandler(async (req, res) => {
+    // Lazily import to avoid circular dep issues inside an admin script, though top-level is fine
+    const { default: FranchiseSale } = await import('../../models/FranchiseSale.model.js');
+
+    const pipeline = [
+        {
+            $group: {
+                _id: {
+                    year: { $year: "$saleDate" },
+                    month: { $month: "$saleDate" }
+                },
+                totalBV: { $sum: "$totalBV" }
+            }
+        },
+        {
+            $sort: { "_id.year": -1, "_id.month": -1 }
+        }
+    ];
+
+    const result = await FranchiseSale.aggregate(pipeline);
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+    const formattedResult = result.map(item => ({
+        monthName: monthNames[item._id.month - 1],
+        month: item._id.month,
+        year: item._id.year,
+        totalBV: item.totalBV
+    }));
+
+    // Calculate current month specifically for the dashboard card
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    const currentMonthData = formattedResult.find(item => item.month === currentMonth && item.year === currentYear);
+    const currentMonthBV = currentMonthData ? currentMonthData.totalBV : 0;
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            history: formattedResult,
+            currentMonthBV
+        }, "Company BV history fetched successfully")
+    );
+});
