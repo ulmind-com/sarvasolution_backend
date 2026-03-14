@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import * as bonusController from '../../../controllers/admin/bonus.controller.js';
-import { verifyJWT, authorizeRoles } from '../../../middlewares/auth.middleware.js';
+import authMiddleware from '../../../middlewares/auth/authMiddleware.js';
+import adminMiddleware from '../../../middlewares/auth/adminMiddleware.js';
 
 const router = Router();
 
 // All admin bonus routes require authentication and admin role
-router.use(verifyJWT, authorizeRoles('admin'));
+router.use(authMiddleware, adminMiddleware);
 
 router.get('/repurchase-pool', bonusController.getBonusPools);
 router.get('/repurchase-qualifiers/:poolId', bonusController.getPoolQualifiers);
